@@ -48,10 +48,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Notify extension that we're on a watch-together page
 function notifyExtension() {
     // Get room code from URL or page
-    const urlParams = new URLSearchParams(window.location.search);
-    let roomCode = urlParams.get('room');
+    // 1. Check URL path (most reliable for this app)
+    const pathMatch = window.location.pathname.match(/\/watch-together\/([a-zA-Z0-9]{6})/i);
+    if (pathMatch && pathMatch[1]) {
+        roomCode = pathMatch[1].toUpperCase();
+    }
 
-    // If not in URL, try to find on page
+    // 2. Check query param (fallback)
+    if (!roomCode) {
+        const urlParams = new URLSearchParams(window.location.search);
+        roomCode = urlParams.get('room');
+    }
+
+    // 3. Check page content (legacy/fallback)
     if (!roomCode) {
         const roomDisplay = document.querySelector('[class*="room"]');
         if (roomDisplay) {
@@ -64,6 +73,9 @@ function notifyExtension() {
         chrome.runtime.sendMessage({
             type: 'STREAMVAULT_TAB_READY',
             roomCode: roomCode
+        }).then(() => {
+            console.log('[StreamVault Bridge] Extension connected');
+            chrome.runtime.sendMessage({ type: 'BRIDGE_CONNECTED' }).catch(() => { });
         }).catch(err => {
             console.log('[StreamVault Bridge] Extension not available');
         });

@@ -81,6 +81,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             }
             break;
 
+        case 'BRIDGE_CONNECTED':
+            if (sender.tab) {
+                chrome.action.setBadgeText({ text: 'ROOM', tabId: sender.tab.id });
+                chrome.action.setBadgeBackgroundColor({ color: '#3b82f6', tabId: sender.tab.id });
+            }
+            break;
+
         default:
             sendResponse({ error: 'Unknown message' });
     }
