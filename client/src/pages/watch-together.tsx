@@ -741,6 +741,42 @@ function WatchTogetherContent() {
         };
     }, [socket, isHost]);
 
+    // Listen for extension messages (for syncing with external Google Drive tabs)
+    useEffect(() => {
+        const handleExtensionMessage = (event: MessageEvent) => {
+            // Only accept messages from our extension
+            if (event.data?.source !== 'streamvault-extension') return;
+
+            if (event.data?.type === 'VIDEO_SYNC') {
+                console.log('📺 Extension sync event received:', event.data);
+
+                // If we're host, broadcast to other viewers
+                if (isHost) {
+                    switch (event.data.action) {
+                        case 'play':
+                            videoPlay(event.data.time || 0);
+                            break;
+                        case 'pause':
+                            videoPause(event.data.time || 0);
+                            break;
+                        case 'seek':
+                            videoSeek(event.data.time || 0);
+                            break;
+                    }
+                }
+            }
+        };
+
+        window.addEventListener('message', handleExtensionMessage);
+
+        // Notify extension that page is ready for sync
+        console.log('📺 Watch Together page ready for extension sync');
+
+        return () => {
+            window.removeEventListener('message', handleExtensionMessage);
+        };
+    }, [isHost, videoPlay, videoPause, videoSeek]);
+
     // Handle join
     const handleJoin = () => {
         if (username.trim() && roomCode) {
