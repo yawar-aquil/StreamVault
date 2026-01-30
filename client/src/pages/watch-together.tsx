@@ -1585,6 +1585,57 @@ function WatchTogetherContent() {
                                 You're the host
                             </div>
                         )}
+
+                        {/* Manual Sync Controls for Google Drive videos - Host Only */}
+                        {isHost && isScheduledRoomReady && (
+                            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/80 backdrop-blur-lg rounded-full px-4 py-2 flex items-center gap-3 border border-white/10 shadow-lg">
+                                <span className="text-xs text-gray-400 hidden sm:inline">Manual Sync:</span>
+                                <button
+                                    onClick={() => {
+                                        console.log('🎬 Manual PLAY sync triggered');
+                                        videoPlay(0);
+                                    }}
+                                    className="bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium transition-colors flex items-center gap-1"
+                                    title="Tell all viewers to PLAY"
+                                >
+                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                                    Play
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        console.log('🎬 Manual PAUSE sync triggered');
+                                        videoPause(0);
+                                    }}
+                                    className="bg-yellow-600 hover:bg-yellow-500 text-white px-3 py-1 rounded-full text-sm font-medium transition-colors flex items-center gap-1"
+                                    title="Tell all viewers to PAUSE"
+                                >
+                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
+                                    Pause
+                                </button>
+                                <div className="flex items-center gap-1">
+                                    <input
+                                        type="number"
+                                        placeholder="0"
+                                        min="0"
+                                        id="sync-time-input"
+                                        className="w-16 bg-white/10 border border-white/20 rounded px-2 py-1 text-sm text-white text-center"
+                                        title="Time in seconds"
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            const input = document.getElementById('sync-time-input') as HTMLInputElement;
+                                            const time = parseInt(input?.value || '0', 10);
+                                            console.log('🎬 Manual SEEK sync triggered to:', time);
+                                            videoSeek(time);
+                                        }}
+                                        className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-medium transition-colors"
+                                        title="Sync all viewers to this time (in seconds)"
+                                    >
+                                        Seek
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Episode Selector Bar - Host Only (for shows) - Hidden in Fullscreen */}
