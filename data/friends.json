@@ -387,6 +387,20 @@
       "read": true,
       "id": "e78222e5-45c9-4880-9e90-bba24873b85f",
       "createdAt": "2026-01-26T14:39:35.946Z"
+    },
+    {
+      "userId": "b59fe60c-35c8-4689-b83a-feda335caa19",
+      "type": "achievement",
+      "title": "New Badge Awarded! 🏆",
+      "message": "You've been awarded the \"VIP\" badge!",
+      "data": {
+        "badgeId": "d390a107-a8f5-4ed4-80de-a04a25b7e5f1",
+        "name": "VIP",
+        "imageUrl": "/badges/vip_v2.svg"
+      },
+      "read": false,
+      "id": "b9854b52-9585-4974-8c2f-dbda72675021",
+      "createdAt": "2026-01-30T07:46:40.256Z"
     }
   ],
   "directMessages": [

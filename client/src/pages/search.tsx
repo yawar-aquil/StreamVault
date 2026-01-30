@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useState, useMemo } from "react";
-import { Search as SearchIcon, SlidersHorizontal } from "lucide-react";
+import { Search as SearchIcon, SlidersHorizontal, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,7 +18,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import type { Show, Movie } from "@shared/schema";
+import type { Show, Movie, Anime } from "@shared/schema";
 
 export default function Search() {
   const [location] = useLocation();
@@ -37,30 +37,39 @@ export default function Search() {
     queryKey: ["/api/movies"],
   });
 
-  const isLoading = showsLoading || moviesLoading;
+  const { data: anime, isLoading: animeLoading } = useQuery<Anime[]>({
+    queryKey: ["/api/anime"],
+  });
+
+  const isLoading = showsLoading || moviesLoading || animeLoading;
 
   const allGenres = useMemo(() => {
     const genres = new Set<string>();
-    
+
     shows?.forEach((show) => {
       const showGenres = show.genres?.split(',').map(g => g.trim()).filter(g => g.length > 0) || [];
       showGenres.forEach((g) => genres.add(g));
     });
-    
+
     movies?.forEach((movie) => {
       const movieGenres = movie.genres?.split(',').map(g => g.trim()).filter(g => g.length > 0) || [];
       movieGenres.forEach((g) => genres.add(g));
     });
-    
+
+    anime?.forEach((a) => {
+      const animeGenres = a.genres?.split(',').map(g => g.trim()).filter(g => g.length > 0) || [];
+      animeGenres.forEach((g) => genres.add(g));
+    });
+
     return Array.from(genres).filter(g => g.length > 0).sort();
-  }, [shows, movies]);
+  }, [shows, movies, anime]);
 
   const filteredShows = useMemo(() => {
     if (!shows) return [];
 
     return shows.filter((show) => {
       const genres = show.genres?.split(',').map(g => g.trim()) || [];
-      
+
       const matchesQuery =
         !searchQuery ||
         show.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -85,7 +94,7 @@ export default function Search() {
 
     return movies.filter((movie) => {
       const genres = movie.genres?.split(',').map(g => g.trim()) || [];
-      
+
       const matchesQuery =
         !searchQuery ||
         movie.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -104,6 +113,31 @@ export default function Search() {
       return matchesQuery && matchesGenre && matchesYear;
     });
   }, [movies, searchQuery, selectedGenres, yearRange]);
+
+  const filteredAnime = useMemo(() => {
+    if (!anime) return [];
+
+    return anime.filter((a) => {
+      const genres = a.genres?.split(',').map(g => g.trim()) || [];
+
+      const matchesQuery =
+        !searchQuery ||
+        a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        a.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        genres.some((g) =>
+          g.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+
+      const matchesGenre =
+        selectedGenres.length === 0 ||
+        genres.some((g) => selectedGenres.includes(g));
+
+      const matchesYear =
+        a.year >= yearRange[0] && a.year <= yearRange[1];
+
+      return matchesQuery && matchesGenre && matchesYear;
+    });
+  }, [anime, searchQuery, selectedGenres, yearRange]);
 
   const toggleGenre = (genre: string) => {
     setSelectedGenres((prev) =>
@@ -191,7 +225,7 @@ export default function Search() {
 
   return (
     <div className="min-h-screen">
-      <SEO 
+      <SEO
         title="Search Movies & TV Shows"
         description="Search for your favorite movies and TV shows on StreamVault. Filter by genre, year, and more."
         canonical="https://streamvault.live/search"
@@ -205,7 +239,7 @@ export default function Search() {
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search for shows, movies, genres, actors..."
+                placeholder="Search for shows, movies, anime, genres, actors..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -251,13 +285,16 @@ export default function Search() {
             <Tabs defaultValue="all" className="w-full">
               <TabsList className="mb-6">
                 <TabsTrigger value="all">
-                  All ({filteredShows.length + filteredMovies.length})
+                  All ({filteredShows.length + filteredMovies.length + filteredAnime.length})
                 </TabsTrigger>
                 <TabsTrigger value="shows">
                   Shows ({filteredShows.length})
                 </TabsTrigger>
                 <TabsTrigger value="movies">
                   Movies ({filteredMovies.length})
+                </TabsTrigger>
+                <TabsTrigger value="anime">
+                  Anime ({filteredAnime.length})
                 </TabsTrigger>
               </TabsList>
 
@@ -269,13 +306,16 @@ export default function Search() {
                       <Skeleton key={i} className="aspect-[2/3]" />
                     ))}
                   </div>
-                ) : filteredShows.length + filteredMovies.length > 0 ? (
+                ) : filteredShows.length + filteredMovies.length + filteredAnime.length > 0 ? (
                   <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
                     {filteredShows.map((show) => (
                       <ShowCard key={`show-${show.id}`} show={show} />
                     ))}
                     {filteredMovies.map((movie) => (
                       <MovieCard key={`movie-${movie.id}`} movie={movie} />
+                    ))}
+                    {filteredAnime.map((a) => (
+                      <ShowCard key={`anime-${a.id}`} show={a} />
                     ))}
                   </div>
                 ) : (
@@ -332,6 +372,31 @@ export default function Search() {
                   <div className="text-center py-12">
                     <SearchIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
                     <h3 className="text-lg font-semibold mb-2">No movies found</h3>
+                    <p className="text-muted-foreground">
+                      Try adjusting your search or filters
+                    </p>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Anime Tab */}
+              <TabsContent value="anime">
+                {isLoading ? (
+                  <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
+                    {[...Array(12)].map((_, i) => (
+                      <Skeleton key={i} className="aspect-[2/3]" />
+                    ))}
+                  </div>
+                ) : filteredAnime.length > 0 ? (
+                  <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
+                    {filteredAnime.map((a) => (
+                      <ShowCard key={a.id} show={a} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <SearchIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No anime found</h3>
                     <p className="text-muted-foreground">
                       Try adjusting your search or filters
                     </p>

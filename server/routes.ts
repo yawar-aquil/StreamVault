@@ -13,7 +13,7 @@ import { setupSitemaps } from "./sitemap";
 import { sendContentRequestEmail, sendIssueReportEmail, sendPasswordResetEmail } from "./email-service";
 import { searchSubtitles, downloadSubtitle, getCachedSubtitle } from "./subtitle-service";
 import { checkAndAwardAchievements, ACHIEVEMENTS } from "./achievements";
-import { getActiveRooms } from "./watch-together";
+import { getActiveRooms, checkRoomExists } from "./watch-together";
 import webpush from "web-push";
 import { hashPassword, verifyPassword, generateToken, verifyToken, setAuthCookie, clearAuthCookie, type AuthRequest } from "./auth";
 import multer from "multer";
@@ -974,25 +974,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
   // Get Leaderboard
   app.get("/api/leaderboard", async (req, res) => {
     try {
+      const { ACHIEVEMENTS } = await import("./achievements");
+      const systemBadgeIds = new Set(ACHIEVEMENTS.map(a => a.id));
+
+      const getFilteredBadges = (badgesJson: string | null) => {
+        if (!badgesJson) return [];
+        try {
+          const badges = JSON.parse(badgesJson);
+          return badges
+            .filter((b: any) => !systemBadgeIds.has(b.id)) // Filter out system achievements
+            .reverse() // Newest first
+            .slice(0, 3); // Top 3
+        } catch (e) {
+          return [];
+        }
+      };
+
       const limit = parseInt(req.query.limit as string) || 10;
       const period = req.query.period as 'daily' | 'weekly' | 'monthly';
 
       if (period) {
         // Return time-based leaderboard
         const leaderboard = await storage.getLeaderboardByPeriod(period, limit);
+        // Note: Time-based leaderboard format doesn't natively include full badge list in current storage implementation
+        // If needed, we'd have to fetch user details. unique to this implementation, we will skip badges for period views
+        // or fetch them if critical. For now, matching existing structure but keeping clean.
 
-        // Map to public user interface (XP is already aggregated as xpGained)
+        // Actually, let's fetch the full user to get badges if we want to show them on period tabs too
+        // But storage.getLeaderboardByPeriod returns a simplified object. 
+        // Let's stick to the requested behaviour for the main leaderboard first which uses getLeaderboard()
+
         const publicLeaderboard = leaderboard.map(u => ({
           id: u.userId,
           username: u.username,
           avatarUrl: u.avatarUrl,
-          xp: u.xpGained, // Show gained XP for the period
+          xp: u.xpGained,
           level: u.level,
-          badges: [], // Badges are global, maybe irrelevant for time-period ranking
-          currentStreak: 0 // Not relevant for this view
+          badges: [], // Keeping empty for period views as per previous logic, or could be fetched
+          currentStreak: 0
         }));
 
         return res.json(publicLeaderboard);
@@ -1007,7 +1030,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           avatarUrl: u.avatarUrl,
           xp: u.xp,
           level: u.level,
-          badges: u.badges ? JSON.parse(u.badges as string) : [],
+          badges: getFilteredBadges(u.badges as string), // Use filtered list
           currentStreak: u.currentStreak || 0
         }));
 
@@ -1800,6 +1823,149 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // DIRECT MESSAGES ROUTES
   // ============================================
 
+
+  // Get Person Details (Cast Profile)
+  app.get("/api/person/:name", async (req, res) => {
+    try {
+      const { name } = req.params;
+      const TMDB_API_KEY = process.env.TMDB_API_KEY;
+
+      if (!TMDB_API_KEY) {
+        return res.status(500).json({ error: "TMDB API key not configured" });
+      }
+
+      // 1. Search for person to get ID
+      const searchRes = await fetch(
+        `https://api.themoviedb.org/3/search/person?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(name)}`
+      );
+      const searchData = await searchRes.json();
+
+      if (!searchData.results || searchData.results.length === 0) {
+        return res.status(404).json({ error: "Person not found" });
+      }
+
+      const personId = searchData.results[0].id;
+
+      // 2. Fetch person details with credits and external IDs
+      const detailsRes = await fetch(
+        `https://api.themoviedb.org/3/person/${personId}?api_key=${TMDB_API_KEY}&append_to_response=combined_credits,external_ids`
+      );
+      const personData = await detailsRes.json();
+
+      // 3. Format response
+      const credits = personData.combined_credits?.cast || [];
+
+      // Sort credits by popularity (most famous roles first)
+      credits.sort((a: any, b: any) => (b.popularity || 0) - (a.popularity || 0));
+
+      // Filter out items with no poster/backdrop to keep UI clean
+      const validCredits = credits.filter((c: any) => c.poster_path || c.backdrop_path);
+
+      const response = {
+        id: personData.id,
+        name: personData.name,
+        biography: personData.biography,
+        birthday: personData.birthday,
+        deathday: personData.deathday,
+        placeOfBirth: personData.place_of_birth,
+        profileUrl: personData.profile_path
+          ? `https://image.tmdb.org/t/p/original${personData.profile_path}`
+          : null,
+        knownForDepartment: personData.known_for_department,
+        socials: {
+          instagram: personData.external_ids?.instagram_id,
+          twitter: personData.external_ids?.twitter_id,
+          facebook: personData.external_ids?.facebook_id,
+          imdb: personData.external_ids?.imdb_id,
+        },
+        credits: validCredits.map((c: any) => ({
+          id: c.id,
+          title: c.title || c.name,
+          mediaType: c.media_type, // 'movie' or 'tv'
+          date: c.release_date || c.first_air_date,
+          posterUrl: c.poster_path
+            ? `https://image.tmdb.org/t/p/w500${c.poster_path}`
+            : null,
+          character: c.character,
+          voteAverage: c.vote_average,
+          overview: c.overview,
+          backdropUrl: c.backdrop_path
+            ? `https://image.tmdb.org/t/p/w780${c.backdrop_path}`
+            : null,
+        })).slice(0, 50) // Limit to top 50 roles
+      };
+
+      res.json(response);
+
+    } catch (error) {
+      console.error("Person details error:", error);
+      res.status(500).json({ error: "Failed to fetch person details" });
+    }
+  });
+
+  // Get Trending Content (Synced with TMDB)
+  app.get("/api/trending", async (req, res) => {
+    try {
+      const TMDB_API_KEY = process.env.TMDB_API_KEY;
+      let trendingItems: (Show | Movie | Anime)[] = [];
+
+      // 1. If TMDB Key exists, fetch real trending data
+      if (TMDB_API_KEY) {
+        try {
+          const tmdbResponse = await fetch(
+            `https://api.themoviedb.org/3/trending/all/day?api_key=${TMDB_API_KEY}`
+          );
+          const tmdbData = await tmdbResponse.json();
+
+          if (tmdbData.results) {
+            const trendingTitles = new Set(tmdbData.results.map((item: any) =>
+              (item.title || item.name || "").toLowerCase()
+            ));
+
+            // Fetch all local content
+            const allShows = await storage.getAllShows();
+            const allMovies = await storage.getAllMovies();
+            const allAnime = await storage.getAllAnime();
+            const allContent = [...allShows, ...allMovies, ...allAnime];
+
+            // Filter local content that matches TMDB trending titles
+            trendingItems = allContent.filter(item =>
+              trendingTitles.has(item.title.toLowerCase())
+            );
+          }
+        } catch (error) {
+          console.error("Failed to fetch TMDB trending:", error);
+        }
+      }
+
+      // 2. Fallback: If no matches or no API key, use local 'trending' flag + 'featured'
+      if (trendingItems.length < 5) {
+        const allShows = await storage.getAllShows();
+        const allMovies = await storage.getAllMovies();
+        const allAnime = await storage.getAllAnime();
+
+        const localTrending = [...allShows, ...allMovies, ...allAnime]
+          .filter(item => item.trending || item.featured)
+          .sort(() => 0.5 - Math.random()) // Shuffle
+          .slice(0, 10);
+
+        // Merge without duplicates
+        const existingIds = new Set(trendingItems.map(i => i.id));
+        localTrending.forEach(item => {
+          if (!existingIds.has(item.id)) {
+            trendingItems.push(item);
+          }
+        });
+      }
+
+      res.json(trendingItems.slice(0, 20));
+    } catch (error) {
+      console.error("Get trending error:", error);
+      res.status(500).json({ error: "Failed to get trending content" });
+    }
+  });
+
+  // Get Recommendations
   // Get conversations
   app.get("/api/messages/conversations", async (req, res) => {
     try {

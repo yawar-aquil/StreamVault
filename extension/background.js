@@ -122,8 +122,14 @@ async function broadcastToStreamVaultTabs(message) {
 }
 
 // Restore state on startup
+// Restore state on startup
 chrome.storage.local.get(['currentRoom', 'isHost'], (data) => {
-    if (data.currentRoom) {
+    if (chrome.runtime.lastError) {
+        console.log('[StreamVault BG] Storage error:', chrome.runtime.lastError);
+        return;
+    }
+
+    if (data && data.currentRoom) {
         currentRoom = data.currentRoom;
         isHost = data.isHost || false;
         isConnected = true;

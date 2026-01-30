@@ -397,7 +397,11 @@ export class MemStorage implements IStorage {
 
         // Restore shows
         if (data.shows) {
-          data.shows.forEach((show: Show) => this.shows.set(show.id, show));
+          data.shows.forEach((show: Show) => {
+            // Backfill createdAt if missing
+            if (!show.createdAt) { show.createdAt = new Date(0); } // epoch for old items
+            this.shows.set(show.id, show);
+          });
           console.log(`✅ Loaded ${data.shows.length} shows`);
         }
 
@@ -409,13 +413,19 @@ export class MemStorage implements IStorage {
 
         // Restore movies
         if (data.movies) {
-          data.movies.forEach((movie: Movie) => this.movies.set(movie.id, movie));
+          data.movies.forEach((movie: Movie) => {
+            if (!movie.createdAt) { movie.createdAt = new Date(0); }
+            this.movies.set(movie.id, movie);
+          });
           console.log(`✅ Loaded ${data.movies.length} movies`);
         }
 
         // Restore anime
         if (data.anime) {
-          data.anime.forEach((a: Anime) => this.anime.set(a.id, a));
+          data.anime.forEach((a: Anime) => {
+            if (!a.createdAt) { a.createdAt = new Date(0); }
+            this.anime.set(a.id, a);
+          });
           console.log(`✅ Loaded ${data.anime.length} anime`);
         }
 
@@ -584,7 +594,9 @@ export class MemStorage implements IStorage {
       cast: insertShow.cast || null,
       creators: insertShow.creators || null,
       featured: insertShow.featured || false,
-      trending: insertShow.trending || false
+      featured: insertShow.featured || false,
+      trending: insertShow.trending || false,
+      createdAt: new Date(),
     };
     this.shows.set(id, show);
     this.saveData(); // Persist to file
@@ -727,6 +739,7 @@ export class MemStorage implements IStorage {
       featured: insertMovie.featured ?? false,
       trending: insertMovie.trending ?? false,
       category: insertMovie.category || null,
+      createdAt: new Date(),
     };
     this.movies.set(id, movie);
     this.saveData(); // Persist to file
@@ -804,6 +817,7 @@ export class MemStorage implements IStorage {
       featured: insertAnime.featured ?? false,
       trending: insertAnime.trending ?? false,
       category: insertAnime.category || null,
+      createdAt: new Date(),
     };
     this.anime.set(id, animeEntry);
     this.saveData();

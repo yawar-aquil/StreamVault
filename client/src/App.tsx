@@ -32,6 +32,7 @@ import Help from "@/pages/help";
 import FAQ from "@/pages/faq";
 import Report from "@/pages/report";
 import Request from "@/pages/request";
+import SeriesPage from "@/pages/series";
 import Movies from "@/pages/movies";
 import Anime from "@/pages/anime";
 import AnimeDetail from "@/pages/anime-detail";
@@ -52,6 +53,7 @@ import WidgetDashboard from "@/pages/widget-dashboard";
 import SiteAnalytics from "@/pages/site-analytics";
 import { AnalyticsTracker } from "@/components/analytics-tracker";
 import NotFound from "@/pages/not-found";
+import PersonDetail from "@/pages/person-detail";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import ForgotPasswordPage from "@/pages/forgot-password";
@@ -87,6 +89,7 @@ function Router() {
           <Route path="/watch/:slug" component={Watch} />
           <Route path="/movie/:slug" component={MovieDetail} />
           <Route path="/watch-movie/:slug" component={WatchMovie} />
+          <Route path="/person/:name" component={PersonDetail} />
           <Route path="/anime" component={Anime} />
           <Route path="/anime/:slug" component={AnimeDetail} />
           <Route path="/watch-anime/:slug" component={WatchAnime} />
@@ -107,7 +110,7 @@ function Router() {
           <Route path="/faq" component={FAQ} />
           <Route path="/report" component={Report} />
           <Route path="/request" component={Request} />
-          <Route path="/series" component={Home} />
+          <Route path="/series" component={SeriesPage} />
           <Route path="/movies" component={Movies} />
           <Route path="/browse/shows" component={BrowseShows} />
           <Route path="/browse/movies" component={BrowseMovies} />

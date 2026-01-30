@@ -203,6 +203,7 @@ export const shows = pgTable("shows", {
   featured: boolean("featured").default(false),
   trending: boolean("trending").default(false),
   category: text("category"), // "action", "drama", "comedy", etc.
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Episodes table
@@ -241,6 +242,7 @@ export const movies = pgTable("movies", {
   featured: boolean("featured").default(false),
   trending: boolean("trending").default(false),
   category: text("category"), // "action", "drama", "comedy", etc.
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Anime table (similar structure to Shows, for anime content)
@@ -268,6 +270,7 @@ export const anime = pgTable("anime", {
   featured: boolean("featured").default(false),
   trending: boolean("trending").default(false),
   category: text("category"), // "action", "romance", "shonen", etc.
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Anime Episodes table

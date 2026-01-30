@@ -1,14 +1,35 @@
 import { useQuery } from "@tanstack/react-query";
 import { HeroCarousel } from "@/components/hero-carousel";
 import { ContentRow } from "@/components/content-row";
+import { Top10Row } from "@/components/top10-row";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SEO } from "@/components/seo";
 import type { Anime } from "@shared/schema";
+import { useMemo } from "react";
 
 export default function AnimePage() {
     const { data: anime, isLoading } = useQuery<Anime[]>({
         queryKey: ["/api/anime"],
     });
+
+    // Sort by rating for "Top 10" (Prioritize MAL rating, fallback to IMDb)
+    const topRated = useMemo(() => {
+        if (!anime) return [];
+        return [...anime].sort((a, b) => {
+            const ratingA = Number(a.malRating) || Number(a.imdbRating) || 0;
+            const ratingB = Number(b.malRating) || Number(b.imdbRating) || 0;
+            return ratingB - ratingA;
+        });
+    }, [anime]);
+
+    const featured = useMemo(() => anime?.filter((a) => a.featured) || [], [anime]);
+    const trending = useMemo(() => anime?.filter((a) => a.trending) || [], [anime]);
+    const action = useMemo(() => anime?.filter((a) => a.genres?.toLowerCase().includes("action")) || [], [anime]);
+    const romance = useMemo(() => anime?.filter((a) => a.genres?.toLowerCase().includes("romance")) || [], [anime]);
+    const shonen = useMemo(() => anime?.filter((a) => a.genres?.toLowerCase().includes("shonen") || a.genres?.toLowerCase().includes("shounen")) || [], [anime]);
+    const fantasy = useMemo(() => anime?.filter((a) => a.genres?.toLowerCase().includes("fantasy")) || [], [anime]);
+    const comedy = useMemo(() => anime?.filter((a) => a.genres?.toLowerCase().includes("comedy")) || [], [anime]);
+    const horror = useMemo(() => anime?.filter((a) => a.genres?.toLowerCase().includes("horror")) || [], [anime]);
 
     if (isLoading) {
         return (
@@ -26,15 +47,6 @@ export default function AnimePage() {
         );
     }
 
-    const featured = anime?.filter((a) => a.featured) || [];
-    const trending = anime?.filter((a) => a.trending) || [];
-    const action = anime?.filter((a) => a.genres?.toLowerCase().includes("action")) || [];
-    const romance = anime?.filter((a) => a.genres?.toLowerCase().includes("romance")) || [];
-    const shonen = anime?.filter((a) => a.genres?.toLowerCase().includes("shonen") || a.genres?.toLowerCase().includes("shounen")) || [];
-    const fantasy = anime?.filter((a) => a.genres?.toLowerCase().includes("fantasy")) || [];
-    const comedy = anime?.filter((a) => a.genres?.toLowerCase().includes("comedy")) || [];
-    const horror = anime?.filter((a) => a.genres?.toLowerCase().includes("horror")) || [];
-
     return (
         <div className="min-h-screen">
             <SEO
@@ -48,6 +60,14 @@ export default function AnimePage() {
 
             {/* Content Rows */}
             <div className="container mx-auto py-8 space-y-12">
+                {/* Top 10 Anime */}
+                {topRated.length > 0 && (
+                    <Top10Row
+                        title="Top 10 Anime"
+                        items={topRated}
+                    />
+                )}
+
                 {trending.length > 0 && (
                     <ContentRow
                         title="Trending Anime"

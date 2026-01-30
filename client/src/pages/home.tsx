@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from "@tanstack/react-query";
 import { HeroCarousel } from "@/components/hero-carousel";
 import { ContentRow } from "@/components/content-row";
+import { Top10Row } from "@/components/top10-row";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SEO } from "@/components/seo";
 import type { Show, Movie, Anime, ViewingProgress } from "@shared/schema";
@@ -24,6 +25,11 @@ export default function Home() {
 
   const { data: recommendations = [] } = useQuery<any[]>({
     queryKey: ["/api/recommendations"],
+  });
+
+  // Fetch trending content from API (synced with TMDB)
+  const { data: trending = [] } = useQuery<(Show | Movie | Anime)[]>({
+    queryKey: ["/api/trending"],
   });
 
   const isLoading = showsLoading || moviesLoading;
@@ -81,11 +87,10 @@ export default function Home() {
     const allProgress = [...(showProgress as any[]), ...(movieProgress as any[]), ...(animeProgress as any[])]
       .sort((a, b) => new Date(b.lastWatched).getTime() - new Date(a.lastWatched).getTime());
 
-    // For the ContentRow, we only pass shows (it only handles Show type)
+    // For the ContentRow, pass mixed content (Show, Movie, Anime)
     const continueWatchingShows = allProgress
-      .filter(p => p.type === 'show')
       .slice(0, 10)
-      .map(p => p.item as Show);
+      .map(p => p.item as Show | Movie | Anime);
 
     // Create progressDataMap with season/episode info for Resume navigation
     const progressDataMap = new Map<string, { season?: number; episodeNumber?: number }>();
@@ -104,6 +109,35 @@ export default function Home() {
     };
   }, [shows, movies, animeList, progressData]);
 
+  // Combine shows and movies and sort by createdAt (Newest first)
+  const allContent: (Show | Movie | Anime)[] = useMemo(() => {
+    return [...(shows || []), ...(movies || []), ...(animeList || [])]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [shows, movies, animeList]);
+
+  const featured = useMemo(() => allContent.filter((item) => item.featured) || [], [allContent]);
+  const action = useMemo(() => allContent.filter((item) => item.genres?.toLowerCase().includes("action")) || [], [allContent]);
+  const drama = useMemo(() => allContent.filter((item) => item.genres?.toLowerCase().includes("drama")) || [], [allContent]);
+  const comedy = useMemo(() => allContent.filter((item) => item.genres?.toLowerCase().includes("comedy")) || [], [allContent]);
+  const horror = useMemo(() => allContent.filter((item) => item.genres?.toLowerCase().includes("horror")) || [], [allContent]);
+
+  // Ensure we have 10 items for the Top 10 row
+  const top10Items = useMemo(() => {
+    const items = [...trending];
+    const existingIds = new Set(items.map(i => i.id));
+
+    // Fill with high rated content if we don't have 10
+    if (items.length < 10) {
+      const topRated = allContent
+        .filter(i => !existingIds.has(i.id))
+        .sort((a, b) => (Number(b.imdbRating) || 0) - (Number(a.imdbRating) || 0));
+
+      items.push(...topRated.slice(0, 10 - items.length));
+    }
+
+    return items;
+  }, [trending, allContent]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen">
@@ -120,16 +154,6 @@ export default function Home() {
     );
   }
 
-  // Combine shows and movies
-  const allContent: (Show | Movie)[] = [...(shows || []), ...(movies || [])];
-
-  const featured = allContent.filter((item) => item.featured) || [];
-  const trending = allContent.filter((item) => item.trending) || [];
-  const action = allContent.filter((item) => item.genres?.toLowerCase().includes("action")) || [];
-  const drama = allContent.filter((item) => item.genres?.toLowerCase().includes("drama")) || [];
-  const comedy = allContent.filter((item) => item.genres?.toLowerCase().includes("comedy")) || [];
-  const horror = allContent.filter((item) => item.genres?.toLowerCase().includes("horror")) || [];
-
   return (
     <div className="min-h-screen">
       <SEO
@@ -143,11 +167,10 @@ export default function Home() {
 
       {/* Content Rows */}
       <div className="container mx-auto py-8 space-y-12">
-        {trending.length > 0 && (
-          <ContentRow
-            title={t('home.trending')}
-            shows={trending}
-            orientation="landscape"
+        {top10Items.length > 0 && (
+          <Top10Row
+            title="Top 10 Today"
+            items={top10Items}
           />
         )}
 

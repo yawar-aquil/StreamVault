@@ -116,6 +116,10 @@ export function getActiveRooms() {
     }));
 }
 
+export function checkRoomExists(code: string): boolean {
+    return rooms.has(code.toUpperCase());
+}
+
 export function setupWatchTogether(httpServer: HttpServer): Server {
     const io = new Server(httpServer, {
         cors: {
