@@ -74,6 +74,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             sendResponse({ success: true });
             break;
 
+        case 'VIDEO_FOUND':
+            if (sender.tab) {
+                chrome.action.setBadgeText({ text: 'ON', tabId: sender.tab.id });
+                chrome.action.setBadgeBackgroundColor({ color: '#22c55e', tabId: sender.tab.id });
+            }
+            break;
+
         default:
             sendResponse({ error: 'Unknown message' });
     }

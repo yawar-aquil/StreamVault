@@ -20,6 +20,7 @@ function findVideoElement() {
         console.log('[StreamVault] Found video element');
         setupVideoListeners();
         showNotification('Video found! Open StreamVault extension to sync.');
+        chrome.runtime.sendMessage({ type: 'VIDEO_FOUND' }).catch(() => {});
         return true;
     }
 
