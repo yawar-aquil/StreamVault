@@ -907,6 +907,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check if room exists (for extension)
+  app.get("/api/watch-together/check/:code", (req, res) => {
+    const { code } = req.params;
+    if (!code || code.length !== 6) {
+      return res.json({ exists: false });
+    }
+    const exists = checkRoomExists(code);
+    res.json({ exists });
+  });
+
   // ============================================
   // GAMIFICATION ROUTES
   // ============================================

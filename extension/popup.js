@@ -81,12 +81,47 @@ async function joinRoom() {
         // I'll try localhost first, purely because I see `npm run dev` running.
         let response;
         try {
-            const resLocal = await fetch('http://localhost:5000/api/watch-together/check/' + roomCode);
-            if (resLocal.ok) response = await resLocal.json();
+            // Try strict local check first
+            const resLocal = await fetch('http://localhost:5000/api/watch-together/check/' + roomCode, {
+                headers: { 'Accept': 'application/json' }
+            });
+            const contentType = resLocal.headers.get('content-type');
+            if (resLocal.ok && contentType && contentType.includes('application/json')) {
+                response = await resLocal.json();
+            } else {
+                throw new Error('Local server not responding with JSON');
+            }
         } catch (e) {
-            // Fallback to prod
-            const resProd = await fetch('https://streamvault.live/api/watch-together/check/' + roomCode);
-            if (resProd.ok) response = await resProd.json();
+            console.log('Local check failed, trying prod...');
+            try {
+                // Fallback to prod
+                const resProd = await fetch('https://streamvault.live/api/watch-together/check/' + roomCode, {
+                    headers: { 'Accept': 'application/json' }
+                });
+                const contentType = resProd.headers.get('content-type');
+                if (resProd.ok && contentType && contentType.includes('application/json')) {
+                    response = await resProd.json();
+                } else {
+                    console.warn('Prod server returned non-JSON (likely HTML fallback)');
+                }
+            } catch (prodErr) {
+                console.error('Prod check failed:', prodErr);
+            }
+        }
+
+        // If we got a valid response, check existence
+        if (response) {
+            if (!response.exists) {
+                alert('Room not found! Please check the code.');
+                joinBtn.disabled = false;
+                joinBtn.textContent = 'Join Room';
+                return;
+            }
+        } else {
+            // Validation completely failed (server down or old version)
+            // We should probably allow them to try to connect via socket, 
+            // as the socket might handle it or it's a legacy server.
+            console.log('Skipping validation - server unreachable or old version');
         }
 
         if (!response || !response.exists) {
