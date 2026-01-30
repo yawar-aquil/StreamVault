@@ -10,7 +10,6 @@
     ],
     "host_permissions": [
         "https://drive.google.com/*",
-        "https://docs.google.com/*",
         "https://streamvault.live/*",
         "http://localhost:5000/*"
     ],
@@ -19,7 +18,8 @@
             "matches": [
                 "https://drive.google.com/file/d/*/preview*",
                 "https://drive.google.com/file/d/*/view*",
-                "https://docs.google.com/*"
+                "https://drive.google.com/open?id=*",
+                "https://drive.google.com/uc?*id=*"
             ],
             "js": [
                 "content-script.js"
