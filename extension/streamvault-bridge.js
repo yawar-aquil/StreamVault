@@ -47,6 +47,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Notify extension that we're on a watch-together page
 function notifyExtension() {
+    let roomCode = null;
+
     // Get room code from URL or page
     // 1. Check URL path (most reliable for this app)
     const pathMatch = window.location.pathname.match(/\/watch-together\/([a-zA-Z0-9]{6})/i);

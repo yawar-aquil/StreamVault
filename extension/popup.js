@@ -1,187 +1,166 @@
 /**
  * StreamVault Watch Together - Popup Script
- * Handles UI interactions for the extension popup
+ * Auto-detects room from StreamVault tab and connects
  */
 
 // Elements
 const statusDot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
-const connectForm = document.getElementById('connectForm');
+const notInRoomView = document.getElementById('notInRoomView');
+const roomDetectedView = document.getElementById('roomDetectedView');
 const connectedView = document.getElementById('connectedView');
-const roomCodeInput = document.getElementById('roomCode');
+const detectedRoomCode = document.getElementById('detectedRoomCode');
+const currentRoomDisplay = document.getElementById('currentRoom');
+const hostStatus = document.getElementById('hostStatus');
 const isHostCheckbox = document.getElementById('isHost');
-const hostToggleRow = document.getElementById('hostToggleRow');
 const joinBtn = document.getElementById('joinBtn');
 const leaveBtn = document.getElementById('leaveBtn');
-const currentRoomInput = document.getElementById('currentRoom');
 
-// Update UI based on connection status
-function updateUI(connected, roomCode = null) {
-    if (connected) {
-        statusDot.classList.add('connected');
-        statusText.classList.add('connected');
-        statusText.textContent = 'Connected';
-        connectForm.classList.add('hidden');
-        connectedView.classList.remove('hidden');
-        currentRoomInput.value = roomCode || '';
-    } else {
+let detectedRoom = null;
+
+// Update UI based on state
+function showView(view) {
+    notInRoomView.classList.add('hidden');
+    roomDetectedView.classList.add('hidden');
+    connectedView.classList.add('hidden');
+
+    if (view === 'notInRoom') {
+        notInRoomView.classList.remove('hidden');
         statusDot.classList.remove('connected');
-        statusText.classList.remove('connected');
-        statusText.textContent = 'Disconnected';
-        connectForm.classList.remove('hidden');
-        connectedView.classList.add('hidden');
+        statusDot.classList.remove('detecting');
+        statusText.textContent = 'Not in a room';
+    } else if (view === 'roomDetected') {
+        roomDetectedView.classList.remove('hidden');
+        statusDot.classList.remove('connected');
+        statusDot.classList.add('detecting');
+        statusText.textContent = 'Room found';
+    } else if (view === 'connected') {
+        connectedView.classList.remove('hidden');
+        statusDot.classList.add('connected');
+        statusDot.classList.remove('detecting');
+        statusText.textContent = 'Connected';
     }
 }
 
-// Check current status on popup open
+// Check if user is on a StreamVault Watch Together page
+async function detectRoom() {
+    try {
+        // Query for StreamVault watch-together tabs
+        const tabs = await chrome.tabs.query({
+            active: true,
+            currentWindow: true
+        });
+
+        const currentTab = tabs[0];
+        if (!currentTab || !currentTab.url) {
+            showView('notInRoom');
+            return null;
+        }
+
+        const url = currentTab.url;
+
+        // Check if on streamvault.live or localhost watch-together page
+        const watchTogetherPattern = /^https?:\/\/(streamvault\.live|localhost:5000)\/watch-together\/([A-Za-z0-9]{6})/;
+        const match = url.match(watchTogetherPattern);
+
+        if (match && match[2]) {
+            const roomCode = match[2].toUpperCase();
+            detectedRoom = roomCode;
+            detectedRoomCode.textContent = roomCode;
+            return roomCode;
+        }
+
+        return null;
+    } catch (e) {
+        console.error('Error detecting room:', e);
+        return null;
+    }
+}
+
+// Check current connection status
 async function checkStatus() {
     try {
         const response = await chrome.runtime.sendMessage({ type: 'GET_STATUS' });
-        updateUI(response.connected, response.roomCode);
+
+        if (response.connected && response.roomCode) {
+            // Already connected
+            currentRoomDisplay.textContent = response.roomCode;
+            hostStatus.textContent = response.isHost ? 'Syncing as Host' : 'Syncing as Viewer';
+            showView('connected');
+            return;
+        }
+
+        // Not connected, check if we can detect a room
+        const roomCode = await detectRoom();
+
+        if (roomCode) {
+            showView('roomDetected');
+        } else {
+            showView('notInRoom');
+        }
     } catch (e) {
         console.error('Failed to get status:', e);
+        showView('notInRoom');
     }
 }
 
-// Join room
-async function joinRoom() {
-    const roomCode = roomCodeInput.value.trim().toUpperCase();
-    if (!roomCode || roomCode.length !== 6) {
-        alert('Please enter a valid 6-character room code');
+// Connect to detected room
+async function connectToRoom() {
+    if (!detectedRoom) {
+        alert('No room detected. Please go to a Watch Together room on StreamVault.');
         return;
     }
 
     joinBtn.disabled = true;
-    joinBtn.textContent = 'Verifying...';
+    joinBtn.textContent = 'Connecting...';
 
     try {
-        // Validate room existence
-        // Note: For dev, we might need localhost logic, but extension context is isolated.
-        // We'll trust streamvault.live for prod or rely on the user having the app running locally?
-        // The manifest allows both. We'll try connection to where the bridge is?
-        // Simpler: Just try to fetch from the known production URL if localhost fails?
-        // Actually, let's try the server URL. To support both dev and prod, we need a setting or heuristics.
-        // For now, let's hardcode the check to the production or localhost depending on context if possible.
-        // Or simpler: Just assume the user is using the intended server.
-
-        // Let's rely on the background script to do the check if we want to be fancy, 
-        // but `fetch` in popup works if permission is granted.
-
-        // Try production first (or determine from tab?)
-        // Let's default to production for the extension published version.
-        // For this user (dev), we'll try localhost if fetch fails?
-
-        let apiUrl = 'https://streamvault.live/api/watch-together/check/' + roomCode;
-
-        // If we are in dev mode (localhost tab is open), we might want to target localhost.
-        // But for this quick fix, I'll parallel check or just pick one.
-        // I will use a simple utility to check.
-
-        // UPDATE: User is likely running on localhost based on context.
-        // I'll try localhost first, purely because I see `npm run dev` running.
-        let response;
-        try {
-            // Try strict local check first
-            const resLocal = await fetch('http://localhost:5000/api/watch-together/check/' + roomCode, {
-                headers: { 'Accept': 'application/json' }
-            });
-            const contentType = resLocal.headers.get('content-type');
-            if (resLocal.ok && contentType && contentType.includes('application/json')) {
-                response = await resLocal.json();
-            } else {
-                throw new Error('Local server not responding with JSON');
-            }
-        } catch (e) {
-            console.log('Local check failed, trying prod...');
-            try {
-                // Fallback to prod
-                const resProd = await fetch('https://streamvault.live/api/watch-together/check/' + roomCode, {
-                    headers: { 'Accept': 'application/json' }
-                });
-                const contentType = resProd.headers.get('content-type');
-                if (resProd.ok && contentType && contentType.includes('application/json')) {
-                    response = await resProd.json();
-                } else {
-                    console.warn('Prod server returned non-JSON (likely HTML fallback)');
-                }
-            } catch (prodErr) {
-                console.error('Prod check failed:', prodErr);
-            }
-        }
-
-        // If we got a valid response, check existence
-        if (response) {
-            if (!response.exists) {
-                alert('Room not found! Please check the code.');
-                joinBtn.disabled = false;
-                joinBtn.textContent = 'Join Room';
-                return;
-            }
-        } else {
-            // Validation completely failed (server down or old version)
-            // We should probably allow them to try to connect via socket, 
-            // as the socket might handle it or it's a legacy server.
-            console.log('Skipping validation - server unreachable or old version');
-        }
-
-        if (!response || !response.exists) {
-            alert('Room not found! Please check the code.');
-            joinBtn.disabled = false;
-            joinBtn.textContent = 'Join Room';
-            return;
-        }
-
-        joinBtn.textContent = 'Connecting...';
-
         const isHost = isHostCheckbox.checked;
 
         await chrome.runtime.sendMessage({
             type: 'JOIN_ROOM',
-            roomCode: roomCode,
+            roomCode: detectedRoom,
             isHost: isHost
         });
 
-        // Save last room code
-        chrome.storage.local.set({ lastRoomCode: roomCode });
-
-        // Save host status
+        // Save host preference
         chrome.storage.local.set({ isHost: isHost });
 
-        // Notify content scripts about host status
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            if (tabs[0]) {
-                chrome.tabs.sendMessage(tabs[0].id, { type: 'SET_HOST', isHost: isHost }).catch(() => { });
-            }
-        });
+        // Notify content scripts
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tabs[0]) {
+            chrome.tabs.sendMessage(tabs[0].id, { type: 'SET_HOST', isHost: isHost }).catch(() => { });
+        }
 
-        // Wait a bit then check status
-        setTimeout(checkStatus, 1000);
+        // Update UI
+        currentRoomDisplay.textContent = detectedRoom;
+        hostStatus.textContent = isHost ? 'Syncing as Host' : 'Syncing as Viewer';
+        showView('connected');
 
     } catch (e) {
-        console.error('Failed to join:', e);
-        alert('Failed to connect. Make sure screenvault.live is reachable.');
+        console.error('Failed to connect:', e);
+        alert('Failed to connect. Please try again.');
         joinBtn.disabled = false;
-        joinBtn.textContent = 'Join Room';
+        joinBtn.textContent = 'Connect Extension';
     }
 }
 
-// Leave room
-async function leaveRoom() {
+// Disconnect from room
+async function disconnectFromRoom() {
     try {
         await chrome.runtime.sendMessage({ type: 'LEAVE_ROOM' });
-        updateUI(false);
+
+        // Re-check status (will show room detected if still on page)
+        checkStatus();
     } catch (e) {
-        console.error('Failed to leave:', e);
+        console.error('Failed to disconnect:', e);
     }
 }
 
-// Load saved settings
+// Load saved host preference
 async function loadSettings() {
     try {
-        const data = await chrome.storage.local.get(['lastRoomCode', 'isHost']);
-        if (data.lastRoomCode) {
-            roomCodeInput.value = data.lastRoomCode;
-        }
+        const data = await chrome.storage.local.get(['isHost']);
         if (data.isHost !== undefined) {
             isHostCheckbox.checked = data.isHost;
         }
@@ -191,14 +170,8 @@ async function loadSettings() {
 }
 
 // Event listeners
-joinBtn.addEventListener('click', joinRoom);
-leaveBtn.addEventListener('click', leaveRoom);
-
-roomCodeInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        joinRoom();
-    }
-});
+joinBtn.addEventListener('click', connectToRoom);
+leaveBtn.addEventListener('click', disconnectFromRoom);
 
 // Initialize
 loadSettings();
