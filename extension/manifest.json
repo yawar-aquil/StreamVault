@@ -16,10 +16,7 @@
     "content_scripts": [
         {
             "matches": [
-                "https://drive.google.com/file/d/*/preview*",
-                "https://drive.google.com/file/d/*/view*",
-                "https://drive.google.com/open?id=*",
-                "https://drive.google.com/uc?*id=*"
+                "https://drive.google.com/*"
             ],
             "js": [
                 "content-script.js"

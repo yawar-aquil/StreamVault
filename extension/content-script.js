@@ -20,7 +20,7 @@ function findVideoElement() {
         console.log('[StreamVault] Found video element');
         setupVideoListeners();
         showNotification('Video found! Open StreamVault extension to sync.');
-        chrome.runtime.sendMessage({ type: 'VIDEO_FOUND' }).catch(() => {});
+        chrome.runtime.sendMessage({ type: 'VIDEO_FOUND' }).catch(() => { });
         return true;
     }
 
@@ -143,28 +143,47 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // Show notification
-function showNotification(text) {
+function showNotification(text, persistent = false) {
+    console.log('[StreamVault] Notification:', text);
+
     const existing = document.getElementById('streamvault-notif');
     if (existing) existing.remove();
 
     const notif = document.createElement('div');
     notif.id = 'streamvault-notif';
     notif.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: #DC2626;
-    color: white;
-    padding: 12px 20px;
-    border-radius: 8px;
-    font-family: sans-serif;
-    font-size: 14px;
-    z-index: 999999;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-  `;
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #DC2626, #ef4444);
+        color: white;
+        padding: 14px 24px;
+        border-radius: 12px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        z-index: 2147483647;
+        box-shadow: 0 8px 32px rgba(220, 38, 38, 0.5);
+        animation: slideIn 0.3s ease;
+        max-width: 300px;
+    `;
+
+    // Add animation keyframes
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    `;
+    document.head.appendChild(style);
+
     notif.textContent = '🎬 ' + text;
     document.body.appendChild(notif);
-    setTimeout(() => notif.remove(), 4000);
+
+    if (!persistent) {
+        setTimeout(() => notif.remove(), 5000);
+    }
 }
 
 // Initialize

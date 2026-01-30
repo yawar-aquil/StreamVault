@@ -81,6 +81,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             }
             break;
 
+        case 'VIDEO_DETECTED_ON_PAGE':
+            if (sender.tab) {
+                chrome.action.setBadgeText({ text: 'SYNC', tabId: sender.tab.id });
+                chrome.action.setBadgeBackgroundColor({ color: '#22c55e', tabId: sender.tab.id });
+            }
+            break;
+
         case 'BRIDGE_CONNECTED':
             if (sender.tab) {
                 chrome.action.setBadgeText({ text: 'ROOM', tabId: sender.tab.id });
