@@ -57,7 +57,7 @@ export default function Calendar() {
                 <div className="space-y-12">
                     {sortedMonths.map((month) => (
                         <div key={month} className="relative">
-                            <h2 className="text-2xl font-bold mb-6 sticky top-20 bg-background/95 backdrop-blur py-2 z-10 border-b border-white/5">
+                            <h2 className="text-2xl font-bold mb-6 sticky top-20 bg-background/95 backdrop-blur py-2 z-10 border-b border-border">
                                 {month}
                             </h2>
                             <div className="space-y-4">
@@ -70,7 +70,7 @@ export default function Calendar() {
                                         return (
                                             <div
                                                 key={event.id}
-                                                className="group relative flex items-center gap-6 p-4 rounded-xl bg-card/50 border border-white/5 hover:bg-white/5 transition-all hover:scale-[1.01]"
+                                                className="group relative flex items-center gap-6 p-4 rounded-xl bg-card/50 border border-border hover:bg-accent transition-all hover:scale-[1.01]"
                                             >
                                                 {/* Date Badge */}
                                                 <div className="flex flex-col items-center justify-center w-16 h-16 rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
@@ -88,8 +88,8 @@ export default function Calendar() {
                                                             </span>
                                                         )}
                                                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${event.contentType === 'movie' ? 'bg-blue-500/20 text-blue-500' :
-                                                                event.contentType === 'anime' ? 'bg-pink-500/20 text-pink-500' :
-                                                                    'bg-green-500/20 text-green-500'
+                                                            event.contentType === 'anime' ? 'bg-pink-500/20 text-pink-500' :
+                                                                'bg-green-500/20 text-green-500'
                                                             }`}>
                                                             {event.contentType || 'Event'}
                                                         </span>
@@ -117,7 +117,7 @@ export default function Calendar() {
                             </div>
 
                             {/* Connector Line */}
-                            <div className="absolute left-8 top-16 bottom-0 w-px bg-gradient-to-b from-white/10 to-transparent -z-10 hidden md:block" />
+                            <div className="absolute left-8 top-16 bottom-0 w-px bg-gradient-to-b from-border to-transparent -z-10 hidden md:block" />
                         </div>
                     ))}
                 </div>

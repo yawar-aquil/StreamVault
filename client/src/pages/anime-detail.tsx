@@ -527,30 +527,32 @@ export default function AnimeDetail() {
                                     <h3 className="text-lg font-semibold mb-4">Voice Cast</h3>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                         {JSON.parse(anime.castDetails).map((member: { name: string; character: string; profile_path: string | null }, index: number) => (
-                                            <div key={index} className="text-center">
-                                                <div className="aspect-square rounded-lg overflow-hidden bg-card mb-2">
-                                                    {member.profile_path ? (
-                                                        <img
-                                                            src={member.profile_path.startsWith('http') ? member.profile_path : `https://image.tmdb.org/t/p/w185${member.profile_path}`}
-                                                            alt={member.name}
-                                                            className="w-full h-full object-cover"
-                                                            loading="lazy"
-                                                        />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center bg-muted">
+                                            <Link key={index} href={`/person/${encodeURIComponent(member.name)}`}>
+                                                <div className="text-center cursor-pointer hover:opacity-80 transition-opacity">
+                                                    <div className="aspect-square rounded-lg overflow-hidden bg-card mb-2">
+                                                        {member.profile_path ? (
                                                             <img
-                                                                src="https://static.vecteezy.com/system/resources/thumbnails/005/544/718/small/profile-icon-design-free-vector.jpg"
+                                                                src={member.profile_path.startsWith('http') ? member.profile_path : `https://image.tmdb.org/t/p/w185${member.profile_path}`}
                                                                 alt={member.name}
                                                                 className="w-full h-full object-cover"
+                                                                loading="lazy"
                                                             />
-                                                        </div>
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center bg-muted">
+                                                                <img
+                                                                    src="https://static.vecteezy.com/system/resources/thumbnails/005/544/718/small/profile-icon-design-free-vector.jpg"
+                                                                    alt={member.name}
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <p className="font-medium text-sm line-clamp-1">{member.name}</p>
+                                                    {member.character && (
+                                                        <p className="text-xs text-muted-foreground line-clamp-1">as {member.character}</p>
                                                     )}
                                                 </div>
-                                                <p className="font-medium text-sm line-clamp-1">{member.name}</p>
-                                                {member.character && (
-                                                    <p className="text-xs text-muted-foreground line-clamp-1">as {member.character}</p>
-                                                )}
-                                            </div>
+                                            </Link>
                                         ))}
                                     </div>
                                 </div>

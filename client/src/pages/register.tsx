@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function RegisterPage() {
     const [, navigate] = useLocation();
-    const { register, isAuthenticated } = useAuth();
+    const { register, isAuthenticated, user } = useAuth();
     const { toast } = useToast();
 
     const [email, setEmail] = useState('');
@@ -22,8 +22,8 @@ export default function RegisterPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
-    // Redirect if already logged in
-    if (isAuthenticated) {
+    // Redirect if already logged in and verified
+    if (isAuthenticated && user?.emailVerified) {
         navigate('/');
         return null;
     }
@@ -55,7 +55,11 @@ export default function RegisterPage() {
                 title: 'Account created!',
                 description: 'Welcome to StreamVault. You can now join watch parties!',
             });
-            navigate('/');
+            toast({
+                title: 'Account created!',
+                description: 'Please verify your email address.',
+            });
+            navigate(`/verify-email?email=${encodeURIComponent(email)}`);
         } catch (err: any) {
             setError(err.message || 'Failed to register');
         } finally {

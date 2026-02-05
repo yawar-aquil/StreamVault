@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useTranslation } from 'react-i18next';
-import { Search, Moon, Sun, Play, Menu, X, Bookmark, Users, User, LogOut, PartyPopper, UserPlus, Download, Settings } from "lucide-react";
+import { Search, Moon, Sun, Play, Menu, X, Bookmark, Users, User, LogOut, PartyPopper, UserPlus, Download, Settings, Store, Wallet, Package, Trophy, Medal, BarChart2, Target, Gift, BookOpen, Code } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "./theme-provider";
@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Show, Movie, Anime } from "@shared/schema";
 import { useAuth } from "@/contexts/auth-context";
 import { NotificationsDropdown } from "@/components/notifications-dropdown";
+import StreamCoin from '@/components/stream-coin';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -157,32 +158,140 @@ export function Header() {
           </DropdownMenu>
         </nav>
 
+
+
         {/* Right Section */}
         <div className="flex items-center gap-2">
-          {/* Watch Rooms */}
-          <Link href="/watch-rooms">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="hidden sm:flex gap-2"
-              data-testid="button-watch-rooms"
-            >
-              <PartyPopper className="h-4 w-4" />
-              Rooms
-            </Button>
-          </Link>
 
-          {/* Watchlist */}
-          <Link href="/watchlist">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="hidden sm:flex"
-              data-testid="button-watchlist"
-            >
-              <Bookmark className="h-5 w-5" />
-            </Button>
-          </Link>
+
+
+
+          {/* Custom Grid Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="flex"
+                data-testid="button-grid-menu"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="text-foreground transition-colors"
+                >
+                  <rect x="3" y="3" width="7" height="7" rx="2" stroke="currentColor" strokeWidth="2.5" />
+                  <rect x="14" y="3" width="7" height="7" rx="2" stroke="currentColor" strokeWidth="2.5" />
+                  <rect x="14" y="14" width="7" height="7" rx="2" stroke="currentColor" strokeWidth="2.5" />
+                  <rect x="3" y="14" width="7" height="7" rx="2" stroke="currentColor" strokeWidth="2.5" />
+                </svg>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[300px] sm:w-[340px] p-4 bg-background/95 backdrop-blur-xl border-border/50 shadow-2xl rounded-2xl">
+              <div className="flex items-center justify-center mb-4 px-1">
+                <h2 className="text-lg font-bold">Menu</h2>
+
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {/* Store */}
+                <Link href="/store">
+                  <div className="group flex flex-col items-center justify-center p-4 rounded-xl bg-accent/30 hover:bg-accent border border-white/5 hover:border-primary/20 transition-all cursor-pointer">
+                    <Store className="h-6 w-6 mb-2 text-purple-500 group-hover:scale-110 transition-transform" />
+                    <span className="font-medium text-sm">Store</span>
+                  </div>
+                </Link>
+
+                {/* Rooms */}
+                <Link href="/watch-rooms">
+                  <div className="group flex flex-col items-center justify-center p-4 rounded-xl bg-accent/30 hover:bg-accent border border-white/5 hover:border-primary/20 transition-all cursor-pointer">
+                    <PartyPopper className="h-6 w-6 mb-2 text-pink-500 group-hover:scale-110 transition-transform" />
+                    <span className="font-medium text-sm">Rooms</span>
+                  </div>
+                </Link>
+
+                {/* Watchlist */}
+                <Link href="/watchlist">
+                  <div className="group flex flex-col items-center justify-center p-4 rounded-xl bg-accent/30 hover:bg-accent border border-white/5 hover:border-primary/20 transition-all cursor-pointer">
+                    <Bookmark className="h-6 w-6 mb-2 text-blue-500 group-hover:scale-110 transition-transform" />
+                    <span className="font-medium text-sm">Watchlist</span>
+                  </div>
+                </Link>
+
+                {/* Achievements */}
+                <Link href="/achievements">
+                  <div className="group flex flex-col items-center justify-center p-4 rounded-xl bg-accent/30 hover:bg-accent border border-white/5 hover:border-primary/20 transition-all cursor-pointer">
+                    <Trophy className="h-6 w-6 mb-2 text-purple-400 group-hover:scale-110 transition-transform" />
+                    <span className="font-medium text-sm">Achievements</span>
+                  </div>
+                </Link>
+
+                {/* Leaderboard */}
+                <Link href="/leaderboard">
+                  <div className="group flex flex-col items-center justify-center p-4 rounded-xl bg-accent/30 hover:bg-accent border border-white/5 hover:border-primary/20 transition-all cursor-pointer">
+                    <Medal className="h-6 w-6 mb-2 text-yellow-400 group-hover:scale-110 transition-transform" />
+                    <span className="font-medium text-sm">Leaderboard</span>
+                  </div>
+                </Link>
+
+                {/* Polls */}
+                <Link href="/polls">
+                  <div className="group flex flex-col items-center justify-center p-4 rounded-xl bg-accent/30 hover:bg-accent border border-white/5 hover:border-primary/20 transition-all cursor-pointer">
+                    <BarChart2 className="h-6 w-6 mb-2 text-blue-400 group-hover:scale-110 transition-transform" />
+                    <span className="font-medium text-sm">Polls</span>
+                  </div>
+                </Link>
+
+                {/* Challenges */}
+                <Link href="/challenges">
+                  <div className="group flex flex-col items-center justify-center p-4 rounded-xl bg-accent/30 hover:bg-accent border border-white/5 hover:border-primary/20 transition-all cursor-pointer">
+                    <Target className="h-6 w-6 mb-2 text-red-400 group-hover:scale-110 transition-transform" />
+                    <span className="font-medium text-sm">Challenges</span>
+                  </div>
+                </Link>
+
+                {/* Referrals */}
+                <Link href="/referral-program">
+                  <div className="group flex flex-col items-center justify-center p-4 rounded-xl bg-accent/30 hover:bg-accent border border-white/5 hover:border-primary/20 transition-all cursor-pointer">
+                    <Gift className="h-6 w-6 mb-2 text-emerald-500 group-hover:scale-110 transition-transform" />
+                    <span className="font-medium text-sm">Referrals</span>
+                  </div>
+                </Link>
+
+                {/* Blog */}
+                <Link href="/blog">
+                  <div className="group flex flex-col items-center justify-center p-4 rounded-xl bg-accent/30 hover:bg-accent border border-white/5 hover:border-primary/20 transition-all cursor-pointer">
+                    <BookOpen className="h-6 w-6 mb-2 text-orange-400 group-hover:scale-110 transition-transform" />
+                    <span className="font-medium text-sm">Blog</span>
+                  </div>
+                </Link>
+
+                {/* API Docs */}
+                <Link href="/api-docs">
+                  <div className="group flex flex-col items-center justify-center p-4 rounded-xl bg-accent/30 hover:bg-accent border border-white/5 hover:border-primary/20 transition-all cursor-pointer">
+                    <Code className="h-6 w-6 mb-2 text-cyan-400 group-hover:scale-110 transition-transform" />
+                    <span className="font-medium text-sm">API Docs</span>
+                  </div>
+                </Link>
+
+                {/* Theme Toggle */}
+                <div
+                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                  className="col-span-2 group flex flex-row items-center justify-center gap-3 p-4 rounded-xl bg-accent/30 hover:bg-accent border border-white/5 hover:border-primary/20 transition-all cursor-pointer"
+                >
+                  {theme === 'dark' ? (
+                    <Sun className="h-5 w-5 text-yellow-500 group-hover:rotate-90 transition-transform" />
+                  ) : (
+                    <Moon className="h-5 w-5 text-indigo-500 group-hover:-rotate-12 transition-transform" />
+                  )}
+                  <span className="font-medium text-sm">{theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}</span>
+                </div>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Search */}
           {searchOpen ? (
@@ -268,18 +377,7 @@ export function Header() {
               <Search className="h-5 w-5" />
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            data-testid="button-theme-toggle"
-          >
-            {theme === "dark" ? (
-              <Sun className="h-5 w-5" />
-            ) : (
-              <Moon className="h-5 w-5" />
-            )}
-          </Button>
+
 
           {/* Auth: Notifications Bell and User Avatar */}
           {isAuthenticated && (
@@ -288,22 +386,58 @@ export function Header() {
           {isAuthenticated ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={user?.avatarUrl || undefined} alt={user?.username} />
-                    <AvatarFallback className="bg-primary/10 text-xs">
-                      {user?.username?.slice(0, 2).toUpperCase() || <User className="h-4 w-4" />}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
+                <div className="flex items-center gap-2 cursor-pointer outline-none">
+
+
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user?.avatarUrl || undefined} alt={user?.username} />
+                      <AvatarFallback className="bg-primary/10 text-xs">
+                        {user?.username?.slice(0, 2).toUpperCase() || <User className="h-4 w-4" />}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <div className="px-2 py-1.5 text-sm font-medium">{user?.username}</div>
+                <div className="px-2 py-1.5 text-sm font-medium flex items-center gap-2">
+                  {user?.username}
+                  {user?.badges && (typeof user.badges === 'string' ? JSON.parse(user.badges) : user.badges)
+                    .filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'feature')
+                    .map((badge: any) => (
+                      <img
+                        key={badge.id}
+                        src={badge.imageUrl}
+                        alt={badge.name}
+                        title={badge.name}
+                        className="w-4 h-4 object-contain"
+                      />
+                    ))
+                  }
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-yellow-500 font-medium focus:text-yellow-400 focus:bg-yellow-500/10 cursor-default">
+                  <StreamCoin size="sm" className="mr-2" />
+                  <span>{user?.coins || 0} Coins</span>
+                </DropdownMenuItem>
+                <Link href="/wallet">
+                  <DropdownMenuItem className="cursor-pointer">
+                    <Wallet className="mr-2 h-4 w-4" />
+                    <span>{t('My Wallet')}</span>
+                  </DropdownMenuItem>
+                </Link>
+                <Link href="/inventory">
+                  <DropdownMenuItem className="cursor-pointer">
+                    <Package className="mr-2 h-4 w-4" />
+                    <span>My Products</span>
+                  </DropdownMenuItem>
+                </Link>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate('/profile')}>
                   <User className="mr-2 h-4 w-4" />
                   {t('nav.profile')}
                 </DropdownMenuItem>
+
                 <DropdownMenuItem onClick={() => navigate('/settings')}>
                   <Settings className="mr-2 h-4 w-4" />
                   {t('nav.settings')}

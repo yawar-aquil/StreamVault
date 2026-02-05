@@ -1,6 +1,9 @@
+
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
+import '@/jwplayer.css'; // Import Netflix-style red skin
 
 // Export interface for external control
 export interface VideoPlayerRef {
@@ -21,7 +24,15 @@ interface SubtitleTrack {
     default?: boolean;
 }
 
-interface VideoPlayerProps {
+interface VideoMetadata {
+    title?: string;
+    description?: string;
+    season?: number;
+    episode?: number;
+    episodeTitle?: string;
+}
+
+interface VideoPlayerProps extends VideoMetadata {
     videoUrl: string | null | undefined;
     className?: string;
     onTimeUpdate?: (currentTime: number, duration: number) => void;
@@ -35,6 +46,8 @@ interface VideoPlayerProps {
     syncMode?: boolean; // If true, disables local controls for non-hosts
     subtitleTracks?: SubtitleTrack[]; // External subtitle tracks to load
 }
+
+// ... (keep helper functions unchanged: isGoogleDriveUrl, isJWPlayerUrl, etc.) ...
 
 // URL type detection helpers
 const isGoogleDriveUrl = (url: string): boolean => {
@@ -99,7 +112,7 @@ declare global {
 }
 
 // JW Player Wrapper Component with ref for external control
-interface JWPlayerWrapperProps {
+interface JWPlayerWrapperProps extends VideoMetadata {
     videoUrl: string;
     className?: string;
     onTimeUpdate?: (currentTime: number, duration: number) => void;
@@ -126,12 +139,20 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
     autoplay = false,
     isHost = true,
     syncMode = false,
-    subtitleTracks = []
+    subtitleTracks = [],
+    title,
+    description,
+    season,
+    episode,
+    episodeTitle
 }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const playerIdRef = useRef<string>(`jwplayer-${Math.random().toString(36).substr(2, 9)}`);
     const playerRef = useRef<any>(null);
     const lastSeekTime = useRef<number>(0);
+    const [isPaused, setIsPaused] = useState(!autoplay); // Default to paused unless autoplay
+    const [isIdle, setIsIdle] = useState(true); // Track if player is idle/unstarted
+    const [playerContainer, setPlayerContainer] = useState<HTMLElement | null>(null);
 
     // Refs for callbacks to avoid stale closures
     const callbacksRef = useRef({
@@ -178,8 +199,6 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
         },
         setCaptions: (index: number) => {
             console.log('🎬 VideoPlayer.setCaptions() called:', index);
-            // JWPlayer uses setCurrentCaptions - index 0 = off, 1+ = track index
-            // Our index: -1 = off, 0+ = track. So we add 1
             playerRef.current?.setCurrentCaptions?.(index + 1);
         },
         getCurrentTime: () => {
@@ -201,19 +220,15 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
         }
 
         const playerId = playerIdRef.current;
-
-        // Initialize JW Player with full settings
-        // Use proxy for protected external URLs
         const finalVideoUrl = getProxiedUrl(videoUrl);
         const playerConfig: any = {
             file: finalVideoUrl,
             width: '100%',
             height: '100%',
             autostart: autoplay,
-            controls: true, // Always show controls, but we'll handle sync via events
+            controls: true,
         };
 
-        // If explicitly a blob URL, force type to mp4 to help JW Player
         if (finalVideoUrl.startsWith('blob:')) {
             playerConfig.type = 'mp4';
         }
@@ -226,15 +241,10 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
             playbackRates: [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2],
             displaytitle: false,
             displaydescription: false,
-            // Force highest quality for HLS/adaptive streams
-            qualityLabels: {
-                // Map bitrates to quality labels
-            },
-            // Always start with highest quality level (0 = auto, -1 = highest)
+            // HLS Settings
+            qualityLabels: {},
             hlshtml: true,
-            // Set default quality to highest available
-            defaultBandwidthEstimate: 50000000, // 50 Mbps - forces highest quality selection
-            // Enable captions button and auto-detect captions
+            defaultBandwidthEstimate: 50000000,
             captions: {
                 color: '#FFFFFF',
                 fontSize: 14,
@@ -246,14 +256,12 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
                 windowColor: '#000000',
                 windowOpacity: 0
             },
-            // Add subtitle tracks - use provided tracks or fallback to placeholder
-            // JW Player will show the CC button when tracks array exists
             tracks: subtitleTracks.length > 0
                 ? subtitleTracks.map((track, index) => ({
                     file: track.file,
                     label: track.label,
                     kind: track.kind,
-                    'default': index === 0 // First track is default
+                    'default': index === 0
                 }))
                 : [
                     {
@@ -263,7 +271,6 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
                         'default': false
                     }
                 ],
-            // Show captions button in controlbar even if no tracks (allows user to toggle if available)
             renderCaptionsNatively: false,
             skin: {
                 name: 'seven'
@@ -272,32 +279,42 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
 
         playerRef.current = player;
 
-        // Attach event listeners using refs to avoid stale closures
+        // Wait for player to be ready to get container for Portal
+        player.on('ready', () => {
+            const element = document.getElementById(playerId);
+            if (element) {
+                // Try to inject into the wrapper or the element itself
+                // JWPlayer structure: #id > .jw-wrapper > .jw-media
+                // We want to be inside #id
+                setPlayerContainer(element);
+            }
+        });
+
+        // --- Event Listeners ---
+
         player.on('time', (e: { position: number; duration: number }) => {
             callbacksRef.current.onTimeUpdate?.(e.position, e.duration);
         });
 
-        // Only emit control events if host or not in sync mode
         player.on('play', () => {
+            setIsPaused(false);
+            setIsIdle(false);
             const { isHost, syncMode, onPlay } = callbacksRef.current;
-            console.log('🎬 JW Player play event - isHost:', isHost, 'syncMode:', syncMode);
-            if (isHost || !syncMode) {
-                onPlay?.();
-            }
+            if (isHost || !syncMode) onPlay?.();
         });
 
         player.on('pause', () => {
+            setIsPaused(true);
             const { isHost, syncMode, onPause } = callbacksRef.current;
-            console.log('🎬 JW Player pause event - isHost:', isHost, 'syncMode:', syncMode);
-            if (isHost || !syncMode) {
-                onPause?.();
-            }
+            if (isHost || !syncMode) onPause?.();
+        });
+
+        player.on('idle', () => {
+            setIsPaused(true);
         });
 
         player.on('seek', (e: { offset: number; position: number }) => {
             const { isHost, syncMode, onSeek } = callbacksRef.current;
-            console.log('🎬 JW Player seek event:', e.offset, '- isHost:', isHost);
-            // Only emit if this is a user-initiated seek (not a sync seek)
             if ((isHost || !syncMode) && Math.abs(e.offset - lastSeekTime.current) > 1) {
                 onSeek?.(e.offset);
             }
@@ -305,35 +322,19 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
 
         player.on('playbackRateChanged', (e: { playbackRate: number }) => {
             const { isHost, syncMode, onPlaybackRateChange } = callbacksRef.current;
-            console.log('🎬 JW Player playbackRate changed:', e.playbackRate, '- isHost:', isHost);
-            if (isHost || !syncMode) {
-                onPlaybackRateChange?.(e.playbackRate);
-            }
-        });
-
-        // Caption/subtitle changed - notify for sync in watch together
-        player.on('captionsList', (e: { tracks: any[]; track: number }) => {
-            console.log('🎬 JW Player captionsList:', e);
+            if (isHost || !syncMode) onPlaybackRateChange?.(e.playbackRate);
         });
 
         player.on('captionsChanged', (e: { track: number }) => {
             const { isHost, syncMode, onSubtitleChange } = callbacksRef.current;
-            // JWPlayer track: 0 = off, 1+ = track index. Convert to our format: -1 = off, 0+ = track
             const subtitleIndex = e.track - 1;
-            console.log('🎬 JW Player captions changed to track:', e.track, '(our index:', subtitleIndex, ') - isHost:', isHost);
-            if (isHost || !syncMode) {
-                onSubtitleChange?.(subtitleIndex);
-            }
+            if (isHost || !syncMode) onSubtitleChange?.(subtitleIndex);
         });
 
-        // Force highest quality when quality levels are loaded (for HLS streams)
         player.on('levels', (e: { levels: Array<{ label: string; bitrate: number }> }) => {
             if (e.levels && e.levels.length > 1) {
-                console.log('🎬 Quality levels available:', e.levels.length);
-                // Set to highest quality (last level is usually highest)
                 const highestLevel = e.levels.length - 1;
                 player.setCurrentQuality(highestLevel);
-                console.log(`🎬 Forced quality to level ${highestLevel}:`, e.levels[highestLevel]?.label);
             }
         });
 
@@ -341,20 +342,79 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
             playerRef.current = null;
             try {
                 window.jwplayer(playerId).remove();
-            } catch (e) {
-                // Player may already be destroyed
-            }
+            } catch (e) { }
         };
-    }, [videoUrl, autoplay, isHost, syncMode, subtitleTracks.length]); // Added subtitleTracks.length to reinit when subs loaded
+    }, [videoUrl, autoplay, isHost, syncMode, subtitleTracks.length]);
+
+    // Format helpers
+    const formatSeasonEp = () => {
+        if (season && episode) return `Season ${season}: Ep. ${episode}`;
+        if (season) return `Season ${season}`;
+        if (episode) return `Episode ${episode}`;
+        return '';
+    };
+
+    // Render Overlay
+    const Overlay = (
+        <div
+            className="absolute inset-0 z-10 flex flex-col justify-center px-12 pointer-events-none animate-in fade-in duration-300 bg-black/60"
+        >
+            <div className="max-w-3xl space-y-4">
+                <span className="text-gray-300 font-medium text-lg uppercase tracking-wide drop-shadow-md">You're watching</span>
+
+                {title && (
+                    <h1 className="text-5xl font-bold text-white tracking-tight drop-shadow-lg">{title}</h1>
+                )}
+
+                {(season || episode) && (
+                    <div className="text-xl font-semibold text-gray-200 drop-shadow-md">
+                        {formatSeasonEp()}
+                    </div>
+                )}
+
+                {episodeTitle && (
+                    <h2 className="text-3xl font-bold text-white drop-shadow-lg">{episodeTitle}</h2>
+                )}
+
+                {description && (
+                    <p className="text-gray-200 text-base max-w-2xl line-clamp-3 leading-relaxed mt-4 drop-shadow-md">
+                        {description}
+                    </p>
+                )}
+            </div>
+            {/* Removed 'Paused' text as requested */}
+        </div>
+    );
 
     return (
-        <div className={`w-full h-full ${className}`} style={{ position: 'relative' }}>
-            <div
-                id={playerIdRef.current}
-                ref={containerRef}
-                style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-            ></div>
-        </div>
+        <>
+            {/* Inject CSS to force progress bar above overlay */}
+            <style>{`
+                .jwplayer .jw-controlbar .jw-slider-time {
+                    z-index: 50 !important;
+                    position: relative !important;
+                }
+                .jwplayer .jw-controlbar .jw-group-bottom {
+                     /* Maintain button visibility below if needed, but overlay covers controls except progress per user request */
+                     /* User requested "just progress bar", so buttons (play/pause) should dim. */
+                }
+            `}</style>
+
+            <div className={`w-full h-full ${className}`} style={{ position: 'relative' }}>
+                <div
+                    id={playerIdRef.current}
+                    ref={containerRef}
+                    style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+                ></div>
+
+                {/* Render Overlay via Portal if container is ready, otherwise inline (fallback) */}
+                {isPaused && !isIdle && (title || episodeTitle) && (
+                    playerContainer
+                        ? createPortal(Overlay, playerContainer)
+                        : Overlay
+                )}
+            </div>
+        </>
     );
 });
 
@@ -370,13 +430,18 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
     autoplay = false,
     isHost = true,
     syncMode = false,
-    subtitleTracks = []
+    subtitleTracks = [],
+    title,
+    description,
+    season,
+    episode,
+    episodeTitle
 }, ref) => {
+    // ... (rest of VideoPlayer implementation needs to use JWPlayerWrapper with new props)
     const jwPlayerRef = useRef<VideoPlayerRef>(null);
     const [playerType, setPlayerType] = useState<'drive' | 'jwplayer' | 'direct' | 'embed' | 'local' | 'none'>('none');
     const [processedUrl, setProcessedUrl] = useState<string | null>(null);
 
-    // Forward ref to internal player
     useImperativeHandle(ref, () => ({
         play: () => jwPlayerRef.current?.play(),
         pause: () => jwPlayerRef.current?.pause(),
@@ -389,13 +454,13 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
     }));
 
     useEffect(() => {
+        // ... (URL detection logic unchanged) ...
         if (!videoUrl) {
             setPlayerType('none');
             setProcessedUrl(null);
             return;
         }
 
-        // Check for placeholder
         const isPlaceholder = PLACEHOLDER_IDS.some(id => videoUrl.includes(id));
         if (isPlaceholder) {
             setPlayerType('none');
@@ -403,29 +468,21 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
             return;
         }
 
-        // Check if it's a full URL or just a Drive ID
         const isAbsoluteUrl = videoUrl.startsWith('http://') || videoUrl.startsWith('https://') || videoUrl.startsWith('blob:');
-
-        // If it's just a Google Drive ID (alphanumeric with dashes/underscores, typically 30-40 chars)
         const isDriveId = /^[a-zA-Z0-9_-]{20,60}$/.test(videoUrl);
 
         if (isDriveId && !isAbsoluteUrl) {
-            // It's a plain Google Drive ID - convert to embed URL
-            console.log('VideoPlayer: Detected Drive ID, converting to embed URL');
             setPlayerType('drive');
             setProcessedUrl(`https://drive.google.com/file/d/${videoUrl}/preview?autoplay=0&controls=1&modestbranding=1`);
             return;
         }
 
-        // If not absolute URL and not a Drive ID, it's invalid
         if (!isAbsoluteUrl) {
-            console.warn('VideoPlayer: Invalid URL format (must be absolute URL or Drive ID)', videoUrl);
             setPlayerType('none');
             setProcessedUrl(null);
             return;
         }
 
-        // Detect URL type and process accordingly
         if (videoUrl.startsWith('blob:')) {
             setPlayerType('local');
             setProcessedUrl(videoUrl);
@@ -435,7 +492,6 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
             setProcessedUrl(`https://drive.google.com/file/d/${driveId}/preview?autoplay=0&controls=1&modestbranding=1`);
         } else if (isJWPlayerUrl(videoUrl)) {
             setPlayerType('jwplayer');
-            // Use URL directly for JW Player embed or convert if needed
             setProcessedUrl(videoUrl);
         } else if (isDirectVideoUrl(videoUrl)) {
             setPlayerType('direct');
@@ -444,14 +500,13 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
             setPlayerType('embed');
             setProcessedUrl(videoUrl);
         } else {
-            // Default: treat as generic embed
             setPlayerType('embed');
             setProcessedUrl(videoUrl);
         }
     }, [videoUrl]);
 
-    // Render placeholder when no video available
     if (playerType === 'none' || !processedUrl) {
+        // ... (placeholder render unchanged) ...
         return (
             <div className={`w-full h-full flex flex-col items-center justify-center text-white p-8 text-center bg-black ${className}`}>
                 <div className="mb-6">
@@ -473,7 +528,6 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
         );
     }
 
-    // Google Drive Player
     if (playerType === 'drive') {
         return (
             <iframe
@@ -486,7 +540,6 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
         );
     }
 
-    // Local Native Player (for offline blob playback)
     if (playerType === 'local') {
         return (
             <video
@@ -500,22 +553,15 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
         );
     }
 
-    // JW Player - Use iframe embed
     if (playerType === 'jwplayer') {
-        // If it's already an embed URL, use directly
-        // Otherwise, try to create proper embed URL
         let embedUrl = processedUrl;
-
-        // Convert JW Player CDN URLs to embed format if needed
         if (!processedUrl.includes('/embed') && processedUrl.includes('cdn.jwplayer.com')) {
-            // Try to extract media ID and create embed URL
             const mediaIdMatch = processedUrl.match(/\/([a-zA-Z0-9]{8})-/);
             if (mediaIdMatch) {
                 const mediaId = mediaIdMatch[1];
                 embedUrl = `https://cdn.jwplayer.com/players/${mediaId}-${mediaId}.html`;
             }
         }
-
         return (
             <iframe
                 src={embedUrl}
@@ -528,7 +574,6 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
         );
     }
 
-    // Direct Video (MP4, WebM, etc.) - Use JW Player
     if (playerType === 'direct') {
         return (
             <JWPlayerWrapper
@@ -545,11 +590,15 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
                 isHost={isHost}
                 syncMode={syncMode}
                 subtitleTracks={subtitleTracks}
+                title={title}
+                description={description}
+                season={season}
+                episode={episode}
+                episodeTitle={episodeTitle}
             />
         );
     }
 
-    // Generic Embed (iframe for other players)
     return (
         <iframe
             src={processedUrl}

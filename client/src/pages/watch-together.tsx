@@ -228,6 +228,7 @@ function WatchTogetherContent() {
         authUserId?: string;
         isHost?: boolean;
         bio?: string;
+        badges?: any[];
         socialLinks?: {
             twitter?: string;
             instagram?: string;
@@ -242,616 +243,21 @@ function WatchTogetherContent() {
         } | null;
     } | null>(null);
 
-    // Friends system hooks
-    const { sendFriendRequest, friends } = useFriends();
-    const { toast } = useToast();
-    const { startActivity, stopActivity } = useSocialSocket();
-    const [isDragging, setIsDragging] = useState(false);
-    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-    const hasDraggedRef = useRef(false); // Track if actual drag motion happened
-    const chatEndRef = useRef<HTMLDivElement>(null);
-    const videoRef = useRef<HTMLIFrameElement>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
-    const chatOverlayRef = useRef<HTMLDivElement>(null);
-
-    // Countdown timer for scheduled rooms
-    const [countdown, setCountdown] = useState<{ hours: number; minutes: number; seconds: number } | null>(null);
-    const [isScheduledRoomReady, setIsScheduledRoomReady] = useState(false);
-
-    // Detect portrait mode on mobile
-    useEffect(() => {
-        const checkOrientation = () => {
-            const isMobile = window.innerWidth < 768;
-            const isPortraitMode = window.innerHeight > window.innerWidth;
-            setIsPortrait(isMobile && isPortraitMode);
-            setIsSmallHeight(window.innerHeight < 600); // Detect landscape mobile or small screens
-        };
-
-        checkOrientation();
-        window.addEventListener('resize', checkOrientation);
-        window.addEventListener('orientationchange', checkOrientation);
-
-        return () => {
-            window.removeEventListener('resize', checkOrientation);
-            window.removeEventListener('orientationchange', checkOrientation);
-        };
-    }, []);
-
-    // Detect fullscreen mode changes
-    useEffect(() => {
-        const handleFullscreenChange = () => {
-            const isFS = !!(document.fullscreenElement ||
-                (document as any).webkitFullscreenElement ||
-                (document as any).mozFullScreenElement ||
-                (document as any).msFullscreenElement);
-            setIsFullscreen(isFS);
-            // Reset minimized state when exiting fullscreen
-            if (!isFS) {
-                setIsOverlayChatMinimized(false);
-            }
-        };
-
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
-        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
-
-        return () => {
-            document.removeEventListener('fullscreenchange', handleFullscreenChange);
-            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-            document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
-            document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
-        };
-    }, []);
-
-    // Broadcast watch activity to friends
-    useEffect(() => {
-        if (roomInfo && isAuthenticated && roomCode) {
-            // Start activity when room is joined
-            startActivity({
-                roomCode: roomInfo.roomCode,
-                contentType: roomInfo.contentType,
-                contentId: roomInfo.contentId,
-                contentTitle: roomInfo.contentTitle || 'Unknown',
-                contentPoster: roomInfo.contentPoster || undefined,
-                episodeTitle: roomInfo.episodeTitle || undefined,
-            });
-        }
-
-        // Stop activity when component unmounts or room changes
-        return () => {
-            if (isAuthenticated) {
-                stopActivity();
-            }
-        };
-    }, [roomInfo?.roomCode, roomInfo?.contentTitle, isAuthenticated, startActivity, stopActivity]);
-
-    // Countdown timer for scheduled rooms
-    useEffect(() => {
-        if (!roomInfo?.scheduledFor) {
-            setCountdown(null);
-            setIsScheduledRoomReady(true);
-            return;
-        }
-
-        const scheduledTime = new Date(roomInfo.scheduledFor).getTime();
-
-        const updateCountdown = () => {
-            const now = Date.now();
-            const diff = scheduledTime - now;
-
-            if (diff <= 0) {
-                setCountdown(null);
-                setIsScheduledRoomReady(true);
-                return true; // Timer complete
-            }
-
-            const hours = Math.floor(diff / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-            setCountdown({ hours, minutes, seconds });
-            setIsScheduledRoomReady(false);
-            return false;
-        };
-
-        // Initial check
-        if (updateCountdown()) return;
-
-        // Update every second
-        const interval = setInterval(() => {
-            if (updateCountdown()) {
-                clearInterval(interval);
-            }
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, [roomInfo?.scheduledFor]);
-
-    // Handle file attachment - convert to base64 for sharing
-    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        // Check file size (max 2MB for base64 efficiency)
-        if (file.size > 2 * 1024 * 1024) {
-            alert('File too large. Max 2MB allowed for sharing.');
-            return;
-        }
-
-        let type: 'image' | 'video' | 'audio';
-        if (file.type.startsWith('image/')) type = 'image';
-        else if (file.type.startsWith('video/')) type = 'video';
-        else if (file.type.startsWith('audio/')) type = 'audio';
-        else {
-            alert('Unsupported file type. Only images, videos, and audio allowed.');
-            return;
-        }
-
-        // Convert to base64 data URL
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const base64 = reader.result as string;
-            setAttachment({ file, preview: base64, type });
-        };
-        reader.readAsDataURL(file);
-    };
-
-    // Remove attachment
-    const removeAttachment = () => {
-        setAttachment(null);
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
-    };
-
-    // Search GIFs from Tenor API
-    const searchGifs = async (query: string) => {
-        if (!query.trim()) {
-            setGifs([]);
-            return;
-        }
-        setIsLoadingGifs(true);
-        try {
-            const response = await fetch(
-                `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ&client_key=streamvault&limit=20`
-            );
-            const data = await response.json();
-            setGifs(data.results || []);
-        } catch (error) {
-            console.error('GIF search error:', error);
-            setGifs([]);
-        }
-        setIsLoadingGifs(false);
-    };
-
-    // Load trending GIFs when GIF picker opens
-    useEffect(() => {
-        if (showGifPicker && gifs.length === 0 && !gifSearch) {
-            searchGifs('trending');
-        }
-    }, [showGifPicker]);
-
-    // Fetch all shows to find by ID (API doesn't support direct ID lookup)
-    const { data: allShows } = useQuery<Show[]>({
-        queryKey: ['/api/shows'],
-        enabled: !!roomInfo && roomInfo.contentType === 'show'
-    });
-    const show = allShows?.find(s => s.id === roomInfo?.contentId);
-
-    // Fetch all movies to find by ID
-    const { data: allMovies } = useQuery<Movie[]>({
-        queryKey: ['/api/movies'],
-        enabled: !!roomInfo && roomInfo.contentType === 'movie'
-    });
-    const movie = allMovies?.find(m => m.id === roomInfo?.contentId);
-
-    // Fetch all episodes for the show, then find the one we need
-    const { data: episodes } = useQuery<Episode[]>({
-        queryKey: ['/api/episodes', show?.id],
-        enabled: !!show?.id
+    // Fetch full public profile when a user is selected
+    const { data: fullProfileData } = useQuery({
+        queryKey: ['/api/users', selectedProfileUser?.authUserId, 'public-profile'],
+        queryFn: async () => {
+            if (!selectedProfileUser?.authUserId) return null;
+            const res = await fetch(`/api/users/${selectedProfileUser.authUserId}/public-profile`);
+            if (!res.ok) return null;
+            return res.json();
+        },
+        enabled: !!selectedProfileUser?.authUserId
     });
 
-    // Find the episode by ID from the episodes array
-    const episode = episodes?.find(ep => ep.id === roomInfo?.episodeId);
+    // ... (friends system hooks)
 
-    // Fetch blog posts to get IMDB links for subtitles
-    const { data: blogPosts = [] } = useQuery<any[]>({
-        queryKey: ['/api/blog'],
-        enabled: !!(show?.id || movie?.id)
-    });
-
-    // Find matching blog post for this content to get external links
-    const blogPost = (show || movie) ? blogPosts.find(
-        (post) => post.contentId === (show?.id || movie?.id) || post.slug === (show?.slug || movie?.slug)
-    ) : null;
-
-    // State for subtitle tracks
-    const [subtitleTracks, setSubtitleTracks] = useState<Array<{
-        file: string;
-        label: string;
-        kind: 'captions' | 'subtitles';
-        default?: boolean;
-    }>>([]);
-
-    // Fetch subtitles when content loads
-    useEffect(() => {
-        const fetchSubtitles = async () => {
-            if (!blogPost) return;
-
-            try {
-                // Parse IMDB ID from blog post external links
-                const externalLinks = blogPost.externalLinks
-                    ? (typeof blogPost.externalLinks === 'string'
-                        ? JSON.parse(blogPost.externalLinks)
-                        : blogPost.externalLinks)
-                    : null;
-
-                const imdbLink = externalLinks?.imdb;
-                if (!imdbLink) {
-                    console.log('No IMDB link found for Watch Together subtitle search');
-                    return;
-                }
-
-                // Extract just the IMDB ID (tt1234567) from the link
-                const imdbMatch = imdbLink.match(/tt\d+/);
-                if (!imdbMatch) {
-                    console.log('Invalid IMDB ID format');
-                    return;
-                }
-
-                // For shows, include season and episode
-                const season = episode?.season;
-                const ep = episode?.episodeNumber;
-                const searchUrl = (roomInfo?.contentType === 'show' || roomInfo?.contentType === 'anime') && season && ep
-                    ? `/api/subtitles/search?imdbId=${imdbMatch[0]}&season=${season}&episode=${ep}&language=en`
-                    : `/api/subtitles/search?imdbId=${imdbMatch[0]}&language=en`;
-
-                console.log(`🔍 Fetching subtitles for Watch Together: ${imdbMatch[0]}`);
-
-                const response = await fetch(searchUrl);
-
-                if (!response.ok) {
-                    console.error('Watch Together subtitle search failed');
-                    return;
-                }
-
-                const data = await response.json();
-
-                if (data.subtitles && data.subtitles.length > 0) {
-                    console.log(`✅ Found ${data.subtitles.length} subtitles for Watch Together`);
-
-                    // Language code to full name mapping
-                    const langNames: Record<string, string> = {
-                        'en': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German',
-                        'it': 'Italian', 'pt': 'Portuguese', 'ru': 'Russian', 'ja': 'Japanese',
-                        'ko': 'Korean', 'zh': 'Chinese', 'ar': 'Arabic', 'hi': 'Hindi',
-                        'tr': 'Turkish', 'pl': 'Polish', 'nl': 'Dutch', 'sv': 'Swedish'
-                    };
-
-                    // Convert to VideoPlayer format (use first 10 subtitles)
-                    const tracks = data.subtitles.slice(0, 10).map((sub: any, index: number) => ({
-                        file: sub.downloadUrl,
-                        label: langNames[sub.lang] || sub.language || sub.lang || 'Unknown',
-                        kind: 'subtitles' as const,
-                        default: index === 0
-                    }));
-
-                    setSubtitleTracks(tracks);
-                } else {
-                    console.log('No Watch Together subtitles found');
-                }
-            } catch (error) {
-                console.error('Error fetching Watch Together subtitles:', error);
-            }
-        };
-
-        fetchSubtitles();
-    }, [blogPost, episode?.id, roomInfo?.contentType]);
-
-    const content = roomInfo?.contentType === 'show' ? show : movie;
-    const title = content?.title || 'Watch Together';
-
-    // Debug logging
-    console.log('🎬 Watch Together Debug:', {
-        'roomInfo.contentType': roomInfo?.contentType,
-        'roomInfo.contentId': roomInfo?.contentId,
-        'roomInfo.episodeId': roomInfo?.episodeId,
-        allShowsCount: allShows?.length,
-        'First show ID sample': allShows?.[0]?.id,
-        showFound: show?.title,
-        showId: show?.id,
-        'contentId matches show': show?.id === roomInfo?.contentId,
-        'String match': String(show?.id) === String(roomInfo?.contentId),
-        episodesCount: episodes?.length,
-        'First episode ID sample': episodes?.[0]?.id,
-        episodeFound: episode?.title,
-        googleDriveUrl: episode?.googleDriveUrl || movie?.googleDriveUrl
-    });
-
-    // Auto-create or auto-join if coming from create-room page
-    useEffect(() => {
-        const storedUsername = sessionStorage.getItem('watchTogether_username');
-        const isCreator = sessionStorage.getItem('watchTogether_isCreator');
-        const contentType = sessionStorage.getItem('watchTogether_contentType') as 'show' | 'movie' | 'anime' | null;
-        const contentId = sessionStorage.getItem('watchTogether_contentId');
-        const episodeId = sessionStorage.getItem('watchTogether_episodeId');
-        const contentTitle = sessionStorage.getItem('watchTogether_contentTitle');
-        const contentPoster = sessionStorage.getItem('watchTogether_contentPoster');
-        const isPublicStr = sessionStorage.getItem('watchTogether_isPublic');
-        const storedPassword = sessionStorage.getItem('watchTogether_password');
-        const storedDescription = sessionStorage.getItem('watchTogether_description');
-        const storedScheduledFor = sessionStorage.getItem('watchTogether_scheduledFor');
-
-        if (!isConnected || roomInfo) return;
-
-        // If this is a new room creation request
-        if (roomCode === 'NEW' && isCreator === 'true' && storedUsername && contentType && contentId) {
-            // Clear the stored data
-            sessionStorage.removeItem('watchTogether_username');
-            sessionStorage.removeItem('watchTogether_isCreator');
-            sessionStorage.removeItem('watchTogether_contentType');
-            sessionStorage.removeItem('watchTogether_contentId');
-            sessionStorage.removeItem('watchTogether_episodeId');
-            sessionStorage.removeItem('watchTogether_contentTitle');
-            sessionStorage.removeItem('watchTogether_contentPoster');
-            sessionStorage.removeItem('watchTogether_isPublic');
-            sessionStorage.removeItem('watchTogether_password');
-            sessionStorage.removeItem('watchTogether_description');
-            sessionStorage.removeItem('watchTogether_scheduledFor');
-
-            // Also clear auto-rejoin localStorage to prevent rejoining old room
-            localStorage.removeItem('watch-together-username');
-            localStorage.removeItem('watch-together-room');
-
-            // Create the room with public/private settings
-            setUsername(storedUsername);
-            createRoom(
-                contentType,
-                contentId,
-                storedUsername,
-                user?.avatarUrl,
-                episodeId || undefined,
-                user?.id, // authUserId
-                {
-                    contentTitle: contentTitle || 'Untitled',
-                    contentPoster: contentPoster || undefined,
-                    isPublic: isPublicStr !== 'false',
-                    password: storedPassword || undefined,
-                    description: storedDescription || undefined,
-                    scheduledFor: storedScheduledFor || undefined,
-                }
-            );
-            setShowJoinModal(false);
-        }
-        // If joining an existing room with stored username
-        else if (roomCode && roomCode !== 'NEW' && storedUsername) {
-            sessionStorage.removeItem('watchTogether_username');
-            sessionStorage.removeItem('watchTogether_isCreator');
-
-            setUsername(storedUsername);
-            joinRoom(roomCode, storedUsername, user?.avatarUrl, urlPassword || undefined, user?.id);
-            setShowJoinModal(false);
-        }
-    }, [isConnected, roomCode, roomInfo, joinRoom, createRoom, urlPassword]);
-
-    // Update URL when room is created (replace /NEW with actual room code)
-    useEffect(() => {
-        if (roomInfo?.roomCode && roomCode === 'NEW') {
-            window.history.replaceState({}, '', `/watch-together/${roomInfo.roomCode}`);
-        }
-    }, [roomInfo, roomCode]);
-
-    // Scroll chat to bottom
-    useEffect(() => {
-        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
-
-    // Auto-start voice chat when user joins (muted by default)
-    useEffect(() => {
-        if (currentUser && !isVoiceEnabled && socket) {
-            console.log('🎤 Auto-starting voice chat (muted by default)...');
-            startVoice();
-        }
-    }, [currentUser, socket]);
-
-    // Auto-rejoin on page load if we have saved credentials
-    useEffect(() => {
-        // Skip auto-rejoin if we're creating a new room
-        if (!isConnected || currentUser || !roomCode || roomCode === 'NEW') return;
-
-        // Require authentication to join watch parties
-        if (!authLoading && !isAuthenticated) {
-            // Redirect to login with return URL
-            const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
-            setLocation(`/login?redirect=${returnUrl}`);
-            return;
-        }
-
-        // Use authenticated user's username if available
-        if (isAuthenticated && user?.username) {
-            console.log('🔐 Auto-joining with authenticated user:', user.username);
-            setUsername(user.username);
-            // Small delay to ensure socket is ready
-            setTimeout(() => {
-                joinRoom(roomCode, user.username, user.avatarUrl, undefined, user.id);
-                setShowJoinModal(false);
-            }, 500);
-        }
-    }, [isConnected, currentUser, roomCode, joinRoom, isAuthenticated, authLoading, user, setLocation]);
-
-    // Video sync effect - listen for sync events from host and apply to player
-    useEffect(() => {
-        // Only attach listener for non-host viewers
-        if (!socket || isHost) return;
-
-        const handleVideoSync = (state: { isPlaying: boolean; currentTime: number; playbackRate: number }) => {
-            console.log('🎬 Received video sync:', state);
-
-            const player = videoPlayerRef.current;
-            if (!player) {
-                console.log('🎬 VideoPlayer ref not available yet');
-                return;
-            }
-
-            // Apply playback rate
-            if (state.playbackRate !== player.getPlaybackRate()) {
-                console.log('🎬 Applying playback rate:', state.playbackRate);
-                player.setPlaybackRate(state.playbackRate);
-            }
-
-            // Sync position if difference is more than 2 seconds
-            const currentTime = player.getCurrentTime();
-            if (Math.abs(currentTime - state.currentTime) > 2) {
-                console.log('🎬 Syncing position from', currentTime, 'to', state.currentTime);
-                player.seek(state.currentTime);
-            }
-
-            // Sync play/pause state
-            if (state.isPlaying && player.isPaused()) {
-                console.log('🎬 Playing video (sync)');
-                player.play();
-            } else if (!state.isPlaying && !player.isPaused()) {
-                console.log('🎬 Pausing video (sync)');
-                player.pause();
-            }
-        };
-
-        console.log('🎬 Attaching video:sync listener for viewer');
-        socket.on('video:sync', handleVideoSync);
-
-        // Listen for subtitle sync from host
-        const handleSubtitleSync = (data: { subtitleIndex: number }) => {
-            console.log('🎬 Received subtitle sync:', data.subtitleIndex, '(index -1 means off)');
-            const player = videoPlayerRef.current;
-            if (player) {
-                console.log('🎬 Setting captions to index:', data.subtitleIndex);
-                player.setCaptions(data.subtitleIndex);
-            } else {
-                console.log('🎬 VideoPlayer ref not ready for subtitle sync');
-            }
-        };
-        socket.on('video:subtitle', handleSubtitleSync);
-
-        return () => {
-            console.log('🎬 Removing video:sync listener');
-            socket.off('video:sync', handleVideoSync);
-            socket.off('video:subtitle', handleSubtitleSync);
-        };
-    }, [socket, isHost]);
-
-    // Listen for extension messages (for syncing with external Google Drive tabs)
-    useEffect(() => {
-        const handleExtensionMessage = (event: MessageEvent) => {
-            // Only accept messages from our extension
-            if (event.data?.source !== 'streamvault-extension') return;
-
-            if (event.data?.type === 'VIDEO_SYNC') {
-                console.log('📺 Extension sync event received:', event.data);
-
-                // If we're host, broadcast to other viewers
-                if (isHost) {
-                    switch (event.data.action) {
-                        case 'play':
-                            videoPlay(event.data.time || 0);
-                            break;
-                        case 'pause':
-                            videoPause(event.data.time || 0);
-                            break;
-                        case 'seek':
-                            videoSeek(event.data.time || 0);
-                            break;
-                    }
-                }
-            }
-        };
-
-        window.addEventListener('message', handleExtensionMessage);
-
-        // Notify extension that page is ready for sync
-        console.log('📺 Watch Together page ready for extension sync');
-
-        return () => {
-            window.removeEventListener('message', handleExtensionMessage);
-        };
-    }, [isHost, videoPlay, videoPause, videoSeek]);
-
-    // Handle join
-    const handleJoin = () => {
-        if (username.trim() && roomCode) {
-            // Save to localStorage for auto-rejoin on page refresh
-            localStorage.setItem('watch-together-username', username.trim());
-            localStorage.setItem('watch-together-room', roomCode);
-
-            // Pass URL password for private rooms, and auth user ID for friend requests
-            joinRoom(roomCode, username.trim(), user?.avatarUrl, urlPassword || undefined, user?.id?.toString());
-            setShowJoinModal(false);
-        }
-    };
-
-    // Handle leave
-    const handleLeave = () => {
-        // Clear localStorage since user intentionally left
-        localStorage.removeItem('watch-together-username');
-        localStorage.removeItem('watch-together-room');
-        leaveRoom();
-        setLocation('/');
-    };
-
-    // Copy room code
-    const copyRoomCode = () => {
-        if (roomInfo?.roomCode) {
-            navigator.clipboard.writeText(`${window.location.origin}/watch-together/${roomInfo.roomCode}`);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        }
-    };
-
-    // Add friend from watch room
-    const handleAddFriend = async (userId: string, username: string) => {
-        if (!isAuthenticated) {
-            toast({
-                title: 'Login Required',
-                description: 'Please login to add friends',
-                variant: 'destructive',
-            });
-            return;
-        }
-
-        // Check if already friends
-        const isAlreadyFriend = friends.some(f => f.friendId === userId);
-        if (isAlreadyFriend) {
-            toast({
-                title: 'Already Friends',
-                description: `You are already friends with ${username}`,
-            });
-            return;
-        }
-
-        setPendingFriendRequests(prev => new Set(Array.from(prev).concat(userId)));
-
-        const result = await sendFriendRequest(userId);
-
-        if (result.success) {
-            toast({
-                title: 'Friend Request Sent! 🎉',
-                description: `Request sent to ${username}`,
-            });
-        } else {
-            toast({
-                title: 'Request Failed',
-                description: result.error || 'Could not send friend request',
-                variant: 'destructive',
-            });
-        }
-
-        setPendingFriendRequests(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(userId);
-            return newSet;
-        });
-    };
+    // ... (rest of file)
 
     // View user profile
     const handleViewProfile = async (roomUser: { username: string; avatarUrl?: string; authUserId?: string; isHost: boolean }) => {
@@ -860,15 +266,17 @@ function WatchTogetherContent() {
         let bio: string | undefined;
         let socialLinks: any = null;
         let favorites: any = null;
+        let badges: any[] | undefined;
 
         if (roomUser.authUserId) {
             try {
-                const response = await fetch(`/api/users/${roomUser.authUserId}/profile`);
+                const response = await fetch(`/api/users/${roomUser.authUserId}/profile`, { cache: 'no-store' });
                 if (response.ok) {
                     const profile = await response.json();
                     bio = profile.bio;
                     socialLinks = profile.socialLinks;
                     favorites = profile.favorites;
+                    badges = profile.badges ? (typeof profile.badges === 'string' ? JSON.parse(profile.badges) : profile.badges) : [];
                 }
             } catch (error) {
                 console.error('Failed to fetch user profile:', error);
@@ -881,6 +289,7 @@ function WatchTogetherContent() {
             authUserId: roomUser.authUserId,
             isHost: roomUser.isHost,
             bio,
+            badges,
             socialLinks,
             favorites,
         });
@@ -1360,6 +769,20 @@ function WatchTogetherContent() {
                                                             <div className="flex items-center gap-1">
                                                                 {roomUser.isHost && <Crown className="h-3 w-3 text-yellow-500" />}
                                                                 <span className="text-sm font-medium">{roomUser.username}</span>
+                                                                {/* Equipped Badges */}
+                                                                {roomUser.badges && roomUser.badges.length > 0 && (
+                                                                    <div className="flex items-center gap-1">
+                                                                        {roomUser.badges.filter((b: any) => b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'theme').map((badge: any, idx: number) => (
+                                                                            <img
+                                                                                key={idx}
+                                                                                src={badge.imageUrl}
+                                                                                alt={badge.name}
+                                                                                className="w-4 h-4 object-contain"
+                                                                                title={badge.name}
+                                                                            />
+                                                                        ))}
+                                                                    </div>
+                                                                )}
                                                                 {/* Friend indicator */}
                                                                 {isAuthenticated && roomUser.authUserId && roomUser.authUserId !== user?.id?.toString() && friends.some(f => f.friendId === roomUser.authUserId) && (
                                                                     <span className="text-green-500" title={`${roomUser.username} is your friend`}>
@@ -1815,9 +1238,22 @@ function WatchTogetherContent() {
                                                                 )}
                                                             </div>
                                                             <div className="flex-1 min-w-0">
-                                                                <p className="text-sm">
+                                                                <p className="text-sm flex items-center gap-1.5">
                                                                     <span className="font-semibold text-primary">{msg.username}</span>
-                                                                    <span className="text-muted-foreground ml-2 text-xs">
+                                                                    {msg.badges && msg.badges.length > 0 && (
+                                                                        <div className="flex items-center gap-1">
+                                                                            {msg.badges.filter((b: any) => b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'theme').map((badge: any, idx: number) => (
+                                                                                <img
+                                                                                    key={idx}
+                                                                                    src={badge.imageUrl}
+                                                                                    alt={badge.name}
+                                                                                    className="w-3.5 h-3.5 object-contain"
+                                                                                    title={badge.name}
+                                                                                />
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                    <span className="text-muted-foreground ml-1 text-xs">
                                                                         {new Date(msg.timestamp).toLocaleTimeString()}
                                                                     </span>
                                                                 </p>
@@ -2059,7 +1495,7 @@ function WatchTogetherContent() {
                 <UserProfileModal
                     isOpen={!!selectedProfileUser}
                     onClose={() => setSelectedProfileUser(null)}
-                    user={selectedProfileUser}
+                    user={{ ...selectedProfileUser, ...(fullProfileData || {}) }}
                     isFriend={selectedProfileUser.authUserId ? friends.some(f => f.friendId === selectedProfileUser.authUserId) : false}
                 />
             )}

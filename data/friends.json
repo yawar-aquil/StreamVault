@@ -5,6 +5,12 @@
       "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
       "friendId": "b59fe60c-35c8-4689-b83a-feda335caa19",
       "createdAt": "2026-01-23T14:49:25.854Z"
+    },
+    {
+      "id": "fe1925d0-7bd7-4120-ad9c-26f8ac0c63b8",
+      "userId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
+      "friendId": "0229a46c-2302-4909-93c5-c71f80db5538",
+      "createdAt": "2026-02-05T09:12:40.209Z"
     }
   ],
   "friendRequests": [
@@ -31,6 +37,37 @@
       "status": "accepted",
       "createdAt": "2026-01-23T14:49:00.895Z",
       "respondedAt": "2026-01-23T14:49:25.851Z"
+    },
+    {
+      "id": "afa56acc-8528-4fe8-9514-965270733b2c",
+      "fromUserId": "0229a46c-2302-4909-93c5-c71f80db5538",
+      "toUserId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
+      "status": "accepted",
+      "createdAt": "2026-02-02T13:12:58.447Z",
+      "respondedAt": "2026-02-02T13:13:24.024Z"
+    },
+    {
+      "id": "e677a2ad-5836-427a-8e03-5efe3c9c8ad4",
+      "fromUserId": "0229a46c-2302-4909-93c5-c71f80db5538",
+      "toUserId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
+      "status": "accepted",
+      "createdAt": "2026-02-04T12:31:05.162Z",
+      "respondedAt": "2026-02-04T14:03:13.642Z"
+    },
+    {
+      "id": "fa1b102d-ae3a-4898-ac17-cd52bb682222",
+      "fromUserId": "0229a46c-2302-4909-93c5-c71f80db5538",
+      "toUserId": "ac521cb9-c493-4afb-8893-b121fd29b493",
+      "status": "pending",
+      "createdAt": "2026-02-04T13:11:06.817Z"
+    },
+    {
+      "id": "d99fa42f-dba5-476f-8cf3-a9abaabdcf61",
+      "fromUserId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
+      "toUserId": "0229a46c-2302-4909-93c5-c71f80db5538",
+      "status": "accepted",
+      "createdAt": "2026-02-05T09:12:35.491Z",
+      "respondedAt": "2026-02-05T09:12:40.208Z"
     }
   ],
   "notifications": [
@@ -401,6 +438,655 @@
       "read": false,
       "id": "b9854b52-9585-4974-8c2f-dbda72675021",
       "createdAt": "2026-01-30T07:46:40.256Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "New Badge Awarded! 🏆",
+      "message": "You've been awarded the \"VIP\" badge!",
+      "data": {
+        "badgeId": "d390a107-a8f5-4ed4-80de-a04a25b7e5f1",
+        "name": "VIP",
+        "imageUrl": "/badges/vip_v2.svg"
+      },
+      "read": true,
+      "id": "db500212-d7bd-4318-8c1c-af3c7907e59c",
+      "createdAt": "2026-01-31T07:56:28.424Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "New Badge Awarded! 🏆",
+      "message": "You've been awarded the \"VIP\" badge!",
+      "data": {
+        "badgeId": "d390a107-a8f5-4ed4-80de-a04a25b7e5f1",
+        "name": "VIP",
+        "imageUrl": "/badges/vip_v2.svg"
+      },
+      "read": true,
+      "id": "a56b8d69-cf62-4f4b-a527-8fa2c5d1a402",
+      "createdAt": "2026-01-31T08:06:34.920Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "New Badge Awarded! 🏆",
+      "message": "You've been awarded the \"VIP\" badge!",
+      "data": {
+        "badgeId": "d390a107-a8f5-4ed4-80de-a04a25b7e5f1",
+        "name": "VIP",
+        "imageUrl": "/badges/vip_v2.svg"
+      },
+      "read": true,
+      "id": "f6c4002f-c50b-40d8-9b2f-baefdf8e5962",
+      "createdAt": "2026-01-31T08:16:10.941Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"New Comer\" badge!",
+      "data": {
+        "achievementId": "new-comer",
+        "name": "New Comer",
+        "description": "Create your account",
+        "icon": "user-plus"
+      },
+      "read": true,
+      "id": "19552deb-d058-41b2-81bd-c83d69f2e4a4",
+      "createdAt": "2026-01-31T08:39:35.428Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"Bio-hazed\" badge!",
+      "data": {
+        "achievementId": "bio-hazard",
+        "name": "Bio-hazed",
+        "description": "Update your bio",
+        "icon": "file-text"
+      },
+      "read": true,
+      "id": "07cecfaf-89e9-416b-ad07-efe51ac054d1",
+      "createdAt": "2026-01-31T08:39:35.432Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"First Friend\" badge!",
+      "data": {
+        "achievementId": "social-1",
+        "name": "First Friend",
+        "description": "Add 1 Friend",
+        "icon": "user-plus"
+      },
+      "read": true,
+      "id": "e58de0d3-784a-4e9c-92d7-e0cf5340fba4",
+      "createdAt": "2026-01-31T08:39:35.440Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"New Comer\" badge!",
+      "data": {
+        "achievementId": "new-comer",
+        "name": "New Comer",
+        "description": "Create your account",
+        "icon": "user-plus"
+      },
+      "read": true,
+      "id": "e74cf28c-9e89-4cc9-897e-dd666744ac36",
+      "createdAt": "2026-01-31T08:39:40.121Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"Bio-hazed\" badge!",
+      "data": {
+        "achievementId": "bio-hazard",
+        "name": "Bio-hazed",
+        "description": "Update your bio",
+        "icon": "file-text"
+      },
+      "read": true,
+      "id": "271cf429-28ee-4e5b-a059-c09faaad9c70",
+      "createdAt": "2026-01-31T08:39:40.135Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"First Friend\" badge!",
+      "data": {
+        "achievementId": "social-1",
+        "name": "First Friend",
+        "description": "Add 1 Friend",
+        "icon": "user-plus"
+      },
+      "read": true,
+      "id": "832978ea-9d66-467d-a703-ece487fc1b71",
+      "createdAt": "2026-01-31T08:39:40.137Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"New Comer\" badge!",
+      "data": {
+        "achievementId": "new-comer",
+        "name": "New Comer",
+        "description": "Create your account",
+        "icon": "user-plus"
+      },
+      "read": true,
+      "id": "93e4aa4c-7ee4-4119-91fd-4831a9c5cc3d",
+      "createdAt": "2026-01-31T08:39:51.971Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"Bio-hazed\" badge!",
+      "data": {
+        "achievementId": "bio-hazard",
+        "name": "Bio-hazed",
+        "description": "Update your bio",
+        "icon": "file-text"
+      },
+      "read": true,
+      "id": "c5435712-0a10-4b16-b00b-92b1c6d67121",
+      "createdAt": "2026-01-31T08:39:51.979Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"First Friend\" badge!",
+      "data": {
+        "achievementId": "social-1",
+        "name": "First Friend",
+        "description": "Add 1 Friend",
+        "icon": "user-plus"
+      },
+      "read": true,
+      "id": "d56f14b5-4d5d-4b3c-a63d-ad20431c6657",
+      "createdAt": "2026-01-31T08:39:51.993Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"New Comer\" badge!",
+      "data": {
+        "achievementId": "new-comer",
+        "name": "New Comer",
+        "description": "Create your account",
+        "icon": "user-plus"
+      },
+      "read": true,
+      "id": "18c5cc30-6056-4957-b9d4-b4f0e1be9131",
+      "createdAt": "2026-01-31T08:40:01.405Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"Bio-hazed\" badge!",
+      "data": {
+        "achievementId": "bio-hazard",
+        "name": "Bio-hazed",
+        "description": "Update your bio",
+        "icon": "file-text"
+      },
+      "read": true,
+      "id": "2ed8a7fd-ca62-4ecf-af5e-aaa16d93aca4",
+      "createdAt": "2026-01-31T08:40:01.407Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"First Friend\" badge!",
+      "data": {
+        "achievementId": "social-1",
+        "name": "First Friend",
+        "description": "Add 1 Friend",
+        "icon": "user-plus"
+      },
+      "read": true,
+      "id": "60dd57e6-34b7-467b-82bb-60d656585e17",
+      "createdAt": "2026-01-31T08:40:01.410Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"New Comer\" badge!",
+      "data": {
+        "achievementId": "new-comer",
+        "name": "New Comer",
+        "description": "Create your account",
+        "icon": "user-plus"
+      },
+      "read": true,
+      "id": "f0ffe028-d16a-4bed-ae8f-ba18f342f36e",
+      "createdAt": "2026-01-31T08:40:23.998Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"Bio-hazed\" badge!",
+      "data": {
+        "achievementId": "bio-hazard",
+        "name": "Bio-hazed",
+        "description": "Update your bio",
+        "icon": "file-text"
+      },
+      "read": true,
+      "id": "62a2debb-3fbc-4387-a201-067aaeeb1fbc",
+      "createdAt": "2026-01-31T08:40:24.006Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"First Friend\" badge!",
+      "data": {
+        "achievementId": "social-1",
+        "name": "First Friend",
+        "description": "Add 1 Friend",
+        "icon": "user-plus"
+      },
+      "read": true,
+      "id": "530f4be5-1a4f-4847-b212-0afb99042c8a",
+      "createdAt": "2026-01-31T08:40:24.012Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"New Comer\" badge!",
+      "data": {
+        "achievementId": "new-comer",
+        "name": "New Comer",
+        "description": "Create your account",
+        "icon": "user-plus"
+      },
+      "read": true,
+      "id": "a8034531-d21f-4970-bf7f-a0adc83a032c",
+      "createdAt": "2026-01-31T08:40:27.144Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"Bio-hazed\" badge!",
+      "data": {
+        "achievementId": "bio-hazard",
+        "name": "Bio-hazed",
+        "description": "Update your bio",
+        "icon": "file-text"
+      },
+      "read": true,
+      "id": "476ecf24-db50-470a-8ebc-6d19d8761ca2",
+      "createdAt": "2026-01-31T08:40:27.148Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"First Friend\" badge!",
+      "data": {
+        "achievementId": "social-1",
+        "name": "First Friend",
+        "description": "Add 1 Friend",
+        "icon": "user-plus"
+      },
+      "read": true,
+      "id": "9eb0ad41-7726-4b3a-b3a1-9edf0831b21b",
+      "createdAt": "2026-01-31T08:40:27.150Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"New Comer\" badge!",
+      "data": {
+        "achievementId": "new-comer",
+        "name": "New Comer",
+        "description": "Create your account",
+        "icon": "user-plus"
+      },
+      "read": true,
+      "id": "35d596b7-90d0-4844-a874-3574a7ed82c5",
+      "createdAt": "2026-01-31T08:56:38.939Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"Bio-hazed\" badge!",
+      "data": {
+        "achievementId": "bio-hazard",
+        "name": "Bio-hazed",
+        "description": "Update your bio",
+        "icon": "file-text"
+      },
+      "read": true,
+      "id": "46d7fa5d-c2b7-4ec6-b33c-dfd20341c074",
+      "createdAt": "2026-01-31T08:56:38.941Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"First Friend\" badge!",
+      "data": {
+        "achievementId": "social-1",
+        "name": "First Friend",
+        "description": "Add 1 Friend",
+        "icon": "user-plus"
+      },
+      "read": true,
+      "id": "8a2c53ab-a76e-410a-815b-2051ab2f2708",
+      "createdAt": "2026-01-31T08:56:38.944Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"New Comer\" badge!",
+      "data": {
+        "achievementId": "new-comer",
+        "name": "New Comer",
+        "description": "Create your account",
+        "icon": "user-plus"
+      },
+      "read": true,
+      "id": "7ee1515d-9dd0-4550-b6e3-0d892daf3994",
+      "createdAt": "2026-01-31T08:56:42.419Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"Bio-hazed\" badge!",
+      "data": {
+        "achievementId": "bio-hazard",
+        "name": "Bio-hazed",
+        "description": "Update your bio",
+        "icon": "file-text"
+      },
+      "read": true,
+      "id": "e77432a3-5e7b-4f62-a331-8cf6c7d85972",
+      "createdAt": "2026-01-31T08:56:42.421Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"First Friend\" badge!",
+      "data": {
+        "achievementId": "social-1",
+        "name": "First Friend",
+        "description": "Add 1 Friend",
+        "icon": "user-plus"
+      },
+      "read": true,
+      "id": "1e6004a2-8b89-43dc-99b8-b664bc1e3fba",
+      "createdAt": "2026-01-31T08:56:42.423Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"New Comer\" badge!",
+      "data": {
+        "achievementId": "new-comer",
+        "name": "New Comer",
+        "description": "Create your account",
+        "icon": "user-plus"
+      },
+      "read": false,
+      "id": "5af6c23b-a69d-411f-a69f-b3d4f1a507c0",
+      "createdAt": "2026-01-31T08:56:57.470Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"Bio-hazed\" badge!",
+      "data": {
+        "achievementId": "bio-hazard",
+        "name": "Bio-hazed",
+        "description": "Update your bio",
+        "icon": "file-text"
+      },
+      "read": false,
+      "id": "255decb3-b498-40c8-9a56-10def275c1b5",
+      "createdAt": "2026-01-31T08:56:57.473Z"
+    },
+    {
+      "userId": "c480dcef-3488-4083-b326-00920fdbc1e1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"First Friend\" badge!",
+      "data": {
+        "achievementId": "social-1",
+        "name": "First Friend",
+        "description": "Add 1 Friend",
+        "icon": "user-plus"
+      },
+      "read": false,
+      "id": "780e7a26-7814-469b-b7a5-2afb65c28db2",
+      "createdAt": "2026-01-31T08:56:57.476Z"
+    },
+    {
+      "userId": "0229a46c-2302-4909-93c5-c71f80db5538",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"New Comer\" badge!",
+      "data": {
+        "achievementId": "new-comer",
+        "name": "New Comer",
+        "description": "Create your account",
+        "icon": "user-plus"
+      },
+      "read": true,
+      "id": "1499dc51-8586-45e5-b39e-39b3b5161c42",
+      "createdAt": "2026-01-31T09:17:02.258Z"
+    },
+    {
+      "userId": "ac521cb9-c493-4afb-8893-b121fd29b493",
+      "type": "system",
+      "title": "🎁 You received a gift!",
+      "message": "admin gifted you the \"VIP\" badge!",
+      "read": false,
+      "data": {
+        "badgeId": "d390a107-a8f5-4ed4-80de-a04a25b7e5f1",
+        "senderId": "0229a46c-2302-4909-93c5-c71f80db5538"
+      },
+      "id": "9ca6409d-917f-4a8a-9ac2-83c3dd4d4ee7",
+      "createdAt": "2026-02-01T07:59:16.060Z"
+    },
+    {
+      "userId": "0229a46c-2302-4909-93c5-c71f80db5538",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"Bio-hazed\" badge!",
+      "data": {
+        "achievementId": "bio-hazard",
+        "name": "Bio-hazed",
+        "description": "Update your bio",
+        "icon": "file-text"
+      },
+      "read": true,
+      "id": "ee071679-a311-4de5-8d98-11eb3186567d",
+      "createdAt": "2026-02-02T11:28:54.093Z"
+    },
+    {
+      "userId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"New Comer\" badge!",
+      "data": {
+        "achievementId": "new-comer",
+        "name": "New Comer",
+        "description": "Create your account",
+        "icon": "user-plus"
+      },
+      "read": true,
+      "id": "d68c8635-f8ec-4108-9439-30dd41979bb2",
+      "createdAt": "2026-02-02T13:12:22.055Z"
+    },
+    {
+      "userId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
+      "type": "friend_request",
+      "title": "Friend Request",
+      "message": "admin sent you a friend request",
+      "data": {
+        "requestId": "afa56acc-8528-4fe8-9514-965270733b2c",
+        "fromUserId": "0229a46c-2302-4909-93c5-c71f80db5538"
+      },
+      "read": true,
+      "id": "71b6197a-ac2c-44d9-abc9-a84bada28df6",
+      "createdAt": "2026-02-02T13:12:58.449Z"
+    },
+    {
+      "userId": "0229a46c-2302-4909-93c5-c71f80db5538",
+      "type": "friend_accepted",
+      "title": "Friend Request Accepted",
+      "message": "elton galeech accepted your friend request",
+      "data": {
+        "friendId": "c47aa877-d49b-40d2-9afd-467ab293a6a1"
+      },
+      "read": true,
+      "id": "aea8d0ea-8b6b-4f8a-8910-09a7d87481be",
+      "createdAt": "2026-02-02T13:13:24.028Z"
+    },
+    {
+      "userId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"First Friend\" badge!",
+      "data": {
+        "achievementId": "social-1",
+        "name": "First Friend",
+        "description": "Add 1 Friend",
+        "icon": "user-plus"
+      },
+      "read": true,
+      "id": "4456e198-41c9-4ef7-9ffb-594481aebbfd",
+      "createdAt": "2026-02-02T13:13:24.217Z"
+    },
+    {
+      "userId": "0229a46c-2302-4909-93c5-c71f80db5538",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"First Friend\" badge!",
+      "data": {
+        "achievementId": "social-1",
+        "name": "First Friend",
+        "description": "Add 1 Friend",
+        "icon": "user-plus"
+      },
+      "read": true,
+      "id": "3f4ac63c-763d-4478-b7e6-212b8118cfef",
+      "createdAt": "2026-02-02T13:13:24.410Z"
+    },
+    {
+      "userId": "0229a46c-2302-4909-93c5-c71f80db5538",
+      "type": "achievement",
+      "title": "Achievement Unlocked! 🏆",
+      "message": "You earned the \"Identity Crisis\" badge!",
+      "data": {
+        "achievementId": "identity-crisis",
+        "name": "Identity Crisis",
+        "description": "Upload an avatar",
+        "icon": "image"
+      },
+      "read": true,
+      "id": "54e4c535-f7c3-42ce-a1a7-f36462a0c797",
+      "createdAt": "2026-02-03T11:11:08.289Z"
+    },
+    {
+      "userId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
+      "type": "friend_request",
+      "title": "Friend Request",
+      "message": "admin sent you a friend request",
+      "data": {
+        "requestId": "e677a2ad-5836-427a-8e03-5efe3c9c8ad4",
+        "fromUserId": "0229a46c-2302-4909-93c5-c71f80db5538"
+      },
+      "read": true,
+      "id": "390ab6a9-a793-414c-a744-b94024bdb95d",
+      "createdAt": "2026-02-04T12:31:05.164Z"
+    },
+    {
+      "userId": "ac521cb9-c493-4afb-8893-b121fd29b493",
+      "type": "friend_request",
+      "title": "Friend Request",
+      "message": "admin sent you a friend request",
+      "data": {
+        "requestId": "fa1b102d-ae3a-4898-ac17-cd52bb682222",
+        "fromUserId": "0229a46c-2302-4909-93c5-c71f80db5538"
+      },
+      "read": false,
+      "id": "be11f9aa-d503-4c37-a955-91347441a429",
+      "createdAt": "2026-02-04T13:11:06.821Z"
+    },
+    {
+      "userId": "0229a46c-2302-4909-93c5-c71f80db5538",
+      "type": "friend_accepted",
+      "title": "Friend Request Accepted",
+      "message": "elton galeech accepted your friend request",
+      "data": {
+        "friendId": "c47aa877-d49b-40d2-9afd-467ab293a6a1"
+      },
+      "read": true,
+      "id": "b3f317a5-d514-4908-886e-3a62cdfbd71d",
+      "createdAt": "2026-02-04T14:03:13.648Z"
+    },
+    {
+      "userId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
+      "type": "friend_accepted",
+      "title": "Friend Request Accepted",
+      "message": "admin accepted your friend request",
+      "read": true,
+      "data": {
+        "friendId": "0229a46c-2302-4909-93c5-c71f80db5538"
+      },
+      "id": "8103dd96-74b7-4570-baa5-04d10e9e71e9",
+      "createdAt": "2026-02-05T09:12:40.211Z"
+    },
+    {
+      "userId": "0229a46c-2302-4909-93c5-c71f80db5538",
+      "type": "dm",
+      "title": "New Message",
+      "message": "elton galeech: hi",
+      "data": {
+        "fromUserId": "c47aa877-d49b-40d2-9afd-467ab293a6a1"
+      },
+      "read": true,
+      "id": "b8da7d26-36c8-411f-bc32-def624217512",
+      "createdAt": "2026-02-05T19:14:33.241Z"
+    },
+    {
+      "userId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
+      "type": "dm",
+      "title": "New Message",
+      "message": "admin: hiiii",
+      "data": {
+        "fromUserId": "0229a46c-2302-4909-93c5-c71f80db5538"
+      },
+      "read": true,
+      "id": "ca95a39f-54cf-417f-96ba-ec26dc9c0ace",
+      "createdAt": "2026-02-05T19:15:19.063Z"
     }
   ],
   "directMessages": [
@@ -531,6 +1217,22 @@
       "message": "hiiii",
       "read": true,
       "createdAt": "2026-01-25T12:57:04.727Z"
+    },
+    {
+      "id": "9fdfc10c-0023-4752-bf6f-1b4e4cfc1d34",
+      "fromUserId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
+      "toUserId": "0229a46c-2302-4909-93c5-c71f80db5538",
+      "message": "hi",
+      "read": true,
+      "createdAt": "2026-02-05T19:14:33.216Z"
+    },
+    {
+      "id": "132da17b-343f-4bf8-b738-633d21ffd41f",
+      "fromUserId": "0229a46c-2302-4909-93c5-c71f80db5538",
+      "toUserId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
+      "message": "hiiii",
+      "read": true,
+      "createdAt": "2026-02-05T19:15:19.060Z"
     }
   ]
 }

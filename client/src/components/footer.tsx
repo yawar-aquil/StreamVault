@@ -76,7 +76,10 @@ export function Footer() {
     { name: t('support.faq'), path: "/faq" },
     { name: t('support.report'), path: "/report" },
     { name: t('support.request'), path: "/request" },
-    { name: t('support.api'), path: "/settings" },
+    { name: "Store", path: "/store" },
+    { name: "Referral Program", path: "/referral-program" },
+    { name: "Refund Policy", path: "/refund" },
+    { name: t('support.api'), path: "/api-docs" },
   ];
 
   return (

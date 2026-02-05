@@ -1,25 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import {
-    X,
-    Send,
-    Loader2,
-    MessageCircle,
-    Smile,
-    Paperclip,
-    Mic,
-    Square,
-    Image as ImageIcon,
-    Film,
-    FileText,
-    Play,
-    Pause
-} from 'lucide-react';
+import { Play, Pause, Square, Mic, Paperclip, Smile, MessageCircle, Loader2, Send, X, FileText, Image as ImageIcon, Film, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/auth-context';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, differenceInMinutes } from 'date-fns';
 import EmojiPicker, { Theme } from 'emoji-picker-react';
 import { useSocialSocket } from '@/hooks/use-social-socket';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface DirectMessage {
     id: string;
@@ -40,6 +32,8 @@ interface Friend {
     id: string;
     username: string;
     avatarUrl: string | null;
+    badges?: any[];
+    lastActive?: string | null;
 }
 
 interface DMPanelProps {
@@ -91,7 +85,7 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
     const inputRef = useRef<HTMLInputElement>(null);
 
     // Friends system hooks
-    const { sendFriendRequest, friends, startTyping, stopTyping, typingFriends, isFriendOnline } = useSocialSocket();
+    const { startTyping, stopTyping, typingFriends, isFriendOnline } = useSocialSocket();
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -459,13 +453,51 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
                         )}
                     </div>
                     <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold truncate">{friend?.username || 'Loading...'}</h3>
+                        <div className="flex items-center gap-2">
+                            <h3 className="font-semibold truncate">{friend?.username || 'Loading...'}</h3>
+
+                            {friend?.badges && friend.badges.length > 0 && (
+                                <div className="flex items-center gap-1">
+                                    {friend.badges
+                                        .filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'feature')
+                                        .map((badge: any) => (
+                                            <TooltipProvider key={badge.id}>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <div className="relative group/tooltip cursor-help">
+                                                            <img
+                                                                src={badge.imageUrl}
+                                                                alt={badge.name}
+                                                                className="w-5 h-5 object-contain hover:scale-110 transition-transform"
+                                                            />
+                                                        </div>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent className="bg-black/90 text-white border-white/10 text-xs max-w-[200px] whitespace-normal break-words z-[60]">
+                                                        <p>{badge.name}</p>
+                                                        {badge.description && <p className="text-[10px] opacity-70 mt-0.5">{badge.description}</p>}
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        ))}
+                                </div>
+                            )}
+                        </div>
                         <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                             {typingFriends.has(friendId) ? (
                                 <span className="text-primary animate-pulse font-medium">Typing...</span>
-                            ) : (
-                                "Direct Message"
-                            )}
+                            ) : (() => {
+                                const isOnline = isFriendOnline(friendId);
+                                const lastActiveDate = friend?.lastActive ? new Date(friend.lastActive) : null;
+                                const showOnline = isOnline;
+
+                                if (showOnline) {
+                                    return <span className="text-green-500 font-medium">Online</span>;
+                                } else if (lastActiveDate) {
+                                    return <span>Active {formatDistanceToNow(lastActiveDate, { addSuffix: true })}</span>;
+                                } else {
+                                    return "Direct Message";
+                                }
+                            })()}
                         </p>
                     </div>
                     <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full hover:bg-destructive/10 hover:text-destructive">

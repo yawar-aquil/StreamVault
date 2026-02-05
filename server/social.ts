@@ -113,7 +113,12 @@ export function initSocialSocket(server: HttpServer, socketio?: Server) {
                 // Push notification to recipient
                 socialNamespace.to(`user:${toUserId}`).emit('notification:new', {
                     type: 'dm',
-                    fromUser: fromUser ? { id: fromUser.id, username: fromUser.username, avatarUrl: fromUser.avatarUrl } : null,
+                    fromUser: fromUser ? {
+                        id: fromUser.id,
+                        username: fromUser.username,
+                        avatarUrl: fromUser.avatarUrl,
+                        equippedBadge: fromUser.equippedBadge
+                    } : null,
                     message: message.substring(0, 100),
                 });
             } catch (error) {
@@ -228,6 +233,7 @@ export function initSocialSocket(server: HttpServer, socketio?: Server) {
                             friendId,
                             username: friendUser?.username || 'Unknown',
                             avatarUrl: friendUser?.avatarUrl || undefined,
+                            equippedBadge: friendUser?.equippedBadge,
                             activity,
                         });
                     }
@@ -287,6 +293,7 @@ async function notifyFriendsOfStatus(userId: string, isOnline: boolean) {
                         friendId: userId,
                         username: user?.username,
                         avatarUrl: user?.avatarUrl,
+                        equippedBadge: user?.equippedBadge,
                     }
                 );
             }
@@ -310,6 +317,7 @@ async function broadcastActivityToFriends(userId: string, activity: WatchActivit
                     friendId: userId,
                     username: user?.username,
                     avatarUrl: user?.avatarUrl,
+                    equippedBadge: user?.equippedBadge,
                     activity,
                 });
             }
@@ -325,4 +333,16 @@ export function isUserOnline(userId: string): boolean {
 
 export function getOnlineUserCount(): number {
     return onlineUsers.size;
+}
+
+export function sendNotificationToUser(userId: string, notification: any) {
+    if (io) {
+        io.of('/social').to(`user:${userId}`).emit('notification:new', notification);
+    }
+}
+
+export function sendInventoryUpdate(userId: string) {
+    if (io) {
+        io.of('/social').to(`user:${userId}`).emit('inventory_update');
+    }
 }

@@ -66,14 +66,13 @@ export function MovieCard({
   return (
     <Link href={`/movie/${movie.slug}`}>
       <div
-        className="group relative overflow-visible cursor-pointer"
+        className="group relative overflow-visible cursor-pointer hover:z-50 transition-all duration-300"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
         <div
-          className={`relative ${aspectRatio} rounded-md overflow-hidden bg-muted transition-all duration-300 ${
-            isHovered ? "scale-105 shadow-xl" : ""
-          }`}
+          className={`relative ${aspectRatio} rounded-md overflow-hidden bg-muted transition-all duration-300 ${isHovered ? "scale-105 shadow-xl" : ""
+            }`}
         >
           {/* Poster Image */}
           <img
@@ -85,9 +84,8 @@ export function MovieCard({
 
           {/* Hover Overlay */}
           <div
-            className={`absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent transition-opacity duration-300 ${
-              isHovered ? "opacity-100" : "opacity-0"
-            }`}
+            className={`absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent transition-opacity duration-300 ${isHovered ? "opacity-100" : "opacity-0"
+              }`}
           >
             <div className="absolute inset-0 flex flex-col justify-end p-4">
               {/* Title */}

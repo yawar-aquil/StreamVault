@@ -75,7 +75,7 @@ export function ContentRow({
         <div
           ref={scrollRef}
           onScroll={checkScroll}
-          className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide px-4 md:px-6 scroll-smooth"
+          className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide px-4 md:px-6 py-8 scroll-smooth"
           style={{ scrollbarWidth: "none" }}
         >
           {shows.map((show) => (

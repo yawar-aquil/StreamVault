@@ -330,6 +330,8 @@ export default function WatchMovie() {
                 videoUrl={movie.googleDriveUrl}
                 subtitleTracks={subtitleTracks}
                 onTimeUpdate={handleTimeUpdate}
+                title={movie.title}
+                description={movie.description}
               />
             </div>
 

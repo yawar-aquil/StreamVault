@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/contexts/auth-context';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,15 +11,31 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from "@/components/ui/badge";
 import { Progress } from '@/components/ui/progress';
 import { StreakDisplay } from '@/components/streak-display';
-import { Loader2, Camera, User, Save, LogOut, FileVideo, Eye, Twitter, Instagram, Youtube, Heart, Trophy, Medal, Star, BarChart2, Target, X, Settings, icons } from 'lucide-react';
+import { Loader2, Camera, User, Save, LogOut, FileVideo, Eye, Twitter, Instagram, Youtube, Heart, Trophy, Medal, Star, BarChart2, Target, X, Settings, icons, Crown, Rocket } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { SiTiktok, SiDiscord } from 'react-icons/si';
 import { FavoritesPicker } from '@/components/favorites-picker';
+import { THEME_MAPPING, THEME_PREVIEWS } from '@/lib/theme-data';
+import { cn } from '@/lib/utils';
+import { HeartRain } from '@/components/heart-rain';
+import { GalaxyAnimation } from '@/components/galaxy-animation';
+import { AnimeMotion } from '@/components/anime-motion';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function ProfilePage() {
     const [, navigate] = useLocation();
     const { user, isLoading: authLoading, isAuthenticated, updateProfile, uploadAvatar, logout } = useAuth();
     const { toast } = useToast();
+    const queryClient = useQueryClient();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [username, setUsername] = useState(user?.username || '');
@@ -26,6 +43,7 @@ export default function ProfilePage() {
     const [isUpdating, setIsUpdating] = useState(false);
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
     const [showFullAvatar, setShowFullAvatar] = useState(false);
+    const [showPremiumModal, setShowPremiumModal] = useState(false);
 
     // Social links state
     const [socialLinks, setSocialLinks] = useState({
@@ -41,6 +59,40 @@ export default function ProfilePage() {
         shows: user?.favorites?.shows || [],
         movies: user?.favorites?.movies || [],
         anime: user?.favorites?.anime || [],
+    });
+
+    // Equip Badge Mutation
+    const equipMutation = useMutation({
+        mutationFn: async ({ badgeId, badgeName, equipped }: { badgeId: string; badgeName: string; equipped: boolean }) => {
+            const res = await fetch('/api/user/equip-badge', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ badgeId, equipped }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Failed to update badge');
+            }
+            return { equipped, badgeName };
+        },
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+            queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/badges`] });
+            queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/profile`] });
+            queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/public-profile`] });
+            toast({
+                title: data.equipped ? 'Badge Equipped' : 'Badge Unequipped',
+                description: `Successfully ${data.equipped ? 'equipped' : 'unequipped'} "${data.badgeName}"`,
+            });
+        },
+        onError: (err: Error) => {
+            toast({
+                title: 'Error',
+                description: err.message,
+                variant: 'destructive',
+            });
+        }
     });
 
     // Sync state when user data loads
@@ -93,13 +145,20 @@ export default function ProfilePage() {
                 description: 'Your profile picture has been updated.',
             });
         } catch (err: any) {
-            toast({
-                title: 'Upload failed',
-                description: err.message || 'Failed to upload avatar',
-                variant: 'destructive',
-            });
+            // Check for specific error message about Animated Pack
+            if (err.message && (err.message.includes('Animated Avatar Pack') || err.message.includes('Animated avatars require'))) {
+                setShowPremiumModal(true);
+            } else {
+                toast({
+                    title: 'Upload failed',
+                    description: err.message || 'Failed to upload avatar',
+                    variant: 'destructive',
+                });
+            }
         } finally {
             setIsUploadingAvatar(false);
+            // Reset input so same file can be selected again if needed
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
 
@@ -142,6 +201,12 @@ export default function ProfilePage() {
         });
     };
 
+
+
+    const handleEquipToggle = (badgeId: string, badgeName: string, currentStatus: boolean) => {
+        equipMutation.mutate({ badgeId, badgeName, equipped: !currentStatus });
+    };
+
     const getInitials = (name: string) => {
         return name
             .split(' ')
@@ -151,11 +216,18 @@ export default function ProfilePage() {
             .slice(0, 2);
     };
 
+    // Calculate Skin Class
+    const equippedSkin = user?.badges ? (typeof user.badges === 'string' ? JSON.parse(user.badges) : user.badges).find((b: any) => (b.category === 'theme' || b.category === 'skin') && b.equipped) : null;
+    const skinClass = equippedSkin && THEME_MAPPING[equippedSkin.name] ? `skin-${THEME_MAPPING[equippedSkin.name]}` : '';
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4 pt-24 pb-20">
             <div className="max-w-4xl mx-auto space-y-8">
                 {/* Hero Profile Card */}
-                <Card className="border-primary/20 bg-card/60 backdrop-blur-sm overflow-hidden relative">
+                <Card className={cn("border-primary/20 bg-card/60 backdrop-blur-sm overflow-hidden relative transition-colors duration-500", skinClass)}>
+                    {skinClass === 'skin-valentines' && <HeartRain />}
+                    {skinClass === 'skin-galaxy' && <GalaxyAnimation />}
+                    {skinClass === 'skin-anime' && <AnimeMotion />}
                     {/* Decorative Background Element */}
                     <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-primary/10 via-purple-500/10 to-primary/5" />
 
@@ -165,7 +237,7 @@ export default function ProfilePage() {
                             <div className="flex-shrink-0 mx-auto md:mx-0">
                                 <div className="relative group">
                                     <Avatar className="h-32 w-32 border-4 border-background shadow-xl cursor-pointer ring-2 ring-primary/20" onClick={() => user?.avatarUrl && setShowFullAvatar(true)}>
-                                        <AvatarImage src={user?.avatarUrl || undefined} />
+                                        <AvatarImage src={user?.avatarUrl || undefined} className={user?.avatarUrl?.endsWith('.gif') ? '' : 'object-cover'} />
                                         <AvatarFallback className="text-4xl bg-primary/10">
                                             {user?.username ? getInitials(user.username) : <User className="h-12 w-12" />}
                                         </AvatarFallback>
@@ -184,8 +256,9 @@ export default function ProfilePage() {
                                             size="icon"
                                             className="h-8 w-8 rounded-full shadow-md hover:bg-primary hover:text-primary-foreground transition-colors"
                                             onClick={handleAvatarClick}
+                                            disabled={isUploadingAvatar}
                                         >
-                                            <Camera className="h-4 w-4" />
+                                            {isUploadingAvatar ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
                                         </Button>
                                     </div>
                                 </div>
@@ -194,7 +267,25 @@ export default function ProfilePage() {
                             {/* User Stats & Info - Main Content */}
                             <div className="flex-1 w-full space-y-6">
                                 <div className="text-center md:text-left space-y-1">
-                                    <h2 className="text-3xl font-bold tracking-tight">{user?.username}</h2>
+                                    <div className="flex flex-col md:flex-row items-center gap-3 justify-center md:justify-start">
+                                        <h2 className="text-3xl font-bold tracking-tight">{user?.username}</h2>
+
+                                        {/* Equipped Badges Display */}
+                                        <div className="flex items-center gap-1.5">
+                                            {user?.badges && (typeof user.badges === 'string' ? JSON.parse(user.badges) : user.badges)
+                                                .filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'feature' && b.category !== 'skin' && !b.name.includes('Skin'))
+                                                .map((badge: any) => (
+                                                    <div key={badge.id} className="relative group/tooltip" title={badge.name}>
+                                                        <img
+                                                            src={badge.imageUrl}
+                                                            alt={badge.name}
+                                                            className="w-6 h-6 object-contain drop-shadow-md hover:scale-110 transition-transform"
+                                                        />
+                                                    </div>
+                                                ))
+                                            }
+                                        </div>
+                                    </div>
                                     <p className="text-muted-foreground">{user?.email}</p>
                                     {bio && <p className="text-sm italic pt-2 max-w-lg mx-auto md:mx-0 text-muted-foreground/80">{bio}</p>}
                                 </div>
@@ -204,15 +295,15 @@ export default function ProfilePage() {
                                     <div className="flex justify-between items-end px-1">
                                         <div className="flex items-center gap-2">
                                             <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 uppercase text-[10px] tracking-wider font-bold px-2 py-0.5">
-                                                Level {user?.level || 1}
+                                                Level {(user as any)?.level || 1}
                                             </Badge>
                                             <span className="text-xs text-muted-foreground font-medium">Master Viewer</span>
                                         </div>
                                         <span className="text-xs font-mono text-muted-foreground">
-                                            {(user?.xp || 0) % 1000} <span className="text-primary/60">/</span> 1000 XP
+                                            {((user as any)?.xp || 0) % 1000} <span className="text-primary/60">/</span> 1000 XP
                                         </span>
                                     </div>
-                                    <Progress value={((user?.xp || 0) % 1000) / 10} className="h-2.5 bg-secondary" />
+                                    <Progress value={(((user as any)?.xp || 0) % 1000) / 10} className="h-2.5 bg-secondary" />
                                 </div>
 
                                 {/* Streak Display - PLACED HERE AS REQUESTED */}
@@ -221,68 +312,158 @@ export default function ProfilePage() {
                                 </div>
 
                                 {/* Badges Section - Integrated */}
-                                {user?.badges && (typeof user.badges === 'string' ? JSON.parse(user.badges) : user.badges).length > 0 && (
-                                    <div className="space-y-3 pt-2">
-                                        <Label className="uppercase text-xs tracking-wider text-muted-foreground font-semibold flex items-center gap-2">
-                                            <Medal className="w-3 h-3" /> Recent Awards
-                                        </Label>
-                                        <div className="flex gap-3 overflow-x-auto p-2 pb-4 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent md:flex-wrap">
-                                            {(typeof user.badges === 'string' ? JSON.parse(user.badges) : user.badges).map((badge: any) => {
-                                                const iconName = badge.icon || 'Star';
-                                                const PascalName = iconName.split('-').map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join('');
-                                                const IconComponent = (icons as any)[PascalName] || (icons as any)[iconName] || Star;
+                                {/* Badges Section - Integrated */}
+                                {(() => {
+                                    const badges = user?.badges ? (typeof user.badges === 'string' ? JSON.parse(user.badges) : user.badges) : [];
+                                    const themes = badges.filter((b: any) => b.category === 'theme');
+                                    const skins = badges.filter((b: any) => b.category === 'skin' || b.name.includes('Skin'));
+                                    const regularBadges = badges.filter((b: any) => b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'feature');
+                                    const equippedCount = badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'feature' && b.category !== 'skin' && !b.name.includes('Skin')).length;
 
-                                                return (
-                                                    <div key={badge.id} className="group relative flex flex-col items-center justify-center p-3 bg-gradient-to-b from-muted/50 to-muted/20 border border-white/5 hover:border-primary/20 rounded-xl min-w-[90px] w-[90px] h-[110px] transition-all hover:-translate-y-1 hover:shadow-lg" title={badge.description}>
-                                                        {badge.imageUrl ? (
-                                                            <img
-                                                                src={badge.imageUrl}
-                                                                alt={badge.name}
-                                                                className="w-10 h-10 object-contain mb-2 drop-shadow-sm transition-transform group-hover:scale-110"
-                                                                onError={(e) => {
-                                                                    e.currentTarget.style.display = 'none';
-                                                                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                                                                }}
-                                                            />
-                                                        ) : null}
+                                    if (badges.length === 0) return null;
 
-                                                        <div className={`w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500 mb-2 group-hover:bg-yellow-500/20 transition-colors ${badge.imageUrl ? 'hidden' : ''}`}>
-                                                            <IconComponent className="w-5 h-5" />
-                                                        </div>
+                                    return (
+                                        <div className="space-y-6 pt-2">
+                                            {/* Premium Items (Themes) */}
+                                            {themes.length > 0 && (
+                                                <div className="space-y-3">
+                                                    <Label className="uppercase text-xs tracking-wider text-muted-foreground font-semibold flex items-center gap-2">
+                                                        <Crown className="w-3 h-3 text-purple-500" /> Premium Items
+                                                    </Label>
+                                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 pb-4 pt-1 px-1">
+                                                        {themes.map((theme: any) => {
+                                                            const themeId = THEME_MAPPING[theme.name];
+                                                            const previewUrl = theme.imageUrl || THEME_PREVIEWS[themeId];
 
-                                                        <span className="text-[10px] text-center font-medium leading-tight w-full px-1 text-muted-foreground group-hover:text-foreground transition-colors line-clamp-2">
-                                                            {badge.name}
-                                                        </span>
+                                                            return (
+                                                                <div key={theme.id} className="relative group w-full rounded-lg overflow-hidden border border-white/10 bg-black/40 shadow-xl transition-all hover:scale-105 hover:border-primary/50" title={theme.description}>
+                                                                    <div className="aspect-video w-full overflow-hidden">
+                                                                        <img
+                                                                            src={previewUrl}
+                                                                            alt={theme.name}
+                                                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                                                        />
+                                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
+                                                                    </div>
+                                                                    <div className="p-2 text-center absolute bottom-0 left-0 right-0">
+                                                                        <h4 className="text-[10px] font-bold text-white drop-shadow-md truncate">{theme.name}</h4>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
                                                     </div>
-                                                );
-                                            })}
+                                                </div>
+                                            )}
+
+                                            {/* Skins */}
+                                            {skins.length > 0 && (
+                                                <div className="space-y-3">
+                                                    <Label className="uppercase text-xs tracking-wider text-muted-foreground font-semibold flex items-center gap-2">
+                                                        <Crown className="w-3 h-3 text-pink-500" /> Skins
+                                                    </Label>
+                                                    <div className="flex gap-3 overflow-x-auto p-2 pb-4 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent md:flex-wrap">
+                                                        {skins.map((skin: any) => {
+                                                            const isMaxEquipped = !skin.equipped && equippedCount >= 3;
+                                                            return (
+                                                                <div key={skin.id} className="group relative flex flex-col items-center justify-center p-2 bg-gradient-to-b from-muted/50 to-muted/20 border border-white/5 hover:border-primary/20 rounded-xl transition-all hover:-translate-y-1 hover:shadow-lg min-w-[90px] w-[90px] h-[140px]" title={skin.description}>
+                                                                    <img
+                                                                        src={skin.imageUrl}
+                                                                        alt={skin.name}
+                                                                        className="w-full h-24 object-cover rounded-md mb-2 drop-shadow-sm transition-transform group-hover:scale-110"
+                                                                        onError={(e) => {
+                                                                            e.currentTarget.style.display = 'none';
+                                                                        }}
+                                                                    />
+                                                                    <span className="text-[10px] text-center font-medium leading-tight w-full px-1 text-muted-foreground group-hover:text-foreground transition-colors line-clamp-2 h-8">
+                                                                        {skin.name}
+                                                                    </span>
+                                                                    {/* Equip Button */}
+                                                                    <Button
+                                                                        variant={skin.equipped ? "secondary" : "ghost"}
+                                                                        size="sm"
+                                                                        disabled={isMaxEquipped}
+                                                                        className={`mt-1 h-6 text-[10px] px-2 w-full relative overflow-hidden ${skin.equipped
+                                                                            ? 'bg-primary/20 text-primary hover:bg-destructive/20 hover:text-destructive'
+                                                                            : 'hover:bg-white/10'}`}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleEquipToggle(skin.badgeId || skin.id, skin.name, skin.equipped);
+                                                                        }}
+                                                                    >
+                                                                        {skin.equipped ? 'Unequip' : 'Equip'}
+                                                                    </Button>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Regular Badges */}
+                                            {regularBadges.length > 0 && (
+                                                <div className="space-y-3">
+                                                    <Label className="uppercase text-xs tracking-wider text-muted-foreground font-semibold flex items-center gap-2">
+                                                        <Trophy className="w-3 h-3" /> Badges Collection <span className="text-[10px] font-normal opacity-70">({equippedCount}/3 Equipped)</span>
+                                                    </Label>
+                                                    <div className="flex gap-3 overflow-x-auto p-2 pb-4 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent md:flex-wrap">
+                                                        {regularBadges.map((badge: any) => {
+                                                            const iconName = badge.icon || 'Star';
+                                                            const PascalName = iconName.split('-').map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join('');
+                                                            const IconComponent = (icons as any)[PascalName] || (icons as any)[iconName] || Star;
+                                                            const isMaxEquipped = !badge.equipped && equippedCount >= 3;
+
+                                                            return (
+                                                                <div key={badge.id} className="group relative flex flex-col items-center justify-center p-3 bg-gradient-to-b from-muted/50 to-muted/20 border border-white/5 hover:border-primary/20 rounded-xl transition-all hover:-translate-y-1 hover:shadow-lg min-w-[100px] w-[110px] h-[140px]" title={badge.description}>
+                                                                    {badge.imageUrl ? (
+                                                                        <img
+                                                                            src={badge.imageUrl}
+                                                                            alt={badge.name}
+                                                                            className="w-10 h-10 object-contain mb-2 drop-shadow-sm transition-transform group-hover:scale-110"
+                                                                            onError={(e) => {
+                                                                                e.currentTarget.style.display = 'none';
+                                                                                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                                                            }}
+                                                                        />
+                                                                    ) : null}
+
+                                                                    <div className={`w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500 mb-2 group-hover:bg-yellow-500/20 transition-colors ${badge.imageUrl ? 'hidden' : ''}`}>
+                                                                        <IconComponent className="w-5 h-5" />
+                                                                    </div>
+
+                                                                    <span className="text-[10px] text-center font-medium leading-tight w-full px-1 text-muted-foreground group-hover:text-foreground transition-colors line-clamp-2 h-8">
+                                                                        {badge.name}
+                                                                    </span>
+
+                                                                    {/* Equip Button */}
+                                                                    <Button
+                                                                        variant={badge.equipped ? "secondary" : "ghost"}
+                                                                        size="sm"
+                                                                        disabled={isMaxEquipped}
+                                                                        className={`mt-2 h-6 text-[10px] px-2 w-full relative overflow-hidden ${badge.equipped
+                                                                            ? 'bg-primary/20 text-primary hover:bg-destructive/20 hover:text-destructive'
+                                                                            : 'hover:bg-white/10'}`}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleEquipToggle(badge.badgeId || badge.id, badge.name, badge.equipped);
+                                                                        }}
+                                                                    >
+                                                                        {badge.equipped ? 'Unequip' : 'Equip'}
+                                                                    </Button>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                    </div>
-                                )}
+                                    );
+                                })()}
                             </div>
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* Gamification Navigation Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {[
-                        { label: 'Achievements', icon: Trophy, color: 'text-purple-400', border: 'hover:border-purple-500', bg: 'hover:bg-purple-500/10', path: '/achievements' },
-                        { label: 'Leaderboard', icon: Medal, color: 'text-yellow-400', border: 'hover:border-yellow-500', bg: 'hover:bg-yellow-500/10', path: '/leaderboard' },
-                        { label: 'Polls', icon: BarChart2, color: 'text-blue-400', border: 'hover:border-blue-500', bg: 'hover:bg-blue-500/10', path: '/polls' },
-                        { label: 'Challenges', icon: Target, color: 'text-red-400', border: 'hover:border-red-500', bg: 'hover:bg-red-500/10', path: '/challenges' },
-                    ].map((item) => (
-                        <Button
-                            key={item.label}
-                            variant="outline"
-                            className={`h-24 flex flex-col items-center justify-center gap-2 border-muted hover:shadow-md transition-all ${item.border} ${item.bg}`}
-                            onClick={() => navigate(item.path)}
-                        >
-                            <item.icon className={`h-8 w-8 ${item.color}`} />
-                            <span className="font-semibold">{item.label}</span>
-                        </Button>
-                    ))}
-                </div>
+
 
                 {/* Profile Settings Section */}
                 <Card>
@@ -459,6 +640,41 @@ export default function ProfilePage() {
                     </div>
                 )
             }
+
+            {/* Premium Upgrade Modal */}
+            <AlertDialog open={showPremiumModal} onOpenChange={setShowPremiumModal}>
+                <AlertDialogContent className="bg-gradient-to-br from-background to-background/95 border-primary/20">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2 text-xl">
+                            <Crown className="w-6 h-6 text-purple-500" />
+                            Premium Feature Locked
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="space-y-3 pt-2">
+                            <p>
+                                Animated avatars (GIFs) are a premium feature reserved for StreamVault supporters.
+                            </p>
+                            <div className="bg-primary/5 p-4 rounded-lg border border-primary/10 flex items-start gap-4">
+                                <div className="p-2 bg-primary/10 rounded-full">
+                                    <Rocket className="w-6 h-6 text-primary" />
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="font-semibold text-foreground">Animated Avatar Pack</p>
+                                    <p className="text-xs text-muted-foreground">Get indefinite access to upload GIFs and stand out in the community!</p>
+                                </div>
+                            </div>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-2 sm:gap-0">
+                        <AlertDialogCancel>Maybe Later</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => {
+                            setShowPremiumModal(false);
+                            navigate('/store?category=feature'); // Navigate to store
+                        }} className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 text-white border-0">
+                            Go to Store
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div >
     );
 }

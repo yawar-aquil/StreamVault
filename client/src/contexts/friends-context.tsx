@@ -8,6 +8,9 @@ interface Friend {
     friendId: string;
     username: string;
     avatarUrl: string | null;
+    badges?: any[];
+    lastActive?: string | null;
+    createdAt: string;
 }
 
 interface FriendRequest {
@@ -19,6 +22,7 @@ interface FriendRequest {
     fromUser: {
         username: string;
         avatarUrl: string | null;
+        badges?: any[];
     };
 }
 
@@ -30,8 +34,9 @@ interface FriendsContextType {
     acceptFriendRequest: (userId: string) => Promise<void>;
     declineFriendRequest: (userId: string) => Promise<void>;
     removeFriend: (userId: string) => Promise<void>;
-    searchUsers: (query: string) => Promise<{ id: string; username: string; avatarUrl: string | null }[]>;
+    searchUsers: (query: string) => Promise<{ id: string; username: string; avatarUrl: string | null; badges?: any }[]>;
     refreshFriends: () => Promise<void>;
+    updateFriendLastActive: (friendId: string, timestamp: string) => void;
 }
 
 const FriendsContext = createContext<FriendsContextType | undefined>(undefined);
@@ -216,6 +221,15 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    const updateFriendLastActive = useCallback((friendId: string, timestamp: string) => {
+        setFriends(prev => prev.map(f => {
+            if (f.friendId === friendId || f.id === friendId) {
+                return { ...f, lastActive: timestamp };
+            }
+            return f;
+        }));
+    }, []);
+
     return (
         <FriendsContext.Provider
             value={{
@@ -227,7 +241,8 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
                 declineFriendRequest,
                 removeFriend,
                 searchUsers,
-                refreshFriends: fetchFriends
+                refreshFriends: fetchFriends,
+                updateFriendLastActive
             }}
         >
             {children}

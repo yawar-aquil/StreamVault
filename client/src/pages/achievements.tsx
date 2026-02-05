@@ -12,6 +12,7 @@ interface AchievementDef {
     name: string;
     description: string;
     icon: string;
+    imageUrl?: string;
     category: "onboarding" | "viewing" | "genre" | "social" | "time" | "progression" | "secret";
 }
 
@@ -71,11 +72,11 @@ export default function AchievementsPage() {
     return (
         <div className="container mx-auto px-4 py-8 max-w-7xl">
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6 relative overflow-hidden p-8 rounded-3xl bg-gradient-to-br from-purple-900/20 to-blue-900/10 border border-white/5">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6 relative overflow-hidden p-8 rounded-3xl bg-gradient-to-br from-purple-900/20 to-blue-900/10 border border-border">
                 <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-96 h-96 bg-purple-500/20 blur-[100px] rounded-full pointer-events-none" />
 
                 <div className="relative z-10">
-                    <h1 className="text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60 mb-2">
+                    <h1 className="text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/60 mb-2">
                         Achievements
                     </h1>
                     <p className="text-lg text-muted-foreground max-w-xl">
@@ -88,7 +89,7 @@ export default function AchievementsPage() {
                         <span className="text-4xl font-bold font-mono text-purple-400">{systemEarnedCount}</span>
                         <span className="text-muted-foreground pb-1">/ {totalSystemCount} Unlocked</span>
                     </div>
-                    <div className="w-full md:w-64 h-3 bg-secondary/50 rounded-full overflow-hidden backdrop-blur-sm border border-white/5">
+                    <div className="w-full md:w-64 h-3 bg-secondary/50 rounded-full overflow-hidden backdrop-blur-sm border border-border">
                         <motion.div
                             className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full"
                             initial={{ width: 0 }}
@@ -127,7 +128,7 @@ export default function AchievementsPage() {
 
                         return (
                             <section key={catKey} className="space-y-6">
-                                <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                                <div className="flex items-center gap-3 border-b border-border pb-4">
                                     <div className={`p-2 rounded-xl ${config.bg} ${config.color}`}>
                                         <CatIcon className="w-6 h-6" />
                                     </div>
@@ -148,7 +149,7 @@ export default function AchievementsPage() {
                                                 whileHover={{ y: -5 }}
                                                 className={`group relative overflow-hidden rounded-2xl border transition-all duration-300 ${isUnlocked
                                                     ? `bg-gradient-to-br from-card to-card/50 ${config.border} shadow-lg shadow-black/20`
-                                                    : "bg-card/30 border-white/5 grayscale opacity-60 hover:grayscale-[0.5] hover:opacity-80"
+                                                    : "bg-card/30 border-border grayscale opacity-60 hover:grayscale-[0.5] hover:opacity-80"
                                                     }`}
                                             >
                                                 {/* Card Background Glow */}
@@ -188,7 +189,7 @@ export default function AchievementsPage() {
                                                     </div>
 
                                                     {isUnlocked && (
-                                                        <div className="mt-4 pt-3 border-t border-white/5 text-[10px] uppercase tracking-wider font-medium opacity-60">
+                                                        <div className="mt-4 pt-3 border-t border-border text-[10px] uppercase tracking-wider font-medium opacity-60">
                                                             Unlocked {new Date(earnedData.earnedAt).toLocaleDateString()}
                                                         </div>
                                                     )}

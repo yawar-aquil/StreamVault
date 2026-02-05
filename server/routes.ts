@@ -6,17 +6,20 @@ import { storage } from "./storage";
 import { z } from "zod";
 import { watchlistSchema, viewingProgressSchema, insertBlogPostSchema, insertUserSchema, loginSchema, updateProfileSchema } from "@shared/schema";
 import type { InsertEpisode, BlogPost, Show, Movie, Anime } from "@shared/schema";
-import { readFileSync, existsSync, writeFileSync, mkdirSync } from "fs";
+import { readFileSync, existsSync, writeFileSync, mkdirSync, unlinkSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { setupSitemaps } from "./sitemap";
-import { sendContentRequestEmail, sendIssueReportEmail, sendPasswordResetEmail } from "./email-service";
+import { sendContentRequestEmail, sendIssueReportEmail, sendPasswordResetEmail, sendCoinPurchaseReceiptEmail, sendEmailVerificationEmail } from "./email-service";
+import { createRazorpayOrder, verifyRazorpaySignature } from "./payment";
+import { convertCurrency } from "./currency";
 import { searchSubtitles, downloadSubtitle, getCachedSubtitle } from "./subtitle-service";
 import { checkAndAwardAchievements, ACHIEVEMENTS } from "./achievements";
 import { getActiveRooms, checkRoomExists } from "./watch-together";
 import webpush from "web-push";
 import { hashPassword, verifyPassword, generateToken, verifyToken, setAuthCookie, clearAuthCookie, type AuthRequest } from "./auth";
 import multer from "multer";
+import storeRoutes from "./store";
 
 // Helper to convert ReadableStream to async iterable for Node.js
 async function* streamToAsyncIterable(stream: ReadableStream<Uint8Array>) {
@@ -62,12 +65,18 @@ function requireAdmin(req: any, res: any, next: any) {
 // API Key authentication middleware for external access
 async function requireApiKey(req: any, res: any, next: any) {
   // Skip API key check for same-origin (frontend) requests
+  // Check for API key in header
   const origin = req.headers.origin || req.headers.referer;
   const host = req.headers.host;
+
   if (origin && host) {
-    const originUrl = new URL(origin).host;
-    if (originUrl === host || originUrl.includes('localhost') || originUrl.includes('127.0.0.1')) {
-      return next(); // Frontend request, skip API key check
+    try {
+      const originUrl = new URL(origin).host;
+      if (originUrl === host || originUrl.includes('localhost') || originUrl.includes('127.0.0.1')) {
+        return next(); // Frontend request, skip API key check
+      }
+    } catch (e) {
+      // Invalid origin URL, proceed to check API key
     }
   }
 
@@ -105,6 +114,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Setup dynamic sitemaps
   setupSitemaps(app, storage);
+
+  // Global Middleware: Track Last Active
+  app.use(async (req, res, next) => {
+    const token = req.cookies?.authToken || req.headers.authorization?.replace('Bearer ', '');
+    if (token) {
+      try {
+        const payload = verifyToken(token);
+        if (payload && payload.userId) {
+          // Update last active in background
+          storage.setLastActive(payload.userId).catch(err => console.error("Error updating last active:", err));
+        }
+      } catch (e) {
+        // Ignore token errors in this global middleware, let specific routes handle auth enforcement
+      }
+    }
+    next();
+  });
 
   // Configure multer for avatar uploads
   const avatarStorage = multer.diskStorage({
@@ -167,6 +193,287 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   });
 
+  // Equip Badge Endpoint (Toggle Logic + Max 3)
+  app.post("/api/badges/equip", async (req: AuthRequest, res) => {
+    try {
+      const token = req.cookies?.authToken || req.headers.authorization?.replace('Bearer ', '');
+      if (!token) return res.status(401).json({ error: "Not authenticated" });
+      const payload = verifyToken(token);
+      if (!payload) return res.status(401).json({ error: "Invalid token" });
+
+      const { badgeId, equipped } = req.body;
+      if (!badgeId) return res.status(400).json({ error: "Badge ID required" });
+
+      // Verify ownership
+      const userBadges = await storage.getUserBadges(payload.userId);
+      const userBadge = userBadges.find(ub => ub.badgeId === badgeId);
+
+      if (!userBadge) {
+        return res.status(400).json({ error: "You do not own this badge" });
+      }
+
+      // Enforce Max 1 Skin Limit
+      if (equipped && (userBadge.badge.category === 'skin' || userBadge.badge.name.includes('Skin'))) {
+        const currentlyEquippedSkins = userBadges.filter(ub =>
+          ub.equipped && (ub.badge.category === 'skin' || ub.badge.name.includes('Skin'))
+        );
+
+        if (!userBadge.equipped && currentlyEquippedSkins.length >= 1) {
+          return res.status(400).json({ error: "You can only equip 1 skin at a time." });
+        }
+      }
+
+      // Check current equipped count (Exclude Skins, Themes, Features)
+      const currentlyEquipped = userBadges.filter(ub =>
+        ub.equipped &&
+        ub.badge.category !== 'skin' &&
+        !ub.badge.name.includes('Skin') &&
+        ub.badge.category !== 'theme' &&
+        ub.badge.category !== 'feature'
+      );
+
+      // Allow if less than 3, OR if we are re-equipping something (target is true) and it wasn't equipped before
+      if (equipped && !userBadge.equipped && currentlyEquipped.length >= 3) {
+        if (userBadge.badge.category !== 'skin' && !userBadge.badge.name.includes('Skin') && userBadge.badge.category !== 'theme' && userBadge.badge.category !== 'feature') {
+          return res.status(400).json({ error: "You can only equip up to 3 badges at a time." });
+        }
+      }
+
+      await storage.updateUserBadgeEquippedStatus(payload.userId, badgeId, equipped);
+      res.json({ success: true, equipped, badgeName: userBadge.badge.name });
+    } catch (error) {
+      console.error("Equip badge error:", error);
+      res.status(500).json({ error: "Failed to equip badge" });
+    }
+  });
+
+  // Avatar Upload Route
+  app.post("/api/user/avatar", avatarUpload.single('avatar'), async (req: AuthRequest, res) => {
+    try {
+      const token = req.cookies?.authToken || req.headers.authorization?.replace('Bearer ', '');
+      if (!token) return res.status(401).json({ error: "Not authenticated" });
+      const payload = verifyToken(token);
+      if (!payload) return res.status(401).json({ error: "Invalid token" });
+
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      // GIF Restriction Check
+      if (req.file.mimetype === 'image/gif') {
+        const userBadges = await storage.getUserBadges(payload.userId);
+        const hasPack = userBadges.some(ub => ub.badge.name === 'Animated Avatar Pack');
+
+        if (!hasPack) {
+          // Delete unauthorized GIF
+          if (existsSync(req.file.path)) {
+            unlinkSync(req.file.path);
+          }
+          return res.status(403).json({ error: "Animated avatars require the Premium Animated Avatar Pack" });
+        }
+      }
+
+      // Update User Profile with local path (or URL if served statically)
+      // Assuming we serve 'uploads' as static, URL would be /uploads/avatars/filename
+      const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+      await storage.updateUser(payload.userId, { avatarUrl });
+
+      // Check "Identity Crisis" achievement
+      await checkAndAwardAchievements(payload.userId);
+
+      res.json({ success: true, avatarUrl });
+    } catch (error) {
+      console.error("Avatar upload error:", error);
+      res.status(500).json({ error: "Failed to upload avatar" });
+    }
+  });
+
+
+  // ============================================
+  // STORE ROUTES
+  // ============================================
+  // Products can be browsed without auth, but purchase/gift requires auth (checked in routes)
+  app.use('/api/store', storeRoutes);
+
+  // ============================================
+  // WALLET ROUTES
+  // ============================================
+
+  // Get wallet transactions
+  app.get("/api/wallet/transactions", async (req: AuthRequest, res) => {
+    try {
+      const token = req.cookies?.authToken || req.headers.authorization?.replace('Bearer ', '');
+      if (!token) return res.status(401).json({ error: "Not authenticated" });
+      const payload = verifyToken(token);
+      if (!payload) return res.status(401).json({ error: "Invalid token" });
+
+      const transactions = await storage.getUserCoinTransactions(payload.userId);
+      res.json(transactions);
+    } catch (error) {
+      console.error("Get transactions error:", error);
+      res.status(500).json({ error: "Failed to get transactions" });
+    }
+  });
+
+  // ============================================
+  // PAYMENT ROUTES (RAZORPAY)
+  // ============================================
+
+  // 1. Create Order
+  app.post("/api/payment/create-order", async (req: AuthRequest, res) => {
+    try {
+      const token = req.cookies?.authToken || req.headers.authorization?.replace('Bearer ', '');
+      if (!token) return res.status(401).json({ error: "Not authenticated" });
+      const payload = verifyToken(token);
+      if (!payload) return res.status(401).json({ error: "Invalid token" });
+
+      const { packageId, amount } = req.body;
+      let coinAmount = 0;
+
+      // Base Prices in USD
+      const validPackages: Record<string, number> = {
+        'handful': 500,
+        'sack': 1200,
+        'chest': 2500,
+        'vault': 6500
+      };
+      const packagePricesUSD: Record<string, number> = {
+        'handful': 4.99,
+        'sack': 9.99,
+        'chest': 19.99,
+        'vault': 49.99
+      };
+
+      let basePriceUSD = 0;
+
+      if (packageId === 'custom') {
+        const customAmount = parseInt(amount);
+        if (isNaN(customAmount) || customAmount <= 0) {
+          return res.status(400).json({ error: 'Invalid custom amount' });
+        }
+        coinAmount = customAmount;
+
+        // Dynamic Pricing Logic (USD Base)
+        let rate = 0.00998;
+        if (coinAmount >= 6500) rate = 49.99 / 6500;
+        else if (coinAmount >= 2500) rate = 19.99 / 2500;
+        else if (coinAmount >= 1200) rate = 9.99 / 1200;
+
+        basePriceUSD = parseFloat((coinAmount * rate).toFixed(2));
+      } else {
+        coinAmount = validPackages[packageId];
+        if (!coinAmount) return res.status(400).json({ error: 'Invalid coin package' });
+        basePriceUSD = packagePricesUSD[packageId];
+      }
+
+      // 1. Convert USD -> Target Currency (Real-Time)
+      // Default to INR if no currency provided (safety fallback), but client should send it.
+      const targetCurrency = req.body.currency || "INR";
+      const finalAmount = await convertCurrency(basePriceUSD, 'USD', targetCurrency);
+
+      // Update logic to use this finalAmount for Razorpay
+      const priceInRupees = finalAmount; // naming variable specifically for clarity, though it's any currency now
+
+
+      // Create Razorpay Order
+      // Razorpay receipt limit is 40 chars. 
+      const shortUser = payload.userId.substring(0, 6);
+      const shortTime = Date.now().toString().slice(-10);
+      const receiptId = `rcpt_${shortTime}_${shortUser}`;
+
+      // Use the generic helper
+      const order = await createRazorpayOrder(priceInRupees, targetCurrency, receiptId);
+
+      res.json({
+        success: true,
+        keyId: process.env.RAZORPAY_KEY_ID,
+        orderId: order.id,
+        amount: order.amount, // in smallest unit
+        currency: order.currency,
+        packageDetails: { packageId, amount: coinAmount, cost: `$${basePriceUSD}` } // Return USD cost for display confirmation
+      });
+
+    } catch (error) {
+      console.error("Create order error:", error);
+      res.status(500).json({ error: "Failed to create payment order" });
+    }
+  });
+
+  // 2. Verify Payment & Fulfill Order
+  app.post("/api/payment/verify", async (req: AuthRequest, res) => {
+    try {
+      const token = req.cookies?.authToken || req.headers.authorization?.replace('Bearer ', '');
+      if (!token) return res.status(401).json({ error: "Not authenticated" });
+      const payload = verifyToken(token);
+      if (!payload) return res.status(401).json({ error: "Invalid token" });
+
+      const user = await storage.getUserById(payload.userId);
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      const {
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature,
+        packageId,
+        amount,
+        cost,
+        recipientEmail
+      } = req.body;
+
+      // Verify Signature
+      const isValid = verifyRazorpaySignature(razorpay_order_id, razorpay_payment_id, razorpay_signature);
+      if (!isValid) {
+        return res.status(400).json({ error: "Invalid payment signature" });
+      }
+
+      // --- Payment Verified: Fulfill Order ---
+
+      // 1. Update Balance
+      const updatedUser = await storage.updateUserCoins(payload.userId, amount);
+
+      // 2. Record Transaction
+      const transaction = await storage.createCoinTransaction({
+        userId: payload.userId,
+        amount: amount,
+        type: 'deposit',
+        description: packageId === 'custom' ? `Custom Top-Up (${amount} coins)` : `Bought ${packageId} of coins`,
+        metadata: JSON.stringify({
+          packageId,
+          cost,
+          paymentId: razorpay_payment_id,
+          orderId: razorpay_order_id
+        })
+      });
+
+      // 3. Send Receipt Email
+      const emailToSend = recipientEmail || user.email;
+      if (emailToSend) {
+        try {
+          await sendCoinPurchaseReceiptEmail(
+            emailToSend,
+            user.username,
+            amount,
+            cost,
+            updatedUser.coins,
+            transaction.id
+          );
+        } catch (error) {
+          console.error("Failed to send coin receipt email:", error);
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Payment successful! Purchased ${amount} coins.`,
+        newBalance: updatedUser.coins
+      });
+
+    } catch (error) {
+      console.error("Verify payment error:", error);
+      res.status(500).json({ error: "Failed to verify payment" });
+    }
+  });
+
   // ============================================
   // AUTHENTICATION ROUTES
   // ============================================
@@ -209,13 +516,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         badges: "[]"
       });
 
-      // Generate token and set cookie
+      // Handle Referral Code
+      const { referralCode } = req.body;
+      if (referralCode) {
+        try {
+          await storage.applyReferralCode(user.id, referralCode);
+        } catch (error) {
+          console.error("Referral application failed:", error);
+          // Don't fail the registration, just log it
+        }
+      }
+
+      // Generate token and set cookie (Log them in, but UI will force verification)
       const token = generateToken({
         userId: user.id,
         email: user.email,
         username: user.username,
       });
       setAuthCookie(res, token);
+
+      // Send Verification Email
+      try {
+        const verificationToken = await storage.createEmailVerificationToken(user.email);
+        await sendEmailVerificationEmail(user.email, verificationToken);
+      } catch (emailError) {
+        console.error("Failed to send verification email:", emailError);
+      }
 
       // Auto-subscribe to newsletter logic... (keep existing)
       try {
@@ -242,20 +568,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check for 'New Comer' achievement
       await checkAndAwardAchievements(user.id);
 
+      // Re-fetch user to get updated stats (XP/Coins from referral)
+      const freshUser = await storage.getUserById(user.id);
+
       res.status(201).json({
         user: {
-          id: user.id,
-          email: user.email,
-          username: user.username,
-          avatarUrl: user.avatarUrl,
-          bio: user.bio,
-          referredBy: user.referredBy,
-          referralCount: user.referralCount,
+          id: freshUser!.id,
+          email: freshUser!.email,
+          username: freshUser!.username,
+          avatarUrl: freshUser!.avatarUrl,
+          bio: freshUser!.bio,
+          referredBy: freshUser!.referredBy,
+          referralCount: freshUser!.referralCount,
+          coins: freshUser!.coins,
         },
       });
     } catch (error) {
       console.error("Registration error:", error);
       res.status(500).json({ error: "Failed to register" });
+    }
+  });
+
+  // Verify Email Address
+  app.post("/api/auth/verify-email", async (req, res) => {
+    try {
+      const { email, code } = req.body;
+      if (!email || !code) return res.status(400).json({ error: "Email and code are required" });
+
+      const success = await storage.verifyEmailVerificationToken(email, code);
+      if (!success) {
+        return res.status(400).json({ error: "Invalid or expired verification code" });
+      }
+
+      res.json({ success: true, message: "Email verified successfully" });
+    } catch (error) {
+      console.error("Email verification error:", error);
+      res.status(500).json({ error: "Failed to verify email" });
+    }
+  });
+
+  // Resend Verification Code
+  app.post("/api/auth/resend-verification", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) return res.status(400).json({ error: "Email is required" });
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      if (user.emailVerified) {
+        return res.status(400).json({ error: "Email already verified" });
+      }
+
+      const token = await storage.createEmailVerificationToken(email);
+      await sendEmailVerificationEmail(email, token);
+
+      res.json({ success: true, message: "Verification code sent" });
+    } catch (error) {
+      console.error("Resend verification error:", error);
+      res.status(500).json({ error: "Failed to send verification code" });
     }
   });
 
@@ -298,6 +669,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           bio: user.bio,
           referredBy: user.referredBy,
           referralCount: user.referralCount,
+          coins: user.coins,
         },
       });
     } catch (error) {
@@ -402,6 +774,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         favorites = null;
       }
 
+
+      // Get equipped badge
+      const equippedBadge = await storage.getEquippedBadge(user.id);
+
       res.json({
         user: {
           id: user.id,
@@ -416,6 +792,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           xp: user.xp,
           level: user.level,
           badges: user.badges,
+          equippedBadge: equippedBadge,
+          coins: user.coins,
         },
       });
     } catch (error) {
@@ -487,6 +865,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           referralCount: user.referralCount,
           socialLinks,
           favorites,
+          coins: user.coins,
         },
       });
     } catch (error) {
@@ -513,6 +892,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+
+      // Security Check: Restrict GIFs to Premium Users
+      if (req.file.mimetype === 'image/gif') {
+        const userBadges = await storage.getUserBadges(payload.userId);
+        const hasPremium = userBadges.some(ub => ub.badge.name === "Animated Avatar Pack");
+
+        if (!hasPremium) {
+          // Delete the uploaded file to prevent clutter
+          try {
+            unlinkSync(req.file.path);
+          } catch (e) {
+            console.error("Failed to delete rejected GIF:", e);
+          }
+          return res.status(403).json({ error: "Animated avatars require the 'Animated Avatar Pack' badge." });
+        }
+      }
+
       const user = await storage.updateUser(payload.userId, { avatarUrl });
 
       // Check achievements (Identity Crisis)
@@ -549,18 +945,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const users = await storage.searchUsers(query);
+
       // Filter out current user and return only public info
-      const filtered = users
-        .map(u => ({
+      // Also fetch equipped badges dynamically
+      const filtered = await Promise.all(users.map(async (u) => {
+        const userBadges = await storage.getUserBadges(u.id);
+        const equipped = userBadges.filter(ub => ub.equipped).map(ub => ({
+          id: ub.badge.id,
+          name: ub.badge.name,
+          imageUrl: ub.badge.imageUrl,
+          equipped: true
+        }));
+
+        return {
           id: u.id,
           username: u.username,
           avatarUrl: u.avatarUrl,
-        }));
+          badges: equipped,
+        };
+      }));
 
       res.json(filtered);
     } catch (error) {
       console.error("User search error:", error);
       res.status(500).json({ error: "Failed to search users" });
+    }
+  });
+
+  // Get specific user's public profile (for Watch Together / deep linking)
+  app.get("/api/users/:id/public-profile", async (req, res) => {
+    try {
+      const token = req.cookies.authToken;
+      if (!token) return res.status(401).json({ error: "Not authenticated" });
+      if (!verifyToken(token)) return res.status(401).json({ error: "Invalid token" });
+
+      const userId = req.params.id;
+      const user = await storage.getUserById(userId);
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Fetch badges
+      const userBadges = await storage.getUserBadges(user.id);
+      const allBadges = userBadges.map(ub => ({
+        id: ub.badge.id,
+        name: ub.badge.name,
+        imageUrl: ub.badge.imageUrl,
+        equipped: ub.equipped,
+        category: ub.badge.category,
+        description: ub.badge.description,
+        icon: ub.badge.icon
+      }));
+
+      // Parse JSON fields
+      let socialLinks = null;
+      let favorites = null;
+      try { socialLinks = user.socialLinks ? JSON.parse(user.socialLinks as string) : null; } catch (e) { }
+      try {
+        const rawFavorites = user.favorites ? JSON.parse(user.favorites as string) : null;
+        if (rawFavorites) {
+          favorites = { shows: [], movies: [], anime: [] };
+
+          if (rawFavorites.shows && Array.isArray(rawFavorites.shows)) {
+            for (const id of rawFavorites.shows) {
+              const show = await storage.getShowById(id);
+              if (show) favorites.shows.push({ id: show.id, title: show.title, posterUrl: show.posterUrl, slug: show.slug });
+            }
+          }
+
+          if (rawFavorites.movies && Array.isArray(rawFavorites.movies)) {
+            for (const id of rawFavorites.movies) {
+              const movie = await storage.getMovieById(id);
+              if (movie) favorites.movies.push({ id: movie.id, title: movie.title, posterUrl: movie.posterUrl, slug: movie.slug });
+            }
+          }
+
+          if (rawFavorites.anime && Array.isArray(rawFavorites.anime)) {
+            for (const id of rawFavorites.anime) {
+              const anime = await storage.getAnimeById(id);
+              if (anime) favorites.anime.push({ id: anime.id, title: anime.title, posterUrl: anime.posterUrl, slug: anime.slug });
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Error parsing favorites:", e);
+      }
+
+      const publicProfile = {
+        id: user.id,
+        username: user.username,
+        avatarUrl: user.avatarUrl,
+        bio: user.bio,
+        level: user.level,
+        xp: user.xp,
+        socialLinks,
+        favorites,
+        badges: allBadges,
+        createdAt: user.createdAt
+      };
+
+      res.json(publicProfile);
+    } catch (error) {
+      console.error("Get public profile error:", error);
+      res.status(500).json({ error: "Failed to get user profile" });
     }
   });
 
@@ -638,12 +1126,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Enrich with user info
       const enrichedRequests = await Promise.all(requests.map(async (r) => {
         const fromUser = await storage.getUserById(r.fromUserId);
+
+        let badges: any[] = [];
+        if (fromUser) {
+          const userBadges = await storage.getUserBadges(fromUser.id);
+          badges = userBadges.filter(ub => ub.equipped).map(ub => ({
+            id: ub.badge.id,
+            name: ub.badge.name,
+            imageUrl: ub.badge.imageUrl,
+            equipped: true,
+            description: ub.badge.description,
+            icon: ub.badge.icon
+          }));
+        }
+
         return {
           ...r,
           fromUser: fromUser ? {
             id: fromUser.id,
             username: fromUser.username,
             avatarUrl: fromUser.avatarUrl,
+            badges,
           } : null,
         };
       }));
@@ -767,11 +1270,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const enrichedFriends = await Promise.all(friends.map(async (f) => {
         const friendId = f.userId === payload.userId ? f.friendId : f.userId;
         const friendUser = await storage.getUserById(friendId);
+
+        // Fetch equipped badges
+        let badges: any[] = [];
+        if (friendUser) {
+          const userBadges = await storage.getUserBadges(friendUser.id);
+          badges = userBadges.filter(ub => ub.equipped).map(ub => ({
+            id: ub.badge.id,
+            name: ub.badge.name,
+            imageUrl: ub.badge.imageUrl,
+            equipped: true,
+            description: ub.badge.description,
+            icon: ub.badge.icon
+          }));
+        }
+
         return {
           id: f.id,
           friendId,
           username: friendUser?.username || 'Unknown',
           avatarUrl: friendUser?.avatarUrl || null,
+          badges,
+          lastActive: friendUser?.lastActive,
           createdAt: f.createdAt,
         };
       }));
@@ -809,9 +1329,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // USER PROFILE ROUTES
   // ============================================
 
-  // Get public user profile
   app.get("/api/users/:userId/profile", async (req, res) => {
     try {
+      // Secure endpoint: only authenticated users can view profiles (basic privacy)
+      const token = req.cookies.authToken || req.headers.authorization?.replace('Bearer ', '');
+      if (!token) return res.status(401).json({ error: "Not authenticated" });
+      const payload = verifyToken(token);
+      if (!payload) return res.status(401).json({ error: "Invalid token" });
+
       const { userId } = req.params;
       const user = await storage.getUserById(userId);
 
@@ -888,6 +1413,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Fetch fresh badges (prevents stale data issues)
+      const userBadges = await storage.getUserBadges(user.id);
+      const freshBadges = userBadges.map(ub => ({
+        id: ub.badge.id,
+        name: ub.badge.name,
+        imageUrl: ub.badge.imageUrl,
+        equipped: ub.equipped,
+        category: ub.badge.category,
+        description: ub.badge.description,
+        icon: ub.badge.icon
+      }));
+
       // Return public profile data with social links and favorites
       res.json({
         id: user.id,
@@ -896,7 +1433,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         bio: user.bio || null,
         xp: user.xp,
         level: user.level,
-        badges: user.badges ? JSON.parse(user.badges as string) : [],
+        badges: freshBadges,
         socialLinks,
         favorites: enrichedFavorites,
         createdAt: user.createdAt,
@@ -995,10 +1532,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!badgesJson) return [];
         try {
           const badges = JSON.parse(badgesJson);
-          return badges
-            .filter((b: any) => !systemBadgeIds.has(b.id)) // Filter out system achievements
-            .reverse() // Newest first
-            .slice(0, 3); // Top 3
+          return badges; // Return all badges, let frontend filter by equipped
         } catch (e) {
           return [];
         }
@@ -1355,10 +1889,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get referral leaderboard
-  app.get("/api/referral-leaderboard", async (req, res) => {
+  // Get referral leaderboard
+  app.get("/api/referral-leaderboard", requireApiKey, async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
       const leaderboard = await storage.getReferralLeaderboard(limit);
+
+      // Restrict external API users to 1 item per request
+      if ((req as any).apiKey) {
+        return res.json(leaderboard.slice(0, 1));
+      }
+
       res.json(leaderboard);
     } catch (error) {
       console.error("Get referral leaderboard error:", error);
@@ -1371,9 +1912,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================
 
   // Get active polls
-  app.get("/api/polls", async (req, res) => {
+  // Get active polls
+  app.get("/api/polls", requireApiKey, async (req, res) => {
     try {
       const polls = await storage.getPolls(true);
+
+      // Restrict external API users to 1 item per request
+      if ((req as any).apiKey) {
+        return res.json(polls.slice(0, 1));
+      }
+
       res.json(polls);
     } catch (error) {
       console.error("Get polls error:", error);
@@ -1464,9 +2012,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================
 
   // Get all badges
-  app.get("/api/badges", async (req, res) => {
+  // Get all badges
+  app.get("/api/badges", requireApiKey, async (req, res) => {
     try {
       const badges = await storage.getBadges();
+
+      // Restrict external API users to 1 item per request
+      if ((req as any).apiKey) {
+        return res.json(badges.slice(0, 1));
+      }
+
       res.json(badges);
     } catch (error) {
       console.error("Get badges error:", error);
@@ -1483,6 +2038,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get user badges error:", error);
       res.status(500).json({ error: "Failed to get user badges" });
+    }
+  });
+
+  // Equip Badge Route
+  app.post("/api/user/equip-badge", async (req, res) => {
+    try {
+      const token = req.cookies.authToken;
+      if (!token) return res.status(401).json({ error: "Not authenticated" });
+      const payload = verifyToken(token);
+      if (!payload) return res.status(401).json({ error: "Invalid token" });
+
+      const { badgeId, equipped } = req.body;
+      const userId = payload.userId;
+
+      // 1. Verify user owns the badge
+      const userBadges = await storage.getUserBadges(userId);
+      const userBadge = userBadges.find(ub => ub.badgeId === badgeId);
+
+      if (!userBadge) {
+        return res.status(403).json({ error: "You don't own this badge" });
+      }
+
+      // 2. If equipping, check limit (Max 3)
+      if (equipped) {
+        // Enforce Max 1 Skin Limit
+        if (userBadge.badge.category === 'skin' || userBadge.badge.name.includes('Skin')) {
+          const currentlyEquippedSkins = userBadges.filter(ub =>
+            ub.equipped && (ub.badge.category === 'skin' || ub.badge.name.includes('Skin'))
+          );
+
+          if (!userBadge.equipped && currentlyEquippedSkins.length >= 1) {
+            return res.status(400).json({ error: "You can only equip 1 skin at a time." });
+          }
+        }
+        const currentlyEquipped = userBadges.filter(ub =>
+          ub.equipped &&
+          ub.badge.category !== 'skin' &&
+          !ub.badge.name.includes('Skin') &&
+          ub.badge.category !== 'theme' &&
+          ub.badge.category !== 'feature'
+        );
+
+        // Allow if less than 3, OR if we are re-equipping something (though usually frontend sends true only if off)
+        // If already equipped, this is a no-op or re-equip, so counting length includes itself if it was already true. 
+        // Better to check if it wasn't equipped before.
+        if (!userBadge.equipped && currentlyEquipped.length >= 3) {
+          // Only enforce limit for non-skin/theme items
+          if (userBadge.badge.category !== 'skin' && !userBadge.badge.name.includes('Skin') && userBadge.badge.category !== 'theme' && userBadge.badge.category !== 'feature') {
+            return res.status(400).json({ error: "You can only equip up to 3 badges at a time." });
+          }
+        }
+      }
+
+      // 3. Update status
+      await storage.updateUserBadgeEquippedStatus(userId, badgeId, equipped);
+
+      // Update cache/user object if necessary? 
+      // For now, next profile fetch will get updated badges.
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to toggle badge equip:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
@@ -1617,7 +2235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================
 
   // Get show by ID (use /api/content/shows to avoid conflict with /api/shows/:slug)
-  app.get("/api/content/shows/:id", async (req, res) => {
+  app.get("/api/content/shows/:id", requireApiKey, async (req, res) => {
     try {
       const { id } = req.params;
       const show = await storage.getShowById(id);
@@ -1632,7 +2250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get movie by ID
-  app.get("/api/content/movies/:id", async (req, res) => {
+  app.get("/api/content/movies/:id", requireApiKey, async (req, res) => {
     try {
       const { id } = req.params;
       const movie = await storage.getMovieById(id);
@@ -1647,7 +2265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get anime by ID
-  app.get("/api/content/anime/:id", async (req, res) => {
+  app.get("/api/content/anime/:id", requireApiKey, async (req, res) => {
     try {
       const { id } = req.params;
       const anime = await storage.getAnimeById(id);
@@ -1835,7 +2453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Get Person Details (Cast Profile)
-  app.get("/api/person/:name", async (req, res) => {
+  app.get("/api/person/:name", requireApiKey, async (req, res) => {
     try {
       const { name } = req.params;
       const TMDB_API_KEY = process.env.TMDB_API_KEY;
@@ -1914,7 +2532,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get Trending Content (Synced with TMDB)
-  app.get("/api/trending", async (req, res) => {
+  app.get("/api/trending", requireApiKey, async (req, res) => {
     try {
       const TMDB_API_KEY = process.env.TMDB_API_KEY;
       let trendingItems: (Show | Movie | Anime)[] = [];
@@ -1932,34 +2550,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
               (item.title || item.name || "").toLowerCase()
             ));
 
-            // Fetch all local content
+            // Combine and randomize if needed (or just trending)
+            // For now, let's just use the TMDB titles to filter our local content "roughly"
+            // or just return all content sorted by 'trending' if we had that flag.
+            // Simplified: If we found matches in local DB for trending titles, return those.
+
             const allShows = await storage.getAllShows();
             const allMovies = await storage.getAllMovies();
             const allAnime = await storage.getAllAnime();
             const allContent = [...allShows, ...allMovies, ...allAnime];
 
-            // Filter local content that matches TMDB trending titles
-            trendingItems = allContent.filter(item =>
+            const matchedContent = allContent.filter(item =>
               trendingTitles.has(item.title.toLowerCase())
             );
+
+            trendingItems = matchedContent;
           }
-        } catch (error) {
-          console.error("Failed to fetch TMDB trending:", error);
+        } catch (e) {
+          console.error("Failed to fetch TMDB trending:", e);
         }
       }
 
-      // 2. Fallback: If no matches or no API key, use local 'trending' flag + 'featured'
-      if (trendingItems.length < 5) {
+      // Fallback: Return random selection if no TMDB or empty
+      if (trendingItems.length === 0) {
         const allShows = await storage.getAllShows();
         const allMovies = await storage.getAllMovies();
-        const allAnime = await storage.getAllAnime();
-
-        const localTrending = [...allShows, ...allMovies, ...allAnime]
-          .filter(item => item.trending || item.featured)
-          .sort(() => 0.5 - Math.random()) // Shuffle
-          .slice(0, 10);
-
-        // Merge without duplicates
         const existingIds = new Set(trendingItems.map(i => i.id));
         localTrending.forEach(item => {
           if (!existingIds.has(item.id)) {
@@ -1968,6 +2583,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Restrict external API users to 1 item
+      if ((req as any).apiKey) {
+        return res.json(trendingItems.slice(0, 1));
+      }
       res.json(trendingItems.slice(0, 20));
     } catch (error) {
       console.error("Get trending error:", error);
@@ -1999,6 +2618,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             id: friend.id,
             username: friend.username,
             avatarUrl: friend.avatarUrl,
+            equippedBadge: friend.equippedBadge,
+            lastActive: friend.lastActive,
           } : null,
         };
       }));
@@ -2259,9 +2880,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all shows (requires API key for external access)
-  app.get("/api/shows", requireApiKey, async (_req, res) => {
+  // Get all shows (requires API key for external access)
+  app.get("/api/shows", requireApiKey, async (req, res) => {
     try {
       const shows = await storage.getAllShows();
+      // Restrict external API users to 1 item per request
+      if ((req as any).apiKey) {
+        return res.json(shows.slice(0, 1));
+      }
       res.json(shows);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch shows" });
@@ -2276,14 +2902,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Search query required" });
       }
       const users = await storage.searchUsers(query);
-      res.json(users);
+
+      // Enhance users with their equipped badges
+      const enhancedUsers = await Promise.all(users.map(async (u) => {
+        const userBadges = await storage.getUserBadges(u.id);
+        const equipped = userBadges.filter(ub => ub.equipped).map(ub => ({
+          id: ub.badge.id,
+          name: ub.badge.name,
+          imageUrl: ub.badge.imageUrl,
+          equipped: true
+        }));
+
+        return {
+          ...u,
+          badges: equipped // Return array of equipped badges
+        };
+      }));
+
+      res.json(enhancedUsers);
     } catch (error) {
       res.status(500).json({ error: "Failed to search users" });
     }
   });
 
   // Search shows
-  app.get("/api/shows/search", async (req, res) => {
+  app.get("/api/shows/search", requireApiKey, async (req, res) => {
     try {
       const query = req.query.q as string;
       if (!query) {
@@ -2291,6 +2934,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const shows = await storage.searchShows(query);
+      if ((req as any).apiKey) {
+        return res.json(shows.slice(0, 1));
+      }
       res.json(shows);
     } catch (error) {
       res.status(500).json({ error: "Failed to search shows" });
@@ -2298,7 +2944,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get show by slug
-  app.get("/api/shows/:slug", async (req, res) => {
+  app.get("/api/shows/:slug", requireApiKey, async (req, res) => {
     try {
       const { slug } = req.params;
       const show = await storage.getShowBySlug(slug);
@@ -2324,10 +2970,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get episodes by show ID
-  app.get("/api/episodes/:showId", async (req, res) => {
+  app.get("/api/episodes/:showId", requireApiKey, async (req, res) => {
     try {
       const { showId } = req.params;
       const episodes = await storage.getEpisodesByShowId(showId);
+      if ((req as any).apiKey) {
+        return res.json(episodes.slice(0, 1));
+      }
       res.json(episodes);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch episodes" });
@@ -2336,9 +2985,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Movie routes
   // Get all movies (requires API key for external access)
-  app.get("/api/movies", requireApiKey, async (_req, res) => {
+  // Get all movies (requires API key for external access)
+  app.get("/api/movies", requireApiKey, async (req, res) => {
     try {
       const movies = await storage.getAllMovies();
+      // Restrict external API users to 1 item per request
+      if ((req as any).apiKey) {
+        return res.json(movies.slice(0, 1));
+      }
       res.json(movies);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch movies" });
@@ -2346,13 +3000,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Search movies
-  app.get("/api/movies/search", async (req, res) => {
+  app.get("/api/movies/search", requireApiKey, async (req, res) => {
     try {
       const query = req.query.q as string;
       if (!query) {
         return res.status(400).json({ error: "Query parameter required" });
       }
       const movies = await storage.searchMovies(query);
+      if ((req as any).apiKey) {
+        return res.json(movies.slice(0, 1));
+      }
       res.json(movies);
     } catch (error) {
       res.status(500).json({ error: "Failed to search movies" });
@@ -2360,7 +3017,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get movie by slug
-  app.get("/api/movies/:slug", async (req, res) => {
+  app.get("/api/movies/:slug", requireApiKey, async (req, res) => {
     try {
       const movie = await storage.getMovieBySlug(req.params.slug);
       if (!movie) {
@@ -2374,9 +3031,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Anime routes
   // Get all anime (requires API key for external access)
-  app.get("/api/anime", requireApiKey, async (_req, res) => {
+  // Get all anime (requires API key for external access)
+  app.get("/api/anime", requireApiKey, async (req, res) => {
     try {
       const anime = await storage.getAllAnime();
+      // Restrict external API users to 1 item per request
+      if ((req as any).apiKey) {
+        return res.json(anime.slice(0, 1));
+      }
       res.json(anime);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch anime" });
@@ -2384,13 +3046,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Search anime
-  app.get("/api/anime/search", async (req, res) => {
+  app.get("/api/anime/search", requireApiKey, async (req, res) => {
     try {
       const query = req.query.q as string;
       if (!query) {
         return res.status(400).json({ error: "Query parameter required" });
       }
       const anime = await storage.searchAnime(query);
+      if ((req as any).apiKey) {
+        return res.json(anime.slice(0, 1));
+      }
       res.json(anime);
     } catch (error) {
       res.status(500).json({ error: "Failed to search anime" });
@@ -2398,7 +3063,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get anime by slug
-  app.get("/api/anime/:slug", async (req, res) => {
+  app.get("/api/anime/:slug", requireApiKey, async (req, res) => {
     try {
       const anime = await storage.getAnimeBySlug(req.params.slug);
       if (!anime) {
@@ -2421,10 +3086,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get anime episodes by anime ID
-  app.get("/api/anime-episodes/:animeId", async (req, res) => {
+  app.get("/api/anime-episodes/:animeId", requireApiKey, async (req, res) => {
     try {
       const { animeId } = req.params;
       const episodes = await storage.getAnimeEpisodesByAnimeId(animeId);
+      if ((req as any).apiKey) {
+        return res.json(episodes.slice(0, 1));
+      }
       res.json(episodes);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch anime episodes" });
@@ -2432,7 +3100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all categories
-  app.get("/api/categories", async (_req, res) => {
+  app.get("/api/categories", requireApiKey, async (_req, res) => {
     try {
       const categories = await storage.getAllCategories();
       res.json(categories);
@@ -3605,15 +4273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin - Get all content requests
-  app.get("/api/admin/content-requests", async (_req, res) => {
-    try {
-      const requests = await storage.getAllContentRequests();
-      res.json(requests);
-    } catch (error) {
-      console.error('Error fetching content requests:', error);
-      res.status(500).json({ error: "Failed to fetch content requests" });
-    }
-  });
+
 
   // Admin - Update content request status
   app.patch("/api/admin/content-requests/:id", async (req, res) => {
@@ -3629,15 +4289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin - Get all issue reports
-  app.get("/api/admin/issue-reports", async (_req, res) => {
-    try {
-      const reports = await storage.getAllIssueReports();
-      res.json(reports);
-    } catch (error) {
-      console.error('Error fetching issue reports:', error);
-      res.status(500).json({ error: "Failed to fetch issue reports" });
-    }
-  });
+
 
   // Admin - Update issue report status
   app.patch("/api/admin/issue-reports/:id", async (req, res) => {
@@ -3653,10 +4305,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Comments - Get comments for an episode
-  app.get("/api/comments/episode/:episodeId", async (req, res) => {
+  app.get("/api/comments/episode/:episodeId", requireApiKey, async (req, res) => {
     try {
       const { episodeId } = req.params;
       const comments = await storage.getCommentsByEpisodeId(episodeId);
+
+      // Restrict external API users to 1 item per request
+      if ((req as any).apiKey) {
+        return res.json(comments.slice(0, 1));
+      }
+
       res.json(comments);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch comments" });
@@ -3664,10 +4322,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Comments - Get comments for a movie
-  app.get("/api/comments/movie/:movieId", async (req, res) => {
+  app.get("/api/comments/movie/:movieId", requireApiKey, async (req, res) => {
     try {
       const { movieId } = req.params;
       const comments = await storage.getCommentsByMovieId(movieId);
+
+      // Restrict external API users to 1 item per request
+      if ((req as any).apiKey) {
+        return res.json(comments.slice(0, 1));
+      }
+
+      res.json(comments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch comments" });
+    }
+  });
+
+  // Comments - Get comments for a blog post
+  app.get("/api/comments/blog/:blogPostId", requireApiKey, async (req, res) => {
+    try {
+      const { blogPostId } = req.params;
+      const comments = await storage.getCommentsByBlogPostId(blogPostId);
+
+      // Restrict external API users to 1 item per request
+      if ((req as any).apiKey) {
+        return res.json(comments.slice(0, 1));
+      }
+
       res.json(comments);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch comments" });
@@ -3677,15 +4358,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Comments - Create a new comment
   app.post("/api/comments", async (req, res) => {
     try {
-      const { episodeId, movieId, parentId, userName, comment } = req.body;
+      const { episodeId, movieId, blogPostId, parentId, userName, comment } = req.body;
 
       // Validate input
       if (!userName || !comment) {
         return res.status(400).json({ error: "userName and comment are required" });
       }
 
-      if (!episodeId && !movieId) {
-        return res.status(400).json({ error: "Either episodeId or movieId is required" });
+      if (!episodeId && !movieId && !blogPostId) {
+        return res.status(400).json({ error: "Either episodeId, movieId, or blogPostId is required" });
       }
 
       // Try to get authenticated user details to link comment
@@ -3708,6 +4389,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newComment = await storage.createComment({
         episodeId: episodeId || null,
         movieId: movieId || null,
+        blogPostId: blogPostId || null,
+        parentId: parentId || null,
         parentId: parentId || null,
         userId: userId || null,
         userName,
@@ -3724,9 +4407,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============ BLOG POSTS API ============
 
   // Get all published blog posts (public)
-  app.get("/api/blog", async (_req, res) => {
+  // Get all published blog posts (public)
+  app.get("/api/blog", requireApiKey, async (req, res) => {
     try {
       const posts = await storage.getPublishedBlogPosts();
+
+      // Restrict external API users to 1 item per request
+      if ((req as any).apiKey) {
+        return res.json(posts.slice(0, 1));
+      }
+
       res.json(posts);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch blog posts" });
@@ -5512,11 +6202,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // BADGE MANAGEMENT ROUTES
   // ============================================
 
-  // Get all badges
-  app.get("/api/badges", async (_req, res) => {
-    const badges = await storage.getBadges();
-    res.json(badges);
-  });
+
 
   // Create badge (Admin only)
   app.post("/api/admin/badges", requireAdmin, async (req, res) => {

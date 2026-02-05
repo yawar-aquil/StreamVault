@@ -66,7 +66,7 @@ export function MovieHeroCarousel({ movies }: MovieHeroCarouselProps) {
   const currentMovie = movies[currentIndex];
 
   return (
-    <div 
+    <div
       className="relative h-[80vh] overflow-hidden"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -123,7 +123,11 @@ export function MovieHeroCarousel({ movies }: MovieHeroCarouselProps) {
 
           <div className="flex gap-2 mb-6 flex-wrap">
             {currentMovie.genres?.split(',').slice(0, 3).map((genre) => (
-              <Badge key={genre.trim()} variant="secondary">
+              <Badge
+                key={genre.trim()}
+                variant="secondary"
+                className="bg-black/40 backdrop-blur-md text-white border-white/10 hover:bg-black/60 transition-colors"
+              >
                 {genre.trim()}
               </Badge>
             ))}
@@ -157,11 +161,10 @@ export function MovieHeroCarousel({ movies }: MovieHeroCarouselProps) {
             <button
               key={index}
               onClick={() => goToSlide(index)}
-              className={`w-2 h-2 rounded-full transition-all ${
-                index === currentIndex
+              className={`w-2 h-2 rounded-full transition-all ${index === currentIndex
                   ? "bg-white w-8"
                   : "bg-white/50 hover:bg-white/75"
-              }`}
+                }`}
               aria-label={`Go to slide ${index + 1}`}
             />
           ))}

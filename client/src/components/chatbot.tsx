@@ -589,6 +589,21 @@ export function Chatbot() {
       }
     }
 
+    // ===== REFUND POLICY =====
+    if (
+      lowerMessage.includes("refund") ||
+      lowerMessage.includes("return") ||
+      lowerMessage.includes("money back") ||
+      lowerMessage.includes("cancel purchase")
+    ) {
+      return {
+        id: Date.now().toString(),
+        text: "📜 **StreamVault Refund Policy**\n\n🚫 **All purchases are final.**\nSince our items are digital collectibles and instantly delivered, we do not offer refunds.\n\n⚠️ **Technical Issue?**\nIf you didn't receive your item, please contact [Support](/refund).",
+        isBot: true,
+        suggestions: ["Visit Store", "Contact Support", "Top rated"],
+      };
+    }
+
     // ===== HELP / PLAYBACK ISSUES (moved up for priority) =====
     if (
       lowerMessage.includes("help") ||

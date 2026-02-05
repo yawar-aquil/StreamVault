@@ -21,45 +21,62 @@
 
 /* LIGHT MODE */
 :root {
-  --button-outline: rgba(0,0,0, .10);
-  --badge-outline: rgba(0,0,0, .05);
+  --button-outline: rgba(0, 0, 0, .10);
+  --badge-outline: rgba(0, 0, 0, .05);
   --opaque-button-border-intensity: -8;
-  --elevate-1: rgba(0,0,0, .03);
-  --elevate-2: rgba(0,0,0, .08);
-  --background: 0 0% 100%;
-  --foreground: 0 0% 8%;
-  --border: 0 0% 91%;
-  --card: 0 0% 98%;
-  --card-foreground: 0 0% 8%;
-  --card-border: 0 0% 95%;
-  --sidebar: 0 0% 96%;
-  --sidebar-foreground: 0 0% 8%;
-  --sidebar-border: 0 0% 93%;
+  --elevate-1: rgba(0, 0, 0, .03);
+  --elevate-2: rgba(0, 0, 0, .08);
+  /* Premium Light Mode (Zinc/Slate Palette) */
+  --background: 240 10% 98%;
+  /* Slightly tinted off-white background */
+  --foreground: 240 10% 4%;
+  /* Deep soft black */
+
+  --card: 0 0% 100%;
+  /* Pure white cards */
+  --card-foreground: 240 10% 4%;
+  --card-border: 240 5% 92%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 4%;
+  --popover-border: 240 5% 92%;
+
+  --primary: 0 86% 46%;
+  /* Keeping Brand Red */
+  --primary-foreground: 0 0% 98%;
+
+  --secondary: 240 5% 96%;
+  /* Soft light gray */
+  --secondary-foreground: 240 6% 10%;
+
+  --muted: 240 5% 96%;
+  --muted-foreground: 240 4% 46%;
+
+  --accent: 240 5% 96%;
+  --accent-foreground: 240 6% 10%;
+
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 240 6% 90%;
+  /* Subtle slate border */
+  --input: 240 6% 90%;
+  --ring: 0 86% 46%;
+
+  --sidebar: 240 5% 98%;
+  --sidebar-foreground: 240 10% 4%;
+  --sidebar-border: 240 6% 90%;
   --sidebar-primary: 0 86% 46%;
   --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 0 0% 94%;
-  --sidebar-accent-foreground: 0 0% 8%;
+  --sidebar-accent: 240 5% 96%;
+  --sidebar-accent-foreground: 240 10% 4%;
   --sidebar-ring: 0 86% 46%;
-  --popover: 0 0% 95%;
-  --popover-foreground: 0 0% 8%;
-  --popover-border: 0 0% 92%;
-  --primary: 0 86% 46%;
-  --primary-foreground: 0 0% 98%;
-  --secondary: 0 0% 93%;
-  --secondary-foreground: 0 0% 10%;
-  --muted: 0 3% 92%;
-  --muted-foreground: 0 0% 35%;
-  --accent: 0 4% 93%;
-  --accent-foreground: 0 0% 10%;
-  --destructive: 0 85% 45%;
-  --destructive-foreground: 0 0% 98%;
-  --input: 0 0% 85%;
-  --ring: 0 86% 46%;
-  --chart-1: 0 72% 38%;
-  --chart-2: 210 75% 35%;
-  --chart-3: 150 60% 32%;
-  --chart-4: 280 65% 35%;
-  --chart-5: 30 70% 40%;
+
+  --chart-1: 12 76% 61%;
+  --chart-2: 173 58% 39%;
+  --chart-3: 197 37% 24%;
+  --chart-4: 43 74% 66%;
+  --chart-5: 27 87% 67%;
   --font-sans: Open Sans, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: Menlo, monospace;
@@ -75,7 +92,7 @@
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
-/* Fallback for older browsers */
+  /* Fallback for older browsers */
   --sidebar-primary-border: hsl(var(--sidebar-primary));
   --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 
@@ -105,11 +122,11 @@
 }
 
 .dark {
-  --button-outline: rgba(255,255,255, .10);
-  --badge-outline: rgba(255,255,255, .05);
+  --button-outline: rgba(255, 255, 255, .10);
+  --badge-outline: rgba(255, 255, 255, .05);
   --opaque-button-border-intensity: 9;
-  --elevate-1: rgba(255,255,255, .04);
-  --elevate-2: rgba(255,255,255, .09);
+  --elevate-1: rgba(255, 255, 255, .04);
+  --elevate-2: rgba(255, 255, 255, .09);
   --background: 0 0% 8%;
   --foreground: 0 0% 98%;
   --border: 0 0% 16%;
@@ -153,7 +170,7 @@
   --shadow-xl: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 8px 10px -1px hsl(0 0% 0% / 0.00);
   --shadow-2xl: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
 
-/* Fallback for older browsers */
+  /* Fallback for older browsers */
   --sidebar-primary-border: hsl(var(--sidebar-primary));
   --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 
@@ -180,6 +197,391 @@
   /* Fallback for older browsers */
   --destructive-border: hsl(var(--destructive));
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+}
+
+/* Premium Themes */
+
+.skin-midnight {
+  --background: 224 71% 4%;
+  --foreground: 213 31% 91%;
+  --card: 224 71% 7%;
+  --card-foreground: 213 31% 91%;
+  --popover: 224 71% 4%;
+  --popover-foreground: 215 20.2% 65.1%;
+  --primary: 263 70% 50%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 222 47% 11%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 223 47% 11%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 216 34% 17%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 63% 31%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 216 34% 17%;
+  --input: 216 34% 17%;
+  --ring: 263 70% 50%;
+  --opaque-button-border-intensity: 9;
+}
+
+.skin-ocean {
+  --background: 195 50% 6%;
+  --foreground: 180 10% 98%;
+  --card: 195 50% 9%;
+  --card-foreground: 180 10% 98%;
+  --popover: 195 50% 6%;
+  --popover-foreground: 180 10% 98%;
+  --primary: 180 100% 40%;
+  --primary-foreground: 195 50% 6%;
+  --secondary: 195 30% 15%;
+  --secondary-foreground: 180 10% 98%;
+  --muted: 195 30% 15%;
+  --muted-foreground: 180 20% 70%;
+  --accent: 195 30% 20%;
+  --accent-foreground: 180 10% 98%;
+  --destructive: 0 80% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 195 30% 15%;
+  --input: 195 30% 15%;
+  --ring: 180 100% 40%;
+  --opaque-button-border-intensity: 9;
+}
+
+.skin-sunset {
+  --background: 15 40% 6%;
+  --foreground: 20 10% 98%;
+  --card: 15 40% 9%;
+  --card-foreground: 20 10% 98%;
+  --popover: 15 40% 6%;
+  --popover-foreground: 20 10% 98%;
+  --primary: 25 100% 50%;
+  --primary-foreground: 15 40% 6%;
+  --secondary: 15 30% 15%;
+  --secondary-foreground: 20 10% 98%;
+  --muted: 15 30% 15%;
+  --muted-foreground: 20 20% 70%;
+  --accent: 15 30% 20%;
+  --accent-foreground: 20 10% 98%;
+  --destructive: 0 80% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 15 30% 15%;
+  --input: 15 30% 15%;
+  --ring: 25 100% 50%;
+  --opaque-button-border-intensity: 9;
+}
+
+.skin-forest {
+  --background: 155 40% 5%;
+  --foreground: 140 10% 98%;
+  --card: 155 40% 8%;
+  --card-foreground: 140 10% 98%;
+  --popover: 155 40% 5%;
+  --popover-foreground: 140 10% 98%;
+  --primary: 142 70% 45%;
+  --primary-foreground: 155 40% 5%;
+  --secondary: 155 30% 12%;
+  --secondary-foreground: 140 10% 98%;
+  --muted: 155 30% 12%;
+  --muted-foreground: 140 20% 70%;
+  --accent: 155 30% 18%;
+  --accent-foreground: 140 10% 98%;
+  --destructive: 0 80% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 155 30% 12%;
+  --input: 155 30% 12%;
+  --ring: 142 70% 45%;
+  --opaque-button-border-intensity: 9;
+}
+
+.skin-cyberpunk {
+  --background: 260 50% 10%;
+  --foreground: 280 20% 90%;
+  --card: 260 50% 13%;
+  --card-foreground: 280 20% 90%;
+  --popover: 260 50% 13%;
+  --popover-foreground: 280 20% 90%;
+  --primary: 320 100% 50%;
+  /* Neon Pink */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 180 100% 50%;
+  /* Cyan */
+  --secondary-foreground: 260 50% 10%;
+  --muted: 260 40% 20%;
+  --muted-foreground: 280 20% 70%;
+  --accent: 50 100% 50%;
+  /* Yellow */
+  --accent-foreground: 260 50% 10%;
+  --destructive: 0 100% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 320 80% 40%;
+  --input: 260 40% 20%;
+  --ring: 320 100% 50%;
+  --radius: 0.1rem;
+  /* Sharp edges */
+  --opaque-button-border-intensity: 9;
+}
+
+.skin-neon {
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+  --card: 0 0% 3%;
+  --card-foreground: 0 0% 100%;
+  --popover: 0 0% 0%;
+  --popover-foreground: 0 0% 100%;
+  --primary: 320 100% 60%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 0 0% 12%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 0 0% 12%;
+  --muted-foreground: 0 0% 60%;
+  --accent: 320 100% 10%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 100% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 320 100% 20%;
+  --input: 320 100% 20%;
+  --ring: 320 100% 60%;
+  --opaque-button-border-intensity: 9;
+
+  /* Animated Properties */
+  box-shadow: 0 0 10px rgba(255, 20, 147, 0.2),
+    0 0 20px rgba(255, 20, 147, 0.1);
+  /* animation: neon-pulse 3s infinite alternate; - Removed to prevent conflict with Dialog animate-in */
+  border: none;
+}
+
+/* Neon Skin Keyframes */
+@keyframes neon-pulse {
+  0% {
+    box-shadow: 0 0 5px rgba(255, 20, 147, 0.2),
+      0 0 10px rgba(255, 20, 147, 0.1),
+      inset 0 0 5px rgba(255, 20, 147, 0.05);
+  }
+
+  100% {
+    box-shadow: 0 0 15px rgba(255, 20, 147, 0.4),
+      0 0 30px rgba(255, 20, 147, 0.2),
+      inset 0 0 15px rgba(255, 20, 147, 0.1);
+  }
+}
+
+@keyframes neon-border-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes neon-stars {
+  from {
+    background-position: 0 0, 40px 60px, 130px 270px;
+  }
+
+  to {
+    background-position: 550px 550px, 390px 410px, 380px 520px;
+  }
+}
+
+.skin-neon::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  background: linear-gradient(45deg,
+      #ff0099,
+      #493240,
+      #ff0099,
+      #ff00cc,
+      #33001b,
+      #ff0099);
+  background-size: 300% 300%;
+  animation: neon-border-flow 4s ease infinite;
+  border-radius: inherit;
+  opacity: 0.6;
+  will-change: background-position;
+  transform: translateZ(0);
+}
+
+.skin-neon::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-color: inherit;
+  background-image:
+    radial-gradient(white, rgba(255, 255, 255, .2) 2px, transparent 3px),
+    radial-gradient(white, rgba(255, 255, 255, .15) 1px, transparent 2px),
+    radial-gradient(white, rgba(255, 255, 255, .1) 2px, transparent 3px);
+  background-size: 550px 550px, 350px 350px, 250px 250px;
+  background-position: 0 0, 40px 60px, 130px 270px;
+  animation: neon-stars 60s linear infinite;
+  border-radius: inherit;
+  opacity: 0.4;
+  will-change: background-position;
+  transform: translateZ(0);
+}
+
+.skin-gold {
+  --background: 48 20% 4%;
+  --foreground: 48 20% 90%;
+  --card: 48 20% 6%;
+  --card-foreground: 48 20% 90%;
+  --popover: 48 20% 4%;
+  --popover-foreground: 48 20% 90%;
+  --primary: 48 100% 50%;
+  /* Gold */
+  --primary-foreground: 0 0% 0%;
+  --secondary: 48 30% 10%;
+  --secondary-foreground: 48 10% 90%;
+  --muted: 48 30% 10%;
+  --muted-foreground: 48 10% 60%;
+  --accent: 48 50% 15%;
+  --accent-foreground: 48 100% 50%;
+  --destructive: 0 100% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 48 50% 20%;
+  --input: 48 50% 20%;
+  --ring: 48 100% 50%;
+  --opaque-button-border-intensity: 9;
+
+  /* Gold Border & Shadow */
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.1), inset 0 0 20px rgba(255, 215, 0, 0.05);
+
+  /* Force Golden Text */
+  color: #FFD700;
+}
+
+.skin-gold h1,
+.skin-gold h2,
+.skin-gold h3,
+.skin-gold h4,
+.skin-gold p,
+.skin-gold span,
+.skin-gold div,
+.skin-gold button,
+.skin-gold .text-muted-foreground,
+.skin-gold .text-foreground {
+  color: #FFD700 !important;
+}
+
+.skin-gold .text-green-500 {
+  color: #22c55e !important;
+}
+
+@keyframes gold-shimmer {
+  0% {
+    background-position: -200% center;
+  }
+
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes gold-sparkle {
+
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.8;
+    transform: scale(1.1);
+  }
+}
+
+.skin-gold::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(115deg,
+      transparent 20%,
+      rgba(255, 215, 0, 0.4) 30%,
+      rgba(255, 255, 200, 0.6) 45%,
+      rgba(255, 255, 255, 0.8) 50%,
+      rgba(255, 255, 200, 0.6) 55%,
+      rgba(255, 215, 0, 0.4) 70%,
+      transparent 80%);
+  background-size: 200% auto;
+  z-index: -1;
+  animation: gold-shimmer 4s linear infinite;
+  border-radius: inherit;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  will-change: background-position;
+  transform: translateZ(0);
+}
+
+.skin-gold::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: radial-gradient(circle at 50% 0%, rgba(255, 215, 0, 0.15), transparent 70%);
+  border-radius: inherit;
+  pointer-events: none;
+  animation: gold-sparkle 6s ease-in-out infinite;
+  will-change: opacity, transform;
+  transform: translateZ(0);
+}
+
+/* Simple Versions (Themes without Skin Effects) */
+.skin-neon-theme {
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+  --card: 0 0% 3%;
+  --card-foreground: 0 0% 100%;
+  --popover: 0 0% 0%;
+  --popover-foreground: 0 0% 100%;
+  --primary: 320 100% 60%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 0 0% 12%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 0 0% 12%;
+  --muted-foreground: 0 0% 60%;
+  --accent: 320 100% 10%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 100% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 320 100% 20%;
+  --input: 320 100% 20%;
+  --ring: 320 100% 60%;
+  --opaque-button-border-intensity: 9;
+}
+
+.skin-gold-theme {
+  --background: 48 20% 4%;
+  --foreground: 48 20% 90%;
+  --card: 48 20% 6%;
+  --card-foreground: 48 20% 90%;
+  --popover: 48 20% 4%;
+  --popover-foreground: 48 20% 90%;
+  --primary: 48 100% 50%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 48 30% 10%;
+  --secondary-foreground: 48 10% 90%;
+  --muted: 48 30% 10%;
+  --muted-foreground: 48 10% 60%;
+  --accent: 48 50% 15%;
+  --accent-foreground: 48 100% 50%;
+  --destructive: 0 100% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 48 50% 20%;
+  --input: 48 50% 20%;
+  --ring: 48 100% 50%;
+  --opaque-button-border-intensity: 9;
+
+  color: #FFD700;
 }
 
 @layer base {
@@ -364,16 +766,20 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
 }
 
 @keyframes glow-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.6;
     filter: blur(8px);
   }
+
   50% {
     opacity: 1;
     filter: blur(12px);
@@ -382,4 +788,463 @@
 
 .chatbot-glow {
   animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Valentines Skin */
+.skin-valentines {
+  --background: 350 100% 92%;
+  --foreground: 0 0% 100%;
+  --card: 350 100% 95%;
+  --popover: 350 100% 95%;
+  --primary: 340 100% 60%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 340 50% 90%;
+  --secondary-foreground: 340 100% 40%;
+  --muted: 340 30% 90%;
+  --muted-foreground: 340 40% 40%;
+  --accent: 340 100% 90%;
+  --accent-foreground: 340 100% 40%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 340 50% 80%;
+  --input: 340 50% 80%;
+  --ring: 340 100% 60%;
+  --radius: 0.75rem;
+
+  background-color: hsl(var(--background)) !important;
+  color: white !important;
+  border: 2px solid #ff69b4 !important;
+  /* Removed position: relative/overflow to allow Dialog centering */
+}
+
+.skin-valentines * {
+  color: white !important;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.skin-valentines .text-green-500,
+.skin-valentines .text-green-500 * {
+  color: #22c55e !important;
+  /* Keep friends indicator green */
+}
+
+/* Galaxy Skin */
+.skin-galaxy {
+  --background: 240 30% 10%;
+  --foreground: 0 0% 100%;
+  --card: 240 30% 12%;
+  --popover: 240 30% 12%;
+  --primary: 260 100% 70%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 240 20% 20%;
+  --secondary-foreground: 260 100% 80%;
+  --muted: 240 20% 20%;
+  --muted-foreground: 240 40% 70%;
+  --accent: 260 100% 20%;
+  --accent-foreground: 260 100% 80%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 240 20% 30%;
+  --input: 240 20% 30%;
+  --ring: 260 100% 60%;
+  --radius: 0.75rem;
+
+  background-color: hsl(var(--background)) !important;
+  color: white !important;
+  border: 2px solid #a855f7 !important;
+}
+
+.skin-galaxy * {
+  color: white !important;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.skin-galaxy .text-green-500,
+.skin-galaxy .text-green-500 * {
+  color: #22c55e !important;
+  /* Keep friends indicator green */
+}
+
+/* Glitch Skin */
+.skin-glitch {
+  --background: 0 0% 5%;
+  --foreground: 0 0% 90%;
+  --card: 0 0% 8%;
+  --card-foreground: 0 0% 90%;
+  --popover: 0 0% 5%;
+  --popover-foreground: 0 0% 90%;
+  --primary: 153 100% 50%;
+  /* Neon Green */
+  --primary-foreground: 0 0% 0%;
+  --secondary: 0 0% 12%;
+  --secondary-foreground: 0 0% 90%;
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 60%;
+  --accent: 300 100% 50%;
+  /* Magenta */
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 100% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 153 100% 30%;
+  --input: 0 0% 20%;
+  --ring: 153 100% 50%;
+  --radius: 0;
+
+  background-color: #0d0d0d !important;
+  color: #e0e0e0 !important;
+  border: 1px solid #00ff99 !important;
+  box-shadow: 0 0 10px rgba(0, 255, 153, 0.2);
+}
+
+.skin-glitch * {
+  color: #e0e0e0 !important;
+  border-color: rgba(0, 255, 153, 0.3) !important;
+}
+
+.skin-glitch .text-green-500,
+.skin-glitch .text-green-500 * {
+  color: #22c55e !important;
+}
+
+@keyframes glitch-anim {
+  0% {
+    transform: translate(0);
+  }
+
+  20% {
+    transform: translate(-2px, 2px);
+  }
+
+  40% {
+    transform: translate(-2px, -2px);
+  }
+
+  60% {
+    transform: translate(2px, 2px);
+  }
+
+  80% {
+    transform: translate(2px, -2px);
+  }
+
+  100% {
+    transform: translate(0);
+  }
+}
+
+.skin-glitch::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent 65%, rgba(0, 255, 153, 0.1) 70%, transparent 75%);
+  background-size: 200% 200%;
+  animation: glitch-scan 3s infinite linear;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@keyframes glitch-scan {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Retro Skin */
+.skin-retro {
+  --background: 260 40% 15%;
+  --foreground: 320 80% 90%;
+  --card: 260 40% 18%;
+  --card-foreground: 320 80% 90%;
+  --popover: 260 40% 15%;
+  --primary: 320 100% 50%;
+  /* Hot Pink */
+  --primary-foreground: 0 0% 100%;
+  --border: 320 100% 40%;
+  --ring: 180 100% 50%;
+  /* Cyan */
+
+  background-color: #1a1025 !important;
+  color: #ffd6fa !important;
+  border: 2px solid #ff00cc !important;
+  box-shadow: 0 0 15px rgba(255, 0, 204, 0.3);
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.skin-retro * {
+  color: #ffd6fa !important;
+  border-color: rgba(255, 0, 204, 0.3) !important;
+}
+
+.skin-retro .text-green-500,
+.skin-retro .text-green-500 * {
+  color: #22c55e !important;
+}
+
+.skin-retro::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  z-index: 2;
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none;
+}
+
+/* Crystal Skin */
+.skin-crystal {
+  --background: 210 100% 96%;
+  --foreground: 210 20% 20%;
+  --card: 0 0% 100%;
+  --card-foreground: 210 20% 20%;
+  --primary: 210 100% 50%;
+  /* Azure */
+  --border: 0 0% 100%;
+
+  background: rgba(255, 255, 255, 0.35) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  color: #1f2937 !important;
+  overflow: hidden;
+  /* For shimmer */
+}
+
+.skin-crystal * {
+  color: #1f2937 !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.skin-crystal .text-green-500,
+.skin-crystal .text-green-500 * {
+  color: #22c55e !important;
+}
+
+@keyframes crystal-shimmer {
+  0% {
+    transform: translateX(-150%) skewX(-15deg);
+  }
+
+  50% {
+    transform: translateX(150%) skewX(-15deg);
+  }
+
+  100% {
+    transform: translateX(150%) skewX(-15deg);
+  }
+}
+
+.skin-crystal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.4) 50%, rgba(255, 255, 255, 0) 100%);
+  transform: skewX(-15deg);
+  animation: crystal-shimmer 3s infinite;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Anime Skin */
+.skin-anime {
+  --background: 340 100% 97%;
+  --foreground: 340 40% 30%;
+  --primary: 340 80% 60%;
+  /* Sakura Pink */
+  --border: 340 60% 80%;
+
+  background: linear-gradient(to bottom, #fff5f7, #ffe6ea) !important;
+  color: #5c2b3b !important;
+  border: 2px solid #ffb7c5 !important;
+}
+
+.skin-anime * {
+  color: #5c2b3b !important;
+  border-color: rgba(255, 183, 197, 0.5) !important;
+}
+
+.skin-anime .text-green-500,
+.skin-anime .text-green-500 * {
+  color: #22c55e !important;
+}
+
+/* Wanted Skin */
+.skin-wanted {
+  --background: 35 30% 80%;
+  --foreground: 25 40% 20%;
+  --primary: 25 50% 40%;
+  /* Brown */
+  --border: 25 40% 30%;
+
+  background-color: #e8dcc5 !important;
+  /* Parchment */
+  background-image: url("https://www.transparenttextures.com/patterns/aged-paper.png");
+  color: #3e2723 !important;
+  /* Dark Brown */
+  border: 4px solid #3e2723 !important;
+  box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.3);
+  font-family: 'Georgia', serif;
+  transform-origin: top center;
+  animation: wanted-sway 3s ease-in-out infinite alternate;
+}
+
+.skin-wanted * {
+  color: #3e2723 !important;
+  border-color: #8d6e63 !important;
+}
+
+.skin-wanted .text-green-500,
+.skin-wanted .text-green-500 * {
+  color: #22c55e !important;
+}
+
+@keyframes wanted-sway {
+  0% {
+    transform: rotate(0.5deg);
+  }
+
+  100% {
+    transform: rotate(-0.5deg);
+  }
+}
+
+/* App-Wide Themes */
+
+/* Vaporwave Theme */
+.skin-vaporwave {
+  --background: 260 25% 15%;
+  /* Deep purple-grey */
+  --foreground: 320 60% 90%;
+  --card: 260 25% 18%;
+  --card-foreground: 320 60% 90%;
+  --popover: 260 25% 15%;
+  --popover-foreground: 320 60% 90%;
+  --primary: 320 80% 60%;
+  /* Hot Pink */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 260 20% 25%;
+  --secondary-foreground: 320 60% 90%;
+  --muted: 260 20% 25%;
+  --muted-foreground: 320 40% 60%;
+  --accent: 180 80% 60%;
+  /* Cyan */
+  --accent-foreground: 260 25% 15%;
+  --destructive: 0 100% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 320 40% 40%;
+  --input: 260 20% 30%;
+  --ring: 320 80% 60%;
+
+  background-color: hsl(260, 25%, 15%) !important;
+  color: hsl(320, 60%, 90%) !important;
+}
+
+.skin-vaporwave * {
+  border-color: hsl(320, 40%, 40%);
+}
+
+/* OLED Midnight Theme */
+.skin-oled {
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+  --card: 0 0% 7%;
+  --card-foreground: 0 0% 100%;
+  --popover: 0 0% 5%;
+  --popover-foreground: 0 0% 100%;
+  --primary: 130 100% 50%;
+  /* Electric Lime */
+  --primary-foreground: 0 0% 0%;
+  --secondary: 0 0% 15%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 60%;
+  --accent: 0 0% 20%;
+  --accent-foreground: 0 0% 100%;
+  --border: 0 0% 20%;
+  --input: 0 0% 20%;
+  --ring: 130 100% 50%;
+
+  background-color: black !important;
+  color: white !important;
+}
+
+.skin-oled * {
+  border-color: #333;
+}
+
+/* Nord Theme */
+.skin-nord {
+  --background: 220 16% 22%;
+  /* #2E3440 */
+  --foreground: 218 27% 92%;
+  /* #D8DEE9 */
+  --card: 220 16% 26%;
+  /* #3B4252 */
+  --card-foreground: 218 27% 92%;
+  --popover: 220 16% 22%;
+  --popover-foreground: 218 27% 92%;
+  --primary: 193 43% 67%;
+  /* #88C0D0 Frost */
+  --primary-foreground: 220 16% 22%;
+  --secondary: 220 16% 36%;
+  /* #4C566A */
+  --secondary-foreground: 218 27% 92%;
+  --muted: 220 16% 36%;
+  --muted-foreground: 218 20% 70%;
+  --accent: 193 43% 67%;
+  --accent-foreground: 220 16% 22%;
+  --border: 220 16% 30%;
+  --input: 220 16% 30%;
+  --ring: 193 43% 67%;
+
+  background-color: #2E3440 !important;
+  color: #D8DEE9 !important;
+}
+
+.skin-nord * {
+  border-color: #4C566A;
+}
+
+/* Golden Hour Theme - Refined */
+.skin-golden {
+  --background: 40 30% 8%;
+  /* Deep warm black */
+  --foreground: 46 80% 90%;
+  --card: 40 30% 12%;
+  --card-foreground: 46 80% 90%;
+  --popover: 40 30% 8%;
+  --popover-foreground: 46 80% 90%;
+  --primary: 46 85% 60%;
+  /* True Gold */
+  --primary-foreground: 40 40% 10%;
+  --secondary: 40 20% 20%;
+  --secondary-foreground: 46 80% 90%;
+  --muted: 40 20% 20%;
+  --muted-foreground: 46 40% 60%;
+  --accent: 46 85% 60%;
+  --accent-foreground: 40 40% 10%;
+  --border: 46 50% 30%;
+  --input: 40 20% 20%;
+  --ring: 46 85% 60%;
+
+  background-color: #1a1612 !important;
+  color: #faeaca !important;
+}
+
+.skin-golden * {
+  border-color: #8c7636;
 }

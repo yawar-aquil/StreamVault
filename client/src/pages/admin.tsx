@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import {
   Trash2, Edit, Plus, Search,
@@ -24,6 +26,7 @@ import {
   Vote,
   Target,
   Award,
+  ShoppingBag, // Added ShoppingBag
   Mail,
   FileJson,
   Upload,
@@ -34,8 +37,11 @@ import {
   CheckCircle,
   XCircle,
   AlertTriangle,
-  RefreshCw
+  RefreshCw,
+  Eye // Added Eye icon
 } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import StreamCoin from "@/components/stream-coin";
 import type { Show, Episode, Movie, BlogPost, Anime, AnimeEpisode } from "@shared/schema";
 import { getAuthHeaders, logout as authLogout } from "@/lib/auth";
 
@@ -169,6 +175,14 @@ export default function AdminPage() {
               <Award className="w-4 h-4" />
               Badges
             </TabsTrigger>
+            <TabsTrigger value="store" className="gap-2">
+              <ShoppingBag className="w-4 h-4" />
+              Store
+            </TabsTrigger>
+            <TabsTrigger value="store-analytics" className="gap-2">
+              <Activity className="w-4 h-4" />
+              Store Analytics
+            </TabsTrigger>
             <TabsTrigger value="url-health" className="gap-2">
               <Activity className="w-4 h-4" />
               URL Health
@@ -264,6 +278,16 @@ export default function AdminPage() {
           {/* Badges Management Tab */}
           <TabsContent value="badges">
             <BadgesManager />
+          </TabsContent>
+
+          {/* Store Management Tab */}
+          <TabsContent value="store">
+            <StoreManager />
+          </TabsContent>
+
+          {/* Store Analytics Tab */}
+          <TabsContent value="store-analytics">
+            <StoreAnalytics />
           </TabsContent>
 
           {/* URL Health Tab */}
@@ -4632,6 +4656,15 @@ function BadgesManager() {
   const [imageUrl, setImageUrl] = useState('');
   const [category, setCategory] = useState('general');
 
+  // Store fields
+  const [price, setPrice] = useState(0);
+  const [stock, setStock] = useState('');
+  const [isForSale, setIsForSale] = useState(false);
+  const [giftable, setGiftable] = useState(true);
+  const [limited, setLimited] = useState(false);
+  const [isSpecial, setIsSpecial] = useState(false);
+  const [displayPriority, setDisplayPriority] = useState(0);
+
   const { data: badges, isLoading } = useQuery<any[]>({
     queryKey: ["/api/badges"],
     queryFn: async () => {
@@ -4657,6 +4690,13 @@ function BadgesManager() {
           imageUrl,
           category,
           active: true,
+          price: parseInt(price as any),
+          stock: stock === "" ? null : parseInt(stock),
+          isForSale,
+          giftable,
+          limited,
+          isSpecial,
+          displayPriority: parseInt(displayPriority as any)
         }),
       });
       if (!res.ok) throw new Error("Failed to create badge");
@@ -4668,6 +4708,13 @@ function BadgesManager() {
       setName('');
       setDescription('');
       setImageUrl('');
+      setPrice(0);
+      setStock('');
+      setIsForSale(false);
+      setGiftable(true);
+      setLimited(false);
+      setIsSpecial(false);
+      setDisplayPriority(0);
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to create badge", variant: "destructive" });
@@ -4688,51 +4735,112 @@ function BadgesManager() {
       <Card>
         <CardHeader>
           <CardTitle>Create Badge</CardTitle>
-          <CardDescription>Create new badges for users to collect</CardDescription>
+          <CardDescription>Create new badges for users to collect & purchase</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="badge-name">Name</Label>
+                  <Input
+                    id="badge-name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Movie Buff"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="badge-image">Image URL</Label>
+                  <Input
+                    id="badge-image"
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    placeholder="https://example.com/badge.png"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label htmlFor="badge-name">Name</Label>
-                <Input
-                  id="badge-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Movie Buff"
+                <Label htmlFor="badge-desc">Description</Label>
+                <Textarea
+                  id="badge-desc"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Watch 50 movies to earn this badge"
                 />
               </div>
+
               <div className="space-y-2">
-                <Label htmlFor="badge-image">Image URL</Label>
-                <Input
-                  id="badge-image"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="https://example.com/badge.png"
-                />
+                <Label htmlFor="badge-category">Category</Label>
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="general">General</SelectItem>
+                    <SelectItem value="achievement">Achievement</SelectItem>
+                    <SelectItem value="challenge">Challenge</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="badge-desc">Description</Label>
-              <Textarea
-                id="badge-desc"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Watch 50 movies to earn this badge"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="badge-category">Category</Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="general">General</SelectItem>
-                  <SelectItem value="achievement">Achievement</SelectItem>
-                  <SelectItem value="challenge">Challenge</SelectItem>
-                </SelectContent>
-              </Select>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Store Settings</h3>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-4 p-4 border rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <Label className="flex-1 cursor-pointer" htmlFor="is-for-sale">List for Sale</Label>
+                    <Switch id="is-for-sale" checked={isForSale} onCheckedChange={setIsForSale} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label className="flex-1 cursor-pointer" htmlFor="limited">Limited Edition</Label>
+                    <Switch id="limited" checked={limited} onCheckedChange={setLimited} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label className="flex-1 cursor-pointer" htmlFor="is-special">Special (VIP/Effect)</Label>
+                    <Switch id="is-special" checked={isSpecial} onCheckedChange={setIsSpecial} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label className="flex-1 cursor-pointer" htmlFor="giftable">Giftable</Label>
+                    <Switch id="giftable" checked={giftable} onCheckedChange={setGiftable} />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Price (cents)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={price}
+                      onChange={(e) => setPrice(parseInt(e.target.value) || 0)}
+                    />
+                    <p className="text-xs text-muted-foreground">${(Number(price) / 100).toFixed(2)}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Stock (Empty = Unlimited)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={stock}
+                      onChange={(e) => setStock(e.target.value)}
+                      placeholder="Unlimited"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Display Priority</Label>
+                    <Input
+                      type="number"
+                      value={displayPriority}
+                      onChange={(e) => setDisplayPriority(parseInt(e.target.value) || 0)}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
             <Button type="submit" disabled={createMutation.isPending}>
@@ -4877,7 +4985,19 @@ function BadgeItem({ badge }: { badge: any }) {
           <p className="font-medium">{badge.name}</p>
           <p className="text-xs text-muted-foreground max-w-[200px] truncate">{badge.description}</p>
         </div>
-        <Badge variant="outline">{badge.category}</Badge>
+        <div className="flex flex-wrap justify-center gap-1">
+          <Badge variant="outline">{badge.category}</Badge>
+          {badge.isForSale && (
+            <Badge variant="secondary" className="bg-green-500/10 text-green-500 border-0">
+              ${(badge.price / 100).toFixed(2)}
+            </Badge>
+          )}
+          {badge.limited && (
+            <Badge variant="secondary" className="bg-red-500/10 text-red-500 border-0">
+              {badge.stock != null ? `${badge.stock} left` : 'Limited'}
+            </Badge>
+          )}
+        </div>
       </div>
 
       <EditBadgeDialog
@@ -5033,6 +5153,19 @@ function AwardBadgeForm({ badges }: { badges: any[] }) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{user.username}</p>
+                    {user.badges && user.badges.length > 0 && (
+                      <div className="flex items-center gap-0.5 ml-1">
+                        {user.badges.filter((b: any) => b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'theme').map((badge: any) => (
+                          <img
+                            key={badge.id}
+                            src={badge.imageUrl}
+                            alt={badge.name}
+                            title={badge.name}
+                            className="w-3 h-3 object-contain"
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -5210,6 +5343,19 @@ function ManageUserBadges() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{user.username}</p>
+                    {user.badges && user.badges.length > 0 && (
+                      <div className="flex items-center gap-0.5 ml-1">
+                        {user.badges.filter((b: any) => b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'theme').map((badge: any) => (
+                          <img
+                            key={badge.id}
+                            src={badge.imageUrl}
+                            alt={badge.name}
+                            title={badge.name}
+                            className="w-3 h-3 object-contain"
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -5254,3 +5400,638 @@ function ManageUserBadges() {
     </Card>
   );
 }
+
+import { THEME_MAPPING, THEME_PREVIEWS } from "@/lib/theme-data";
+
+function StoreManager() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [productType, setProductType] = useState('badge'); // badge, theme
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [price, setPrice] = useState(500);
+  const [stock, setStock] = useState('');
+  const [category, setCategory] = useState('general');
+  const [selectedTheme, setSelectedTheme] = useState('');
+
+  const { data: products, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/store/products"],
+    queryFn: async () => {
+      const res = await fetch("/api/store/products", {
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to fetch products");
+      return res.json();
+    }
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/admin/badges", {
+        method: "POST",
+        headers: {
+          ...getAuthHeaders(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: productType === 'theme' ? selectedTheme : name, // Use theme key/name
+          description,
+          imageUrl,
+          category: productType === 'theme' ? 'theme' : category, // Force category 'theme'
+          active: true,
+          price: parseInt(price as any),
+          stock: stock === "" ? null : parseInt(stock),
+          isForSale: true,
+          giftable: true,
+          limited: stock !== "",
+          isSpecial: false,
+          displayPriority: 10
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to create product");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/store/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/badges"] });
+      toast({ title: "Success", description: "Product created successfully" });
+      setName('');
+      setDescription('');
+      setImageUrl('');
+      setPrice(500);
+      setStock('');
+      setSelectedTheme('');
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create product", variant: "destructive" });
+    },
+  });
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const updateMutation = useMutation({
+    mutationFn: async (updates: any) => {
+      const res = await fetch(`/api/store/admin/badges/${editingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      if (!res.ok) throw new Error("Failed to update product");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/store/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/badges"] });
+      toast({ title: "Success", description: "Product updated successfully" });
+      resetForm();
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update product", variant: "destructive" });
+    },
+  });
+
+  const resetForm = () => {
+    setEditingId(null);
+    setName('');
+    setDescription('');
+    setImageUrl('');
+    setPrice(500);
+    setStock('');
+    setSelectedTheme('');
+    setProductType('badge');
+  };
+
+  const handleEdit = (product: Badge) => {
+    setEditingId(product.id);
+    setName(product.name);
+    setDescription(product.description);
+    setImageUrl(product.imageUrl);
+    setPrice(product.price);
+    setStock(product.stock?.toString() || '');
+    setCategory(product.category);
+
+    if (product.category === 'theme') {
+      setProductType('theme');
+      setSelectedTheme(product.name);
+    } else {
+      setProductType('badge');
+    }
+
+    // Scroll to form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (productType === 'badge' && !name) {
+      toast({ title: "Error", description: "Name required", variant: "destructive" });
+      return;
+    }
+    // ... rest of validation ...
+
+    if (editingId) {
+      updateMutation.mutate({
+        name: productType === 'theme' ? selectedTheme : name,
+        description,
+        imageUrl,
+        category: productType === 'theme' ? 'theme' : category,
+        price: parseInt(price as any),
+        stock: stock === "" ? null : parseInt(stock),
+      });
+    } else {
+      createMutation.mutate();
+    }
+  };
+
+  const handleThemeChange = (theme: string) => {
+    setSelectedTheme(theme);
+  };
+
+
+
+  // ... (keep rest) ...
+
+  return (
+    <div className="space-y-8">
+      <Card>
+        <CardHeader>
+          <CardTitle>{editingId ? 'Edit Product' : 'Add Store Product'}</CardTitle>
+          <CardDescription>
+            {editingId ? 'Update existing product details' : 'Add new items to the store'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Type Selection (Disable if editing maybe? No, let them change) */}
+            <div className="space-y-4 border p-4 rounded-lg bg-secondary/10">
+              <Label>Product Type</Label>
+              <div className="flex gap-4">
+                <Button
+                  type="button"
+                  variant={productType === 'badge' ? 'default' : 'outline'}
+                  onClick={() => setProductType('badge')}
+                  className="w-1/3"
+                >
+                  Badge / Item
+                </Button>
+                <Button
+                  type="button"
+                  variant={productType === 'theme' ? 'default' : 'outline'}
+                  onClick={() => setProductType('theme')}
+                  className="w-1/3"
+                >
+                  Theme
+                </Button>
+              </div>
+            </div>
+
+            {productType === 'theme' ? (
+              <div className="space-y-2">
+                <Label>Select Theme</Label>
+                <Select value={selectedTheme} onValueChange={handleThemeChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a theme..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.keys(THEME_MAPPING).map(t => (
+                      <SelectItem key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Select a theme from the system themes.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>Product Name</Label>
+                <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Gold Badge" />
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label>Image / Screenshot URL</Label>
+              <Input value={imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder={productType === 'theme' ? "https://... (Theme Preview Screenshot)" : "https://... (Badge Icon)"} />
+              {imageUrl && (
+                <div className="mt-2 w-32 h-32 rounded-md border overflow-hidden">
+                  <img src={imageUrl} className="w-full h-full object-cover" />
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Product description..." />
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Price (Coins)</Label>
+                <Input type="number" value={price} onChange={e => setPrice(parseInt(e.target.value))} />
+              </div>
+              <div className="space-y-2">
+                <Label>Stock (Optional)</Label>
+                <Input type="number" value={stock} onChange={e => setStock(e.target.value)} placeholder="Unlimited" />
+              </div>
+              {productType === 'badge' && (
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select value={category} onValueChange={setCategory}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="general">General</SelectItem>
+                      <SelectItem value="bundle">Bundle</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-3">
+              <Button disabled={createMutation.isPending || updateMutation.isPending} className="flex-1">
+                {editingId ? (updateMutation.isPending ? "Updating..." : "Update Product") : (createMutation.isPending ? "Creating..." : `Add ${productType === 'theme' ? 'Theme' : 'Badge'} to Store`)}
+              </Button>
+              {editingId && (
+                <Button type="button" variant="ghost" onClick={resetForm}>
+                  Cancel Edit
+                </Button>
+              )}
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Store Products</CardTitle>
+          <CardDescription>Items currently listed for sale</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? <p>Loading...</p> : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {products?.map((product) => {
+                const isTheme = product.category === 'theme' || product.name.includes("Theme");
+                const isSkin = product.category === 'skin' || product.name.includes("Skin");
+                // Use preview for themes if available, otherwise fallback to imageUrl
+                // Themes are stored as keys in THEME_PREVIEWS (e.g. 'ocean', 'midnight')
+                // We might need to map name to key if not stored directly
+                // But typically for themes, we want to show the preview.
+
+                let bgImage = product.imageUrl;
+                // If it's a theme, try to find a better preview if the imageUrl is just an icon
+                // Actually, the StoreManager create logic sets imageUrl to the preview URL for themes? checking...
+                // Yes: placeholder={productType === 'theme' ? "https://... (Theme Preview Screenshot)"
+                // So product.imageUrl should be correct for themes.
+
+                return (
+                  <div
+                    key={product.id}
+                    className={`
+                      relative group bg-card hover:border-primary/50 transition-colors border rounded-lg overflow-hidden flex flex-col
+                      ${isTheme ? 'col-span-2 aspect-video' : ''}
+                      ${isSkin ? 'row-span-2 aspect-[2/3]' : ''}
+                      ${!isTheme && !isSkin ? 'aspect-square p-4 items-center text-center' : ''}
+                    `}
+                  >
+                    <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button size="sm" variant="secondary" onClick={() => handleEdit(product)}>
+                        Edit
+                      </Button>
+                    </div>
+
+                    {/* Rendering Logic based on Type */}
+                    {(isTheme || isSkin) ? (
+                      <>
+                        <div className="absolute inset-0">
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 p-3 text-left">
+                          <div className="font-bold text-white truncate shadow-black drop-shadow-md">{product.name}</div>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-sm font-bold text-yellow-500 shadow-black drop-shadow-md">{product.price} Coins</span>
+                            <span className="text-xs text-white/80 capitalize bg-black/50 px-2 py-0.5 rounded shadow-black drop-shadow-md">{product.category}</span>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-24 h-24 mb-2 flex items-center justify-center flex-grow">
+                          <img src={product.imageUrl} className="max-w-full max-h-full object-contain" />
+                        </div>
+                        <div className="w-full mt-auto">
+                          <div className="font-medium truncate w-full">{product.name}</div>
+                          <div className="text-sm text-yellow-500 font-bold">{product.price} Coins</div>
+                          <div className="text-xs text-muted-foreground capitalize">{product.category}</div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Store Analytics Component
+function StoreAnalytics() {
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ["/api/store/admin/stats"],
+    queryFn: async () => {
+      const res = await fetch("/api/store/admin/stats", {
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to fetch store stats");
+      return res.json();
+    }
+  });
+
+  const [isTransactionsOpen, setIsTransactionsOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+
+  if (isLoading) {
+    return <div className="p-8 text-center">Loading analytics...</div>;
+  }
+
+  // Helper to format amount nicely (handle negative values display)
+  const formatAmount = (amount: number) => {
+    const isNegative = amount < 0;
+    const absAmount = Math.abs(amount);
+    return (
+      <span className={isNegative ? "text-red-400" : "text-green-400"}>
+        {isNegative ? "-" : "+"}{absAmount}
+      </span>
+    );
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Key Metrics */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <div className="text-2xl font-bold flex items-center gap-2">
+              <StreamCoin className="w-6 h-6" />
+              {stats?.totalRevenue || 0}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground">Total coins spent in store</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Items Sold</CardTitle>
+            <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.itemsSold || 0}</div>
+            <p className="text-xs text-muted-foreground">Total items purchased</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Top Item</CardTitle>
+            <Award className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-lg font-bold truncate">{stats?.topSellingItems?.[0]?.name || 'N/A'}</div>
+            <p className="text-xs text-muted-foreground">{stats?.topSellingItems?.[0]?.count || 0} sales</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Items</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.activeItemsCount || 0}</div>
+            <p className="text-xs text-muted-foreground">Products available for sale</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="col-span-1">
+          <CardHeader>
+            <CardTitle>Top Selling Items</CardTitle>
+            <CardDescription>Most popular items in the store</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {stats?.topSellingItems?.map((item: any, i: number) => (
+                <div key={i} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="font-bold text-muted-foreground w-6">#{i + 1}</div>
+                    <div className="h-10 w-10 bg-muted rounded-md flex items-center justify-center p-1">
+                      <ShoppingBag className="h-5 w-5 opacity-50" />
+                    </div>
+                    <div>
+                      <div className="font-medium">{item.name}</div>
+                      <div className="text-xs text-muted-foreground">{item.count} sales</div>
+                    </div>
+                  </div>
+                  <div className="font-bold flex items-center gap-1">
+                    {item.revenue} <StreamCoin className="w-3 h-3" />
+                  </div>
+                </div>
+              )) || <p className="text-muted-foreground">No sales data yet.</p>}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="col-span-1">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Recent Purchases</CardTitle>
+              <CardDescription>Latest store transactions</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setIsTransactionsOpen(true)}>
+              View All
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {stats?.recentPurchases?.map((tx: any, i: number) => (
+                <div key={i} className="flex items-center justify-between border-b border-border/50 pb-2 last:border-0 last:pb-0 cursor-pointer hover:bg-muted/50 p-2 rounded transition-colors" onClick={() => setSelectedTransaction(tx)}>
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 bg-green-500/10 rounded-full flex items-center justify-center">
+                      <ShoppingBag className="h-4 w-4 text-green-500" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">
+                        {tx.description || (tx.item_id ? `Purchased Item` : 'Transaction')}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(tx.createdAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold flex items-center justify-end gap-1">
+                      {formatAmount(tx.amount)} <StreamCoin className="w-3 h-3" />
+                    </div>
+                    <div className="text-xs text-muted-foreground">User ID: ...{tx.userId ? tx.userId.slice(-4) : 'N/A'}</div>
+                  </div>
+                </div>
+              )) || <p className="text-muted-foreground">No recent purchases.</p>}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* All Transactions Dialog */}
+      <Dialog open={isTransactionsOpen} onOpenChange={setIsTransactionsOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>All Store Transactions</DialogTitle>
+            <DialogDescription>
+              Complete history of all store purchases and gifts
+            </DialogDescription>
+          </DialogHeader>
+
+          <AllTransactionsTable />
+
+        </DialogContent>
+      </Dialog>
+
+      {/* Transaction Details Dialog */}
+      <Dialog open={!!selectedTransaction} onOpenChange={(open) => !open && setSelectedTransaction(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Transaction Details</DialogTitle>
+          </DialogHeader>
+          {selectedTransaction && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">Transaction ID</Label>
+                  <p className="font-mono text-xs text-muted-foreground">{selectedTransaction.id}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Date</Label>
+                  <p>{new Date(selectedTransaction.createdAt).toLocaleString()}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Amount</Label>
+                  <div className="flex items-center gap-1 font-bold text-lg">
+                    {formatAmount(selectedTransaction.amount)}
+                    <StreamCoin className="w-4 h-4" />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Type</Label>
+                  <div className="capitalize">{selectedTransaction.type}</div>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">User ID</Label>
+                  <p className="font-mono text-sm">{selectedTransaction.userId}</p>
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-muted-foreground">Description</Label>
+                  <p className="bg-muted p-2 rounded-md">{selectedTransaction.description}</p>
+                </div>
+                {selectedTransaction.metadata && (
+                  <div className="col-span-2">
+                    <Label className="text-muted-foreground">Metadata</Label>
+                    <pre className="bg-muted p-2 rounded-md text-xs overflow-auto">
+                      {JSON.stringify(JSON.parse(selectedTransaction.metadata || '{}'), null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+    </div>
+  );
+}
+
+// Sub-component for the table to keep things clean and potentially use query pagination later
+function AllTransactionsTable() {
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ["/api/store/admin/stats"], // Re-using for now, ideally a separate paginated endpoint
+  });
+
+  // We can't easily get ALL transactions from the stats endpoint as it might be limited.
+  // Ideally we should create a new endpoint /api/admin/transactions. 
+  // BUT, for now, let's stick to what we have or accept we might strictly need that new endpoint.
+  // The user asked for "expanded all transaction tab". 
+  // The current stats endpoint gives `recentPurchases` (sliced to 10).
+  // I need to fetch all transactions.
+
+  // Let's create a quick new query for all transactions since stats is limited.
+  const { data: allTransactions = [], isLoading: isLoadingAll } = useQuery({
+    queryKey: ["/api/wallet/transactions/all"], // This endpoint might not exist yet for admin all?
+    // Checking store.ts... "getAllCoinTransactions" exists in storage but exposed?
+    // storage.ts has `getAllCoinTransactions`.
+    // store.ts: `router.get('/admin/stats'` calls `getAllCoinTransactions` but filters and slices.
+    // Wait, the USER expects to see ALL.
+    // I should probably add a quick endpoint or modify stats to return more if requested?
+    // Modifying stats is risky. 
+    // Actually, `get /api/wallet/transactions` is for USER.
+    // Let's assume we can add a quick endpoint to `store.ts` OR just filter client side if the stats endpoint returned everything? 
+    // The stats endpoint currently does: `recentPurchases = ... slice(0, 10)`.
+
+    // Fix: I will fetch from `/api/store/admin/stats` but wait... that endpoint explicitly slices. 
+    // I should add a NEW endpoint `/api/admin/store/transactions` in `store.ts` for the full list.
+    // OR, I can just update the `AllTransactionsTable` to handle this limitation gracefully or mock it for now
+    // No, the user wants it functional. 
+    // I will add the endpoint in the previous step? No, step is over.
+    // I will use client-side logic to fetch a new endpoint I'll CREATE in the NEXT step? 
+    // Actually, I can add the endpoint code right now to `store.ts` via another tool call if needed or just accept I need to do it.
+    // Let's modify `store.ts` first? No I am editing `admin.tsx`.
+
+    // Strategy: I will write `admin.tsx` assuming `/api/admin/store/transactions` exists. 
+    // AND I will use `run_command` or similar to add that endpoint to `store.ts` in the NEXT turn?
+    // OR I can use `multi_replace` to edit both files in ONE turn. YES.
+    // I will edit `store.ts` to add the endpoint.
+
+    queryFn: async () => {
+      const res = await fetch("/api/store/admin/transactions", { headers: getAuthHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch transactions");
+      return res.json();
+    }
+  });
+
+  if (isLoadingAll) return <div>Loading transactions...</div>;
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Date</TableHead>
+          <TableHead>Type</TableHead>
+          <TableHead>Description</TableHead>
+          <TableHead>User</TableHead>
+          <TableHead className="text-right">Amount</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {allTransactions.map((tx: any) => (
+          <TableRow key={tx.id}>
+            <TableCell>{new Date(tx.createdAt).toLocaleDateString()} {new Date(tx.createdAt).toLocaleTimeString()}</TableCell>
+            <TableCell className="capitalize">{tx.type}</TableCell>
+            <TableCell>{tx.description}</TableCell>
+            <TableCell title={tx.userId}>...{tx.userId?.slice(-4) || 'N/A'}</TableCell>
+            <TableCell className={`text-right font-bold ${tx.amount < 0 ? 'text-red-400' : 'text-green-400'}`}>
+              {tx.amount > 0 ? '+' : ''}{tx.amount}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+

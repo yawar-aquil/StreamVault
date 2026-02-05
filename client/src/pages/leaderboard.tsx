@@ -173,9 +173,9 @@ export default function Leaderboard() {
                                 )}>
                                     Lvl {user.level || 1}
                                 </div>
-                                {user.badges && user.badges.length > 0 && (
+                                {user.badges && user.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).length > 0 && (
                                     <div className="flex items-center justify-center gap-1 mt-1">
-                                        {user.badges.slice(0, 3).map(badge => (
+                                        {user.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).slice(0, 5).map(badge => (
                                             <div key={badge.id} title={badge.name}>
                                                 {renderBadge(badge)}
                                             </div>
@@ -230,9 +230,9 @@ export default function Leaderboard() {
                                     <span className="font-semibold text-sm truncate group-hover:text-primary transition-colors">
                                         {user.username}
                                     </span>
-                                    {user.badges && user.badges.length > 0 && (
+                                    {user.badges && user.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).length > 0 && (
                                         <div className="hidden sm:flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
-                                            {user.badges.slice(0, 3).map(badge => (
+                                            {user.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).slice(0, 5).map(badge => (
                                                 <div key={badge.id} className="text-muted-foreground" title={badge.name}>
                                                     {renderBadge(badge)}
                                                 </div>

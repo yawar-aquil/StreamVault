@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useSearch } from 'wouter';
+import { differenceInMinutes, parseISO } from 'date-fns';
 import {
     Users,
     UserPlus,
@@ -33,7 +34,7 @@ import { useSocialSocket } from '@/hooks/use-social-socket';
 
 export default function Friends() {
     const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-    const { isFriendOnline, getFriendActivity, requestFriendActivities, isConnected } = useSocialSocket();
+    const { isFriendOnline, getFriendActivity, requestFriendActivities, isConnected, onFriendStatusChange } = useSocialSocket();
     const [activeTab, setActiveTab] = useState('friends');
     const {
         friends,
@@ -43,15 +44,17 @@ export default function Friends() {
         acceptFriendRequest,
         declineFriendRequest,
         removeFriend,
-        searchUsers
+        searchUsers,
+        updateFriendLastActive
     } = useFriends();
     const { toast } = useToast();
     const [, setLocation] = useLocation();
 
     const [searchQuery, setSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState<{ id: string; username: string; avatarUrl: string | null }[]>([]);
+    const [searchResults, setSearchResults] = useState<{ id: string; username: string; avatarUrl: string | null; badges?: any[] }[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [pendingRequests, setPendingRequests] = useState<Set<string>>(new Set());
+    const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
     const [selectedDMFriendId, setSelectedDMFriendId] = useState<string | null>(null);
     const [selectedProfileUser, setSelectedProfileUser] = useState<{
         username: string;
@@ -68,8 +71,6 @@ export default function Friends() {
         favorites?: {
             shows?: Array<{ id: string; title: string; posterUrl: string | null }>;
             movies?: Array<{ id: string; title: string; posterUrl: string | null }>;
-            anime?: Array<{ id: string; title: string; posterUrl: string | null }>;
-            anime?: Array<{ id: string; title: string; posterUrl: string | null }>;
         } | null;
         xp?: number;
         level?: number;
@@ -102,6 +103,16 @@ export default function Friends() {
         }
     }, [isConnected, isAuthenticated, requestFriendActivities]);
 
+    // Handle instant offline status updates
+    useEffect(() => {
+        onFriendStatusChange((friendId, isOnline) => {
+            if (!isOnline) {
+                // Instantly update local state when user goes offline
+                updateFriendLastActive(friendId, new Date().toISOString());
+            }
+        });
+    }, [onFriendStatusChange, updateFriendLastActive]);
+
     // View friend profile
     const handleViewProfile = async (friendId: string, username: string, avatarUrl?: string | null) => {
         let bio: string | undefined;
@@ -112,7 +123,7 @@ export default function Friends() {
         let badges: any[] | undefined;
 
         try {
-            const response = await fetch(`/api/users/${friendId}/profile`);
+            const response = await fetch(`/api/users/${friendId}/profile`, { cache: 'no-store' });
             if (response.ok) {
                 const profile = await response.json();
                 bio = profile.bio;
@@ -159,27 +170,27 @@ export default function Friends() {
     const handleSendRequest = async (toUserId: string) => {
         setPendingRequests(prev => new Set(prev).add(toUserId));
 
-        const result = await sendFriendRequest(toUserId);
+        try {
+            await sendFriendRequest(toUserId);
 
-        if (result.success) {
-            toast({
-                title: 'Friend Request Sent',
-                description: 'Your friend request has been sent successfully.',
-            });
-            setSearchResults(prev => prev.filter(u => u.id !== toUserId));
-        } else {
-            toast({
-                title: 'Error',
-                description: result.error || 'Failed to send friend request',
-                variant: 'destructive',
+            // If we get here, it succeeded (context handles its own toasts but we can show one too or rely on context)
+            // The context already shows 'Friend request sent', so we might duplicate toast if we keep it here.
+            // But checking the context code, it does show a toast.
+            // Let's rely on context for the toast, or keep the specific one here?
+            // The context throws on error.
+
+            setSentRequests(prev => new Set(prev).add(toUserId));
+        } catch (error: any) {
+            // Context already shows error toast, so we might not need another one,
+            // but for safety we can log or just let the context handle UI feedback.
+            console.error("Friend request failed:", error);
+        } finally {
+            setPendingRequests(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(toUserId);
+                return newSet;
             });
         }
-
-        setPendingRequests(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(toUserId);
-            return newSet;
-        });
     };
 
     const handleAcceptRequest = async (requestId: string) => {
@@ -284,14 +295,42 @@ export default function Friends() {
                                                 <span className="text-lg font-medium">{friend.username.slice(0, 2).toUpperCase()}</span>
                                             )}
                                         </div>
-                                        {isFriendOnline(friend.friendId) && (
-                                            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
-                                        )}
+                                        {(() => {
+                                            const isOnline = isFriendOnline(friend.friendId);
+                                            const lastActiveDate = friend.lastActive ? new Date(friend.lastActive) : null;
+                                            // Consider online ONLY if socket connected (instant updates)
+                                            const showOnline = isOnline;
+
+                                            if (showOnline) {
+                                                return <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />;
+                                            } else if (lastActiveDate) {
+                                                // Mobile/Away indicator (gray with green ring or just gray?) - user asked for text, but dot is good too
+                                                // Let's stick to just the green dot for online, and text for offline
+                                                return null;
+                                            }
+                                            return null;
+                                        })()}
                                     </button>
 
                                     {/* Info and Activity */}
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-semibold">{friend.username}</h3>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-semibold">{friend.username}</h3>
+                                            {/* Equipped Badges */}
+                                            {friend.badges && friend.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).length > 0 && (
+                                                <div className="flex items-center gap-0.5">
+                                                    {friend.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).map((badge: any) => (
+                                                        <div key={badge.id} title={badge.name} className="relative group/tooltip">
+                                                            <img
+                                                                src={badge.imageUrl}
+                                                                alt={badge.name}
+                                                                className="w-4 h-4 object-contain"
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                         {(() => {
                                             const activity = getFriendActivity(friend.friendId);
                                             if (activity?.activity) {
@@ -330,7 +369,21 @@ export default function Friends() {
                                             }
                                             return (
                                                 <p className="text-sm text-muted-foreground">
-                                                    Friends since {formatDistanceToNow(new Date(friend.createdAt), { addSuffix: true })}
+                                                    <div className="flex flex-col gap-0.5">
+                                                        {(() => {
+                                                            const isOnline = isFriendOnline(friend.friendId);
+                                                            const lastActiveDate = friend.lastActive ? new Date(friend.lastActive) : null;
+                                                            const showOnline = isOnline;
+
+                                                            if (showOnline) {
+                                                                return <span className="text-xs text-green-500 font-medium">Online</span>;
+                                                            } else if (lastActiveDate) {
+                                                                return <span className="text-xs text-muted-foreground">Active {formatDistanceToNow(lastActiveDate, { addSuffix: true })}</span>;
+                                                            } else {
+                                                                return <span className="text-xs text-muted-foreground">Friends since {formatDistanceToNow(new Date(friend.createdAt), { addSuffix: true })}</span>;
+                                                            }
+                                                        })()}
+                                                    </div>
                                                 </p>
                                             );
                                         })()}
@@ -413,7 +466,23 @@ export default function Friends() {
 
                                     {/* Info */}
                                     <div className="flex-1">
-                                        <h3 className="font-semibold">{request.fromUser?.username || 'Unknown'}</h3>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-semibold">{request.fromUser?.username || 'Unknown'}</h3>
+                                            {/* Equipped Badges for Requests - assuming backend sends them */}
+                                            {request.fromUser?.badges && request.fromUser.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).length > 0 && (
+                                                <div className="flex items-center gap-0.5">
+                                                    {request.fromUser.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).map((badge: any) => (
+                                                        <div key={badge.id} title={badge.name} className="relative group/tooltip">
+                                                            <img
+                                                                src={badge.imageUrl}
+                                                                alt={badge.name}
+                                                                className="w-4 h-4 object-contain"
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                         <p className="text-sm text-muted-foreground">
                                             Sent {formatDistanceToNow(new Date(request.createdAt), { addSuffix: true })}
                                         </p>
@@ -484,13 +553,40 @@ export default function Friends() {
 
                                     {/* Info */}
                                     <div className="flex-1">
-                                        <h3 className="font-semibold">{resultUser.username}</h3>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-semibold">{resultUser.username}</h3>
+                                            {/* Equipped Badges */}
+                                            {resultUser.badges && (
+                                                <div className="flex items-center gap-1">
+                                                    {(Array.isArray(resultUser.badges)
+                                                        ? resultUser.badges
+                                                        : (typeof resultUser.badges === 'string' ? JSON.parse(resultUser.badges) : [])
+                                                    )
+                                                        .filter((b: any) => b.equipped && b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'theme')
+                                                        .map((badge: any) => (
+                                                            <div key={badge.id} title={badge.name} className="relative group/tooltip">
+                                                                <img
+                                                                    src={badge.imageUrl}
+                                                                    alt={badge.name}
+                                                                    className="w-5 h-5 object-contain"
+                                                                />
+                                                            </div>
+                                                        ))
+                                                    }
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
 
                                     {/* Action */}
                                     {user?.id === resultUser.id ? (
                                         <Button size="sm" variant="outline" disabled>
                                             You
+                                        </Button>
+                                    ) : sentRequests.has(resultUser.id) ? (
+                                        <Button size="sm" variant="outline" className="text-green-500 border-green-500/50 bg-green-500/10" disabled>
+                                            <Check className="h-4 w-4 mr-2" />
+                                            Sent
                                         </Button>
                                     ) : (
                                         <Button
@@ -532,6 +628,8 @@ export default function Friends() {
                         id: selectedDMFriendId,
                         username: friends.find(f => f.friendId === selectedDMFriendId)!.username,
                         avatarUrl: friends.find(f => f.friendId === selectedDMFriendId)!.avatarUrl,
+                        badges: friends.find(f => f.friendId === selectedDMFriendId)!.badges,
+                        lastActive: friends.find(f => f.friendId === selectedDMFriendId)!.lastActive,
                     } : null}
                     onClose={() => setSelectedDMFriendId(null)}
                 />

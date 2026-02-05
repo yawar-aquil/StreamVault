@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SEO } from "@/components/seo";
 import { useToast } from "@/hooks/use-toast";
+import { CommentsSection } from "@/components/comments-section";
 import type { Show, Movie, Anime, BlogPost as BlogPostType } from "@shared/schema";
 
 interface CastMember {
@@ -674,30 +675,31 @@ export default function BlogPost() {
                 {castDetails.length > 0 ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                     {castDetails.slice(0, 8).map((member, index) => (
-                      <div
-                        key={index}
-                        className="bg-card border border-border rounded-lg overflow-hidden text-center"
-                      >
-                        <div className="aspect-[3/4] bg-muted">
-                          {(member.profileUrl || member.profile_path) ? (
-                            <img
-                              src={member.profileUrl || `https://image.tmdb.org/t/p/w185${member.profile_path}`}
-                              alt={member.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Users className="w-12 h-12 text-muted-foreground" />
-                            </div>
-                          )}
+                      <Link key={index} href={`/person/${encodeURIComponent(member.name)}`}>
+                        <div
+                          className="bg-card border border-border rounded-lg overflow-hidden text-center cursor-pointer hover:opacity-80 transition-opacity"
+                        >
+                          <div className="aspect-[3/4] bg-muted">
+                            {(member.profileUrl || member.profile_path) ? (
+                              <img
+                                src={member.profileUrl || `https://image.tmdb.org/t/p/w185${member.profile_path}`}
+                                alt={member.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Users className="w-12 h-12 text-muted-foreground" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="p-3">
+                            <p className="font-medium text-sm line-clamp-1">{member.name}</p>
+                            <p className="text-xs text-muted-foreground line-clamp-1">
+                              {member.character}
+                            </p>
+                          </div>
                         </div>
-                        <div className="p-3">
-                          <p className="font-medium text-sm line-clamp-1">{member.name}</p>
-                          <p className="text-xs text-muted-foreground line-clamp-1">
-                            {member.character}
-                          </p>
-                        </div>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 ) : content.cast ? (
@@ -788,6 +790,13 @@ export default function BlogPost() {
                 </Button>
               </Link>
             </section>
+
+            {/* Comments Section */}
+            {blogPost && (
+              <section className="pt-8 border-t border-border">
+                <CommentsSection blogPostId={blogPost.id} />
+              </section>
+            )}
           </div>
 
           {/* Sidebar */}

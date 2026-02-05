@@ -56,7 +56,7 @@ export function Top10Row({ title = "Top 10 Today", items }: Top10RowProps) {
                 <div
                     ref={scrollRef}
                     onScroll={checkScroll}
-                    className="flex gap-0 overflow-x-auto scrollbar-hide px-4 md:px-6 scroll-smooth items-center h-[300px]"
+                    className="flex gap-0 overflow-x-auto overflow-y-hidden scrollbar-hide px-4 md:px-6 py-4 scroll-smooth items-center h-[350px]"
                     style={{ scrollbarWidth: "none" }}
                 >
                     {top10Items.map((item, index) => (
@@ -67,14 +67,12 @@ export function Top10Row({ title = "Top 10 Today", items }: Top10RowProps) {
                                     <text
                                         x="50%"
                                         y="135"
-                                        className="text-[140px] font-black transition-all duration-300 group-hover/item:fill-white"
+                                        className="text-[140px] font-black transition-all duration-300 fill-transparent stroke-primary group-hover/item:fill-primary"
                                         textAnchor="middle"
-                                        fill="transparent"
-                                        stroke="#E50914"
                                         strokeWidth="2"
                                         style={{
                                             fontFamily: "Impact, sans-serif",
-                                            filter: "drop-shadow(2px 4px 6px black)"
+                                            filter: "drop-shadow(2px 4px 6px rgba(0,0,0,0.5))"
                                         }}
                                     >
                                         {index + 1}

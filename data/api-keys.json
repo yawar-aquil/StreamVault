@@ -10,5 +10,18 @@
     "requestsThisMinute": 0,
     "lastMinuteReset": "2026-01-22T11:40:39.910Z",
     "lastDayReset": "2026-01-22T11:40:39.910Z"
+  },
+  {
+    "id": "7682ad6a-07f0-43d8-9bb9-f5a15eb6ac03",
+    "key": "sv_ef7366f35df94c72b4ccd8f5a8300bb383433bd3",
+    "name": "test",
+    "userId": "0229a46c-2302-4909-93c5-c71f80db5538",
+    "scope": "read-only",
+    "createdAt": "2026-02-02T18:56:41.617Z",
+    "requestsToday": 3,
+    "requestsThisMinute": 1,
+    "lastMinuteReset": "2026-02-02T19:00:08.972Z",
+    "lastDayReset": "2026-02-02T18:56:41.617Z",
+    "lastUsed": "2026-02-02T19:00:08.972Z"
   }
 ]

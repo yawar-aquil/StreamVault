@@ -23,6 +23,7 @@ interface Review {
     createdAt: string;
     username: string;
     avatarUrl: string | null;
+    authorBadges?: any[];
 }
 
 interface ReviewsData {
@@ -57,8 +58,8 @@ function StarRating({ rating, onRatingChange, readonly = false }: {
                 >
                     <Star
                         className={`w-6 h-6 transition-colors ${star <= (hoverRating || rating)
-                                ? 'fill-yellow-400 text-yellow-400'
-                                : 'text-muted-foreground'
+                            ? 'fill-yellow-400 text-yellow-400'
+                            : 'text-muted-foreground'
                             }`}
                     />
                 </button>
@@ -83,15 +84,12 @@ export function ReviewsSection({ contentType, contentId }: ReviewsSectionProps) 
 
     const submitReviewMutation = useMutation({
         mutationFn: async () => {
-            return apiRequest('/api/reviews', {
-                method: 'POST',
-                body: JSON.stringify({
-                    contentType,
-                    contentId,
-                    rating: newRating,
-                    reviewText: newReviewText || null,
-                    spoilerWarning,
-                }),
+            return apiRequest('POST', '/api/reviews', {
+                contentType,
+                contentId,
+                rating: newRating,
+                reviewText: newReviewText || null,
+                spoilerWarning,
             });
         },
         onSuccess: () => {
@@ -108,7 +106,7 @@ export function ReviewsSection({ contentType, contentId }: ReviewsSectionProps) 
 
     const helpfulMutation = useMutation({
         mutationFn: async (reviewId: string) => {
-            return apiRequest(`/api/reviews/${reviewId}/helpful`, { method: 'POST' });
+            return apiRequest('POST', `/api/reviews/${reviewId}/helpful`);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [`/api/reviews/${contentType}/${contentId}`] });
@@ -117,7 +115,7 @@ export function ReviewsSection({ contentType, contentId }: ReviewsSectionProps) 
 
     const deleteReviewMutation = useMutation({
         mutationFn: async (reviewId: string) => {
-            return apiRequest(`/api/reviews/${reviewId}`, { method: 'DELETE' });
+            return apiRequest('DELETE', `/api/reviews/${reviewId}`);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [`/api/reviews/${contentType}/${contentId}`] });
@@ -138,8 +136,8 @@ export function ReviewsSection({ contentType, contentId }: ReviewsSectionProps) 
                                     <Star
                                         key={star}
                                         className={`w-4 h-4 ${star <= Math.round(data.averageRating)
-                                                ? 'fill-yellow-400 text-yellow-400'
-                                                : 'text-muted-foreground'
+                                            ? 'fill-yellow-400 text-yellow-400'
+                                            : 'text-muted-foreground'
                                             }`}
                                     />
                                 ))}
@@ -222,7 +220,26 @@ export function ReviewsSection({ contentType, contentId }: ReviewsSectionProps) 
                                             <AvatarFallback>{review.username[0]?.toUpperCase()}</AvatarFallback>
                                         </Avatar>
                                         <div>
-                                            <p className="font-medium">{review.username}</p>
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-medium">{review.username}</p>
+                                                {/* User Badges */}
+                                                {review.authorBadges && review.authorBadges.length > 0 && (
+                                                    <div className="flex gap-[2px]">
+                                                        {review.authorBadges
+                                                            .filter((b: any) => !b.name.includes('Skin') && !b.name.includes('Theme'))
+                                                            .map((badge: any, i: number) => (
+                                                                <div key={i} className="relative group/badge z-10" style={{ zIndex: 10 - i }}>
+                                                                    <img
+                                                                        src={badge.imageUrl}
+                                                                        alt={badge.name}
+                                                                        className="w-5 h-5 object-contain drop-shadow-sm"
+                                                                        title={badge.name}
+                                                                    />
+                                                                </div>
+                                                            ))}
+                                                    </div>
+                                                )}
+                                            </div>
                                             <div className="flex items-center gap-2">
                                                 <StarRating rating={review.rating} readonly />
                                                 <span className="text-xs text-muted-foreground">

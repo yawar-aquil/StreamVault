@@ -16,8 +16,11 @@ interface EmailData {
 
 // Email notification function using Resend
 async function sendEmail(data: EmailData): Promise<boolean> {
+  console.error("!!! CRITICAL DEBUG !!! sendEmail EXECUTING for:", data.to); // console.error to be sure
   try {
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
+    console.log(`[DEBUG] sendEmail called for: ${data.to}`); // Trace Log
+    console.log(`[DEBUG] API Key present: ${!!RESEND_API_KEY}`); // Trace Log
 
     if (!RESEND_API_KEY) {
       // Fallback to console logging if no API key
@@ -385,6 +388,313 @@ If you didn't request this, please ignore this email.
   return sendEmail({
     to: email,
     subject: "🔐 Reset Your Password",
+    html,
+    text,
+  });
+}
+export async function sendPurchaseReceiptEmail(
+  email: string,
+  username: string,
+  productName: string,
+  productImageUrl: string,
+  price: number,
+  remainingBalance: number,
+  transactionId: string
+): Promise<boolean> {
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Purchase Receipt</title>
+</head>
+<body style="margin:0; padding:0; background-color:#09090b; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#09090b;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color:#18181b; border-radius:16px; overflow:hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.6); border: 1px solid #27272a;">
+          
+          <!-- Header -->
+          <tr>
+            <td align="center" style="padding: 40px 0 0 0; background: linear-gradient(180deg, rgba(88,28,135,0.2) 0%, rgba(24,24,27,1) 100%);">
+              <h1 style="margin:0 0 30px 0; color:#E50914; font-size:24px; font-weight:900; letter-spacing:3px; text-transform:uppercase;">STREAMVAULT</h1>
+              
+              <!-- Product Image Container -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="center">
+                    <div style="position: relative; display: inline-block;">
+                      <div style="background-color: #27272a; padding: 20px; border-radius: 20px; border: 1px solid #3f3f46; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                        <img src="${productImageUrl}" alt="${productName}" width="120" height="120" style="display: block; object-fit: contain;">
+                      </div>
+                      <!-- Checkmark Badge -->
+                      <div style="position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); background-color: #22c55e; width: 40px; height: 40px; border-radius: 50%; border: 4px solid #18181b; text-align: center; line-height: 40px; color: white; font-size: 20px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+                        ✓
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Message -->
+          <tr>
+            <td align="center" style="padding: 40px 40px 30px 40px;">
+              <h2 style="margin:0 0 10px 0; color:#ffffff; font-size:28px; font-weight:bold;">Purchase Successful!</h2>
+              <p style="margin:0; color:#a1a1aa; font-size:16px;">Hi ${username}, you are now the owner of <strong style="color: #fbbf24;">${productName}</strong>.</p>
+            </td>
+          </tr>
+
+          <!-- Receipt Settings -->
+          <tr>
+             <td style="padding: 0 40px 40px 40px;">
+              <div style="background-color:#27272a; border-radius: 12px; padding: 20px;">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td style="padding: 12px 0; color:#a1a1aa; font-size:14px; border-bottom: 1px solid #3f3f46;">Product</td>
+                    <td style="padding: 12px 0; color:#fff; font-size:15px; font-weight: 600; text-align: right; border-bottom: 1px solid #3f3f46;">${productName}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px 0; color:#a1a1aa; font-size:14px; border-bottom: 1px solid #3f3f46;">Price</td>
+                    <td style="padding: 12px 0; color:#E50914; font-size:15px; font-weight: 600; text-align: right; border-bottom: 1px solid #3f3f46;">${price} Coins</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px 0; color:#a1a1aa; font-size:14px; border-bottom: 1px solid #3f3f46;">Transaction ID</td>
+                    <td style="padding: 12px 0; color:#71717a; font-size:12px; font-family: monospace; text-align: right; border-bottom: 1px solid #3f3f46;">${transactionId}</td>
+                  </tr>
+                   <tr>
+                    <td style="padding: 15px 0 5px 0; color:#a1a1aa; font-size:14px;">Remaining Balance</td>
+                    <td style="padding: 15px 0 5px 0; color:#22c55e; font-size:16px; font-weight: bold; text-align: right;">${remainingBalance} Coins</td>
+                  </tr>
+                </table>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding: 30px; background-color:#18181b; border-top:1px solid #27272a;">
+              <a href="https://streamvault.live" style="color: #71717a; text-decoration: none; font-size: 12px; margin-right: 15px;">Website</a>
+              <a href="https://streamvault.live/inventory" style="color: #71717a; text-decoration: none; font-size: 12px;">Inventory</a>
+              <p style="margin:20px 0 0; color:#52525b; font-size:12px;">© ${new Date().getFullYear()} StreamVault. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  const text = `PURCHASE RECEIPT
+  
+Hi ${username},
+
+Purchase Successful!
+You are now the owner of ${productName}.
+
+Product: ${productName}
+Price: ${price} Coins
+Transaction ID: ${transactionId}
+
+Remaining Balance: ${remainingBalance} Coins
+
+View your item: https://streamvault.live/inventory
+
+© StreamVault
+`;
+
+  return sendEmail({
+    to: email,
+    subject: `Receipt: You purchased ${productName}`,
+    html,
+    text,
+  });
+}
+
+export async function sendCoinPurchaseReceiptEmail(
+  email: string,
+  username: string,
+  amount: number,
+  cost: string,
+  newBalance: number,
+  transactionId: string
+): Promise<boolean> {
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coin Purchase Receipt</title>
+</head>
+<body style="margin:0; padding:0; background-color:#09090b; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#09090b;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color:#18181b; border-radius:16px; overflow:hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.6); border: 1px solid #27272a;">
+          
+          <!-- Header -->
+          <tr>
+            <td align="center" style="padding: 40px 0 0 0; background: linear-gradient(180deg, rgba(234,179,8,0.2) 0%, rgba(24,24,27,1) 100%);">
+              <h1 style="margin:0 0 30px 0; color:#EAB308; font-size:24px; font-weight:900; letter-spacing:3px; text-transform:uppercase;">STREAMVAULT</h1>
+              
+              <!-- Coin Icon -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="center">
+                    <div style="position: relative; display: inline-block;">
+                      <!-- CSS StreamCoin Replica -->
+                      <div style="background: linear-gradient(135deg, #FCD34D 0%, #F59E0B 50%, #D97706 100%); width: 80px; height: 80px; border-radius: 50%; border: 4px solid #B45309; box-shadow: 0 0 20px rgba(234,179,8,0.6); display: inline-block; text-align: center; line-height: 80px;">
+                        <span style="font-family: serif; font-size: 48px; font-weight: bold; color: #78350F; text-shadow: 1px 1px 0px rgba(255,255,255,0.4);">S</span>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Message -->
+          <tr>
+            <td align="center" style="padding: 30px 40px 30px 40px;">
+              <h2 style="margin:0 0 10px 0; color:#ffffff; font-size:28px; font-weight:bold;">Wallet Top-Up Successful!</h2>
+              <p style="margin:0; color:#a1a1aa; font-size:16px;">Hi ${username}, you've successfully added <strong style="color: #fbbf24;">${amount} Coins</strong> to your wallet.</p>
+            </td>
+          </tr>
+
+          <!-- Receipt Settings -->
+          <tr>
+             <td style="padding: 0 40px 40px 40px;">
+              <div style="background-color:#27272a; border-radius: 12px; padding: 20px;">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td style="padding: 12px 0; color:#a1a1aa; font-size:14px; border-bottom: 1px solid #3f3f46;">Coins Added</td>
+                    <td style="padding: 12px 0; color:#fbbf24; font-size:15px; font-weight: 600; text-align: right; border-bottom: 1px solid #3f3f46;">+${amount}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px 0; color:#a1a1aa; font-size:14px; border-bottom: 1px solid #3f3f46;">Total Cost</td>
+                    <td style="padding: 12px 0; color:#fff; font-size:15px; font-weight: 600; text-align: right; border-bottom: 1px solid #3f3f46;">${cost}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px 0; color:#a1a1aa; font-size:14px; border-bottom: 1px solid #3f3f46;">Transaction ID</td>
+                    <td style="padding: 12px 0; color:#71717a; font-size:12px; font-family: monospace; text-align: right; border-bottom: 1px solid #3f3f46;">${transactionId}</td>
+                  </tr>
+                   <tr>
+                    <td style="padding: 15px 0 5px 0; color:#a1a1aa; font-size:14px;">New Wallet Balance</td>
+                    <td style="padding: 15px 0 5px 0; color:#22c55e; font-size:16px; font-weight: bold; text-align: right;">${newBalance} Coins</td>
+                  </tr>
+                </table>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding: 30px; background-color:#18181b; border-top:1px solid #27272a;">
+              <a href="https://streamvault.live" style="color: #71717a; text-decoration: none; font-size: 12px; margin-right: 15px;">Website</a>
+              <a href="https://streamvault.live/wallet" style="color: #71717a; text-decoration: none; font-size: 12px;">My Wallet</a>
+              <p style="margin:20px 0 0; color:#52525b; font-size:12px;">© ${new Date().getFullYear()} StreamVault. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  const text = `WALLET TOP-UP RECEIPT
+  
+Hi ${username},
+
+Success! You've added ${amount} Coins to your wallet.
+
+Coins Added: +${amount}
+Total Cost: ${cost}
+Transaction ID: ${transactionId}
+
+New Wallet Balance: ${newBalance} Coins
+
+Manage Wallet: https://streamvault.live/wallet
+
+© StreamVault
+`;
+
+  return sendEmail({
+    to: email,
+    subject: `Receipt: You purchased ${amount} Coins`,
+    html,
+    text,
+  });
+}
+
+export async function sendEmailVerificationEmail(email: string, code: string): Promise<boolean> {
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Your Email</title>
+</head>
+<body style="margin:0; padding:0; background-color:#141414; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#141414;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color:#1f1f1f; border-radius:8px; overflow:hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+          <!-- Logo Header -->
+          <tr>
+            <td align="center" style="padding: 30px; background-color:#000000;">
+              <h1 style="margin:0; color:#E50914; font-size:36px; font-weight:900; letter-spacing:2px; text-transform:uppercase;">STREAMVAULT</h1>
+            </td>
+          </tr>
+          
+          <!-- Main Content -->
+          <tr>
+            <td style="padding: 40px 40px 20px 40px; text-align: center;">
+              <h2 style="margin:0 0 10px 0; color:#ffffff; font-size:24px; font-weight:bold;">Verify Your Email Address</h2>
+              <p style="margin:0 0 30px 0; color:#b3b3b3; font-size:16px;">Welcome to StreamVault! Please verify your email address to complete your registration.</p>
+              
+              <div style="background-color:#2a2a2a; border:1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+                <span style="color:#E50914; font-size: 32px; font-weight: bold; letter-spacing: 5px;">${code}</span>
+              </div>
+
+              <p style="margin:0 0 10px 0; color:#666; font-size:14px;">This code will expire in 30 minutes.</p>
+              <p style="margin:0; color:#666; font-size:14px;">If you didn't request this, you can safely ignore this email.</p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding: 30px; background-color:#181818; border-top:1px solid #2a2a2a;">
+              <p style="margin:0; color:#666; font-size:12px;">© ${new Date().getFullYear()} StreamVault. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  const text = `VERIFY YOUR EMAIL
+  
+Use the code below to verify your email address:
+
+${code}
+
+This code will expire in 30 minutes.
+`;
+
+  return sendEmail({
+    to: email,
+    subject: "✉️ Verify Your Email Address",
     html,
     text,
   });

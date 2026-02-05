@@ -1,4 +1,4 @@
-import type { Show, Episode, Movie, Anime, AnimeEpisode, Comment, InsertShow, InsertEpisode, InsertMovie, InsertAnime, InsertAnimeEpisode, InsertComment, WatchlistItem, ViewingProgress, Category, BlogPost, InsertBlogPost, User, Badge, InsertBadge, UserBadge, Reminder, InsertReminder, Review, ReviewHelpfulVote, Challenge, UserChallenge, Poll, PollVote, XpHistoryEntry } from "@shared/schema";
+import type { Show, Episode, Movie, Anime, AnimeEpisode, Comment, CommentWithBadges, InsertShow, InsertEpisode, InsertMovie, InsertAnime, InsertAnimeEpisode, InsertComment, WatchlistItem, ViewingProgress, Category, BlogPost, InsertBlogPost, User, Badge, InsertBadge, UserBadge, Reminder, InsertReminder, Review, ReviewHelpfulVote, Challenge, UserChallenge, Poll, PollVote, XpHistoryEntry, CoinTransaction, InsertCoinTransaction } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
@@ -99,7 +99,22 @@ export interface ApiKey {
 export interface PasswordResetToken {
   email: string;
   token: string;
+  email: string;
+  token: string;
   expiresAt: number;
+}
+
+export interface EmailVerificationToken {
+  email: string;
+  token: string;
+  expiresAt: number;
+}
+
+// Extend User type to include equippedBadge
+declare module "@shared/schema" {
+  interface User {
+    equippedBadge?: string;
+  }
 }
 
 export interface IStorage {
@@ -171,8 +186,9 @@ export interface IStorage {
   updateIssueReport(id: string, updates: Partial<IssueReport>): Promise<IssueReport>;
 
   // Comments
-  getCommentsByEpisodeId(episodeId: string): Promise<Comment[]>;
-  getCommentsByMovieId(movieId: string): Promise<Comment[]>;
+  getCommentsByEpisodeId(episodeId: string): Promise<CommentWithBadges[]>;
+  getCommentsByMovieId(movieId: string): Promise<CommentWithBadges[]>;
+  getCommentsByBlogPostId(blogPostId: string): Promise<CommentWithBadges[]>;
   createComment(comment: InsertComment): Promise<Comment>;
   getAllComments(): Promise<Comment[]>;
   deleteComment(commentId: string): Promise<void>;
@@ -198,6 +214,16 @@ export interface IStorage {
   // Password Reset
   createPasswordResetToken(email: string): Promise<string>;
   verifyPasswordResetToken(email: string, token: string): Promise<boolean>;
+
+  // Email Verification
+  createEmailVerificationToken(email: string): Promise<string>;
+  verifyEmailVerificationToken(email: string, token: string): Promise<boolean>;
+
+  // Coins & Transactions
+  updateUserCoins(userId: string, amount: number): Promise<User>;
+  deductUserCoins(userId: string, amount: number): Promise<boolean>;
+  createCoinTransaction(transaction: InsertCoinTransaction): Promise<CoinTransaction>;
+  getUserCoinTransactions(userId: string): Promise<CoinTransaction[]>;
   deletePasswordResetToken(email: string): Promise<void>;
 
   // Friends
@@ -250,6 +276,9 @@ export interface IStorage {
   updateUserXP(userId: string, amount: number): Promise<{ user: User; levelUp: boolean }>;
   getLeaderboard(limit: number): Promise<User[]>;
 
+  // Last Active
+  setLastActive(userId: string): Promise<void>;
+
   // Reminders
   createReminder(reminder: InsertReminder): Promise<Reminder>;
   getReminders(userId: string): Promise<Reminder[]>;
@@ -294,6 +323,8 @@ export interface IStorage {
   getUserBadges(userId: string): Promise<(UserBadge & { badge: Badge })[]>;
   awardBadge(userId: string, badgeId: string): Promise<UserBadge>;
   revokeBadge(userId: string, badgeId: string): Promise<void>;
+  getEquippedBadge(userId: string): Promise<Badge | undefined>;
+  updateUserBadgeEquippedStatus(userId: string, badgeId: string, equipped: boolean): Promise<void>;
 
   getPollResults(pollId: string): Promise<{ optionIndex: number; count: number }[]>;
   getUserVote(pollId: string, userId: string): Promise<PollVote | undefined>;
@@ -334,6 +365,7 @@ export class MemStorage implements IStorage {
   private badges: Map<string, Badge>;
   private userBadges: Map<string, UserBadge>;
   private passwordResetTokens: Map<string, PasswordResetToken>;
+  private emailVerificationTokens: Map<string, EmailVerificationToken>;
   private dataFile: string;
   private usersFile: string;
   private friendsFile!: string;
@@ -370,6 +402,8 @@ export class MemStorage implements IStorage {
     this.badges = new Map();
     this.userBadges = new Map();
     this.passwordResetTokens = new Map();
+    this.emailVerificationTokens = new Map();
+    this.coinTransactions = new Map();
     this.categories = [
       { id: "action", name: "Action & Thriller", slug: "action" },
       { id: "drama", name: "Drama & Romance", slug: "drama" },
@@ -382,10 +416,49 @@ export class MemStorage implements IStorage {
       { id: "adventure", name: "Adventure", slug: "adventure" },
     ];
     this.loadData();
+    this.usersFile = join(process.cwd(), "data", "users.json");
+    this.loadUsers();
     this.friendsFile = join(process.cwd(), "data", "friends.json");
     this.loadFriendsData();
     this.apiKeysFile = join(process.cwd(), "data", "api-keys.json");
     this.loadApiKeys();
+    this.loadApiKeys();
+  }
+
+  // Email Verification
+  async createEmailVerificationToken(email: string): Promise<string> {
+    const token = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 30 * 60 * 1000; // 30 minutes
+
+    this.emailVerificationTokens.set(email, {
+      email,
+      token,
+      expiresAt,
+    });
+
+    return token;
+  }
+
+  async verifyEmailVerificationToken(email: string, token: string): Promise<boolean> {
+    const record = this.emailVerificationTokens.get(email);
+    if (!record) return false;
+
+    if (Date.now() > record.expiresAt) {
+      this.emailVerificationTokens.delete(email);
+      return false;
+    }
+
+    if (record.token !== token) {
+      return false;
+    }
+
+    this.emailVerificationTokens.delete(email);
+    // Also mark user as verified
+    const user = await this.getUserByEmail(email);
+    if (user) {
+      await this.updateUser(user.id, { emailVerified: true });
+    }
+    return true;
   }
 
   // Load data from JSON file or seed if file doesn't exist
@@ -511,6 +584,12 @@ export class MemStorage implements IStorage {
           console.log(`✅ Loaded ${data.polls.length} polls`);
         }
 
+        // Restore coin transactions
+        if (data.coinTransactions) {
+          data.coinTransactions.forEach((tx: CoinTransaction) => this.coinTransactions.set(tx.id, tx));
+          console.log(`✅ Loaded ${data.coinTransactions.length} coin transactions`);
+        }
+
       } else {
         console.log("📦 No data file found, seeding initial data...");
         this.seedData();
@@ -552,9 +631,11 @@ export class MemStorage implements IStorage {
         userChallenges: Array.from(this.userChallenges.values()),
         polls: Array.from(this.polls.values()),
         pollVotes: Array.from(this.pollVotes.values()),
+        pollVotes: Array.from(this.pollVotes.values()),
         xpHistory: Array.from(this.xpHistory.values()),
         badges: Array.from(this.badges.values()),
         userBadges: Array.from(this.userBadges.values()),
+        coinTransactions: Array.from(this.coinTransactions.values()),
         lastUpdated: new Date().toISOString(),
       };
 
@@ -568,6 +649,44 @@ export class MemStorage implements IStorage {
       // console.log("💾 Data saved to file"); // Commented out to reduce noise
     } catch (error) {
       console.error("❌ Error saving data:", error);
+    }
+  }
+
+  // Load users from users.json
+  private loadUsers() {
+    try {
+      if (existsSync(this.usersFile)) {
+        console.log("📂 Loading users from file...");
+        const data = JSON.parse(readFileSync(this.usersFile, "utf-8"));
+        if (Array.isArray(data)) {
+          data.forEach((user: User) => this.users.set(user.id, user));
+        } else if (data.users && Array.isArray(data.users)) {
+          // Handle format { users: [...] }
+          data.users.forEach((user: User) => this.users.set(user.id, user));
+        }
+        console.log(`✅ Loaded ${this.users.size} users`);
+      } else {
+        console.log("No users file found.");
+      }
+    } catch (error) {
+      console.error("❌ Error loading users:", error);
+    }
+  }
+
+  // Save users to users.json
+  private saveUsers() {
+    try {
+      const data = {
+        users: Array.from(this.users.values())
+      };
+      // Create data directory if it doesn't exist
+      const dataDir = join(process.cwd(), "data");
+      if (!existsSync(dataDir)) {
+        mkdirSync(dataDir, { recursive: true });
+      }
+      writeFileSync(this.usersFile, JSON.stringify(data, null, 2), "utf-8");
+    } catch (error) {
+      console.error("❌ Error saving users:", error);
     }
   }
 
@@ -593,7 +712,6 @@ export class MemStorage implements IStorage {
       category: insertShow.category || null,
       cast: insertShow.cast || null,
       creators: insertShow.creators || null,
-      featured: insertShow.featured || false,
       featured: insertShow.featured || false,
       trending: insertShow.trending || false,
       createdAt: new Date(),
@@ -1277,16 +1395,44 @@ export class MemStorage implements IStorage {
 
 
   // Comments
-  async getCommentsByEpisodeId(episodeId: string): Promise<Comment[]> {
-    return Array.from(this.comments.values())
-      .filter(comment => comment.episodeId === episodeId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  private enrichCommentsWithBadges(comments: Comment[]): CommentWithBadges[] {
+    return comments.map(comment => {
+      let authorBadges: Badge[] = [];
+      if (comment.userId) {
+        // Find equipped user badges
+        const userBadges = Array.from(this.userBadges.values())
+          .filter(ub => ub.userId === comment.userId && ub.equipped);
+
+        // Get badge details
+        authorBadges = userBadges
+          .map(ub => this.badges.get(ub.badgeId))
+          .filter((b): b is Badge => !!b)
+          // Sort by display priority (descending)
+          .sort((a, b) => (b.displayPriority || 0) - (a.displayPriority || 0));
+      }
+      return { ...comment, authorBadges };
+    });
   }
 
-  async getCommentsByMovieId(movieId: string): Promise<Comment[]> {
-    return Array.from(this.comments.values())
+  async getCommentsByEpisodeId(episodeId: string): Promise<CommentWithBadges[]> {
+    const comments = Array.from(this.comments.values())
+      .filter(comment => comment.episodeId === episodeId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return this.enrichCommentsWithBadges(comments);
+  }
+
+  async getCommentsByMovieId(movieId: string): Promise<CommentWithBadges[]> {
+    const comments = Array.from(this.comments.values())
       .filter(comment => comment.movieId === movieId)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return this.enrichCommentsWithBadges(comments);
+  }
+
+  async getCommentsByBlogPostId(blogPostId: string): Promise<CommentWithBadges[]> {
+    const comments = Array.from(this.comments.values())
+      .filter(comment => comment.blogPostId === blogPostId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return this.enrichCommentsWithBadges(comments);
   }
 
   async createComment(comment: InsertComment): Promise<Comment> {
@@ -1295,6 +1441,7 @@ export class MemStorage implements IStorage {
       id,
       episodeId: comment.episodeId || null,
       movieId: comment.movieId || null,
+      blogPostId: comment.blogPostId || null,
       parentId: comment.parentId || null,
       userId: comment.userId || null,
       userName: comment.userName,
@@ -1423,12 +1570,68 @@ export class MemStorage implements IStorage {
     }
   }
 
+  private enrichUser(user: User): User {
+    const userBadges = Array.from(this.userBadges.values())
+      .filter(ub => ub.userId === user.id);
+
+    const badges = userBadges.map(ub => {
+      let badgeDefinition = this.badges.get(ub.badgeId);
+
+      // Fallback: If definition is missing (e.g. legacy data or sync issue), create a temporary one
+      if (!badgeDefinition) {
+        // console.warn(`[Storage] Warning: Missing badge definition for ${ub.badgeId}, using fallback.`);
+        badgeDefinition = {
+          id: ub.badgeId,
+          name: ub.badgeId.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' '), // "new-comer" -> "New Comer"
+          description: "Awarded Badge",
+          imageUrl: "",
+          icon: "star",
+          category: "achievement",
+          active: true,
+          createdAt: new Date(),
+          price: 0,
+          currency: "USD",
+          isForSale: false,
+          giftable: false,
+          displayPriority: 0,
+          isSpecial: false,
+          limited: false,
+          stock: null
+        };
+        // Ideally, we might want to save this fallback to this.badges, but let's just use it for now 
+        // to prevent the "hidden badge" loop.
+        this.badges.set(ub.badgeId, badgeDefinition);
+      }
+
+      return {
+        id: badgeDefinition.id,
+        badgeId: badgeDefinition.id,
+        name: badgeDefinition.name,
+        description: badgeDefinition.description,
+        imageUrl: badgeDefinition.imageUrl,
+        category: badgeDefinition.category,
+        equipped: ub.equipped,
+        earnedAt: ub.earnedAt,
+        icon: badgeDefinition.icon || 'star'
+      };
+    });
+
+    // Find equipped badge URL
+    const equippedBadge = badges.find(b => b.equipped)?.imageUrl;
+
+    return {
+      ...user,
+      badges: JSON.stringify(badges),
+      equippedBadge
+    };
+  }
+
   async getAllUsers(): Promise<User[]> {
     // Ensure users are loaded
     if (this.users.size === 0) {
       this.loadUsers();
     }
-    return Array.from(this.users.values());
+    return Array.from(this.users.values()).map(u => this.enrichUser(u));
   }
 
   async getUserById(id: string): Promise<User | undefined> {
@@ -1436,7 +1639,8 @@ export class MemStorage implements IStorage {
     if (this.users.size === 0) {
       this.loadUsers();
     }
-    return this.users.get(id);
+    const user = this.users.get(id);
+    return user ? this.enrichUser(user) : undefined;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
@@ -1444,9 +1648,10 @@ export class MemStorage implements IStorage {
     if (this.users.size === 0) {
       this.loadUsers();
     }
-    return Array.from(this.users.values()).find(
+    const user = Array.from(this.users.values()).find(
       (user) => user.email.toLowerCase() === email.toLowerCase()
     );
+    return user ? this.enrichUser(user) : undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
@@ -1454,9 +1659,10 @@ export class MemStorage implements IStorage {
     if (this.users.size === 0) {
       this.loadUsers();
     }
-    return Array.from(this.users.values()).find(
+    const user = Array.from(this.users.values()).find(
       (user) => user.username.toLowerCase() === username.toLowerCase()
     );
+    return user ? this.enrichUser(user) : undefined;
   }
 
   async createUser(userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User> {
@@ -1493,6 +1699,26 @@ export class MemStorage implements IStorage {
     this.users.set(id, updatedUser);
     this.saveUsers();
     return updatedUser;
+  }
+
+  async setLastActive(userId: string): Promise<void> {
+    const user = this.users.get(userId);
+    if (!user) return;
+
+    const now = new Date();
+    // Update in memory immediately
+    user.lastActive = now;
+    this.users.set(userId, user);
+
+    // Persist to disk occasionally (e.g., probability check or just do it)
+    // For safety in this environment, we'll save. 
+    // To prevent IO thrashing, maybe we can implement a dirty flag system later, 
+    // but for now, let's save but catch errors silently to not block content.
+    try {
+      this.saveUsers();
+    } catch (e) {
+      console.error("Background save failed", e);
+    }
   }
 
   async searchUsers(query: string): Promise<User[]> {
@@ -1892,29 +2118,49 @@ export class MemStorage implements IStorage {
     const user = this.users.get(userId);
     if (!user) throw new Error("User not found");
 
-    let currentBadges: any[] = [];
-    try {
-      currentBadges = JSON.parse(user.badges || "[]");
-    } catch (e) { currentBadges = []; }
-
-    // Check if already has this badge
-    if (currentBadges.find((b: any) => b.id === badgeData.id)) {
-      return; // Already has it
+    // 1. Ensure Badge exists in definitions
+    if (!this.badges.has(badgeData.id)) {
+      // Create it if missing (lazy migration of code-defined achievements to DB)
+      this.badges.set(badgeData.id, {
+        id: badgeData.id,
+        name: badgeData.name,
+        description: badgeData.description,
+        imageUrl: badgeData.imageUrl || "",  // Achievements might not have images yet
+        icon: badgeData.icon,
+        category: "achievement",
+        active: true,
+        createdAt: new Date(),
+        price: 0,
+        currency: "USD",
+        isForSale: false,
+        giftable: false,
+        displayPriority: 0,
+        isSpecial: false,
+        limited: false,
+        stock: null
+      });
+      // console.log(`[Storage] Auto-created missing badge definition: ${badgeData.name}`);
     }
 
-    currentBadges.push({
-      id: badgeData.id,
-      name: badgeData.name,
-      description: badgeData.description,
-      icon: badgeData.icon,
-      imageUrl: badgeData.imageUrl || null,
-      earnedAt: badgeData.earnedAt || new Date().toISOString()
-    });
+    // 2. Add to UserBadges (the source of truth)
+    const existingUserBadge = Array.from(this.userBadges.values()).find(
+      ub => ub.userId === userId && ub.badgeId === badgeData.id
+    );
 
-    user.badges = JSON.stringify(currentBadges);
-    this.users.set(userId, user);
-    this.saveUsers();
-    console.log(`✅ Added badge "${badgeData.name}" to user ${userId}`);
+    if (!existingUserBadge) {
+      const id = randomUUID();
+      const userBadge: UserBadge = {
+        id,
+        userId,
+        badgeId: badgeData.id,
+        equipped: false, // Achievements not equipped by default
+        earnedAt: new Date(badgeData.earnedAt || new Date()),
+        giftedFrom: null,
+        giftMessage: null
+      };
+      this.userBadges.set(id, userBadge);
+      this.saveData(); // Persist changes
+    }
   }
 
   async awardBadge(userId: string, badgeId: string): Promise<UserBadge> {
@@ -1993,6 +2239,15 @@ export class MemStorage implements IStorage {
       this.saveData();
       console.log(`✅ Revoked ${userBadgesToRemove.length} instances of badge ${badgeId} for user ${userId}`);
     }
+  }
+
+  async getEquippedBadge(userId: string): Promise<Badge | undefined> {
+    const userBadge = Array.from(this.userBadges.values()).find(
+      ub => ub.userId === userId && ub.equipped
+    );
+
+    if (!userBadge) return undefined;
+    return this.badges.get(userBadge.badgeId);
   }
 
   async getLeaderboard(limit: number): Promise<User[]> {
@@ -2101,28 +2356,18 @@ export class MemStorage implements IStorage {
     const now = new Date();
     const nowIso = now.toISOString();
 
-    // Check and reset minute counter
-    const lastMinuteReset = new Date(apiKey.lastMinuteReset);
-    const minuteAgo = new Date(now.getTime() - 60000);
-    if (lastMinuteReset < minuteAgo) {
-      apiKey.requestsThisMinute = 0;
+    // Check and reset 15-minute window
+    const lastWindowReset = new Date(apiKey.lastMinuteReset); // Reusing this field as "lastWindowReset" to avoid schema migration issues for now
+    const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
+
+    if (lastWindowReset < fifteenMinutesAgo) {
+      apiKey.requestsThisMinute = 0; // Reusing this field as "requestsThisWindow"
       apiKey.lastMinuteReset = nowIso;
     }
 
-    // Check and reset day counter
-    const lastDayReset = new Date(apiKey.lastDayReset);
-    const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    if (lastDayReset < dayAgo) {
-      apiKey.requestsToday = 0;
-      apiKey.lastDayReset = nowIso;
-    }
-
     // Check rate limits
-    if (apiKey.requestsThisMinute >= 10) {
-      return { allowed: false, reason: 'Rate limit exceeded: 10 requests per minute' };
-    }
-    if (apiKey.requestsToday >= 50) {
-      return { allowed: false, reason: 'Rate limit exceeded: 50 requests per day' };
+    if (apiKey.requestsThisMinute >= 1000) {
+      return { allowed: false, reason: 'Rate limit exceeded: 1000 requests per 15 minutes' };
     }
 
     // Increment counters
@@ -2244,10 +2489,24 @@ export class MemStorage implements IStorage {
 
     return reviews.map(review => {
       const user = this.users.get(review.userId);
+
+      // Fetch equipped badges
+      let authorBadges: Badge[] = [];
+      if (user) {
+        const userBadges = Array.from(this.userBadges.values())
+          .filter(ub => ub.userId === user.id && ub.equipped);
+
+        authorBadges = userBadges
+          .map(ub => this.badges.get(ub.badgeId))
+          .filter((b): b is Badge => !!b)
+          .sort((a, b) => (b.displayPriority || 0) - (a.displayPriority || 0));
+      }
+
       return {
         ...review,
         username: user?.username || 'Unknown',
         avatarUrl: user?.avatarUrl || null,
+        authorBadges
       };
     });
   }
@@ -2453,19 +2712,49 @@ export class MemStorage implements IStorage {
 
     // Update referrer
     referrer.referralCount = (referrer.referralCount || 0) + 1;
-    referrer.xp = (referrer.xp || 0) + 100; // Referral bonus
+    referrer.xp = (referrer.xp || 0) + 200; // Increased base reward to 200 XP
+
+    // Check for Milestone Rewards (Multiples of 5)
+    let milestoneMessage = "";
+    if (referrer.referralCount % 5 === 0) {
+      const tier = referrer.referralCount / 5;
+
+      // Calculate Milestone Bonuses
+      // Series: 5 -> 500xp, 100 coins
+      //        10 -> 1000xp, 150 coins
+      //        15 -> 1500xp, 200 coins
+      const bonusXP = tier * 500;
+      const bonusCoins = 100 + ((tier - 1) * 50);
+
+      referrer.xp += bonusXP;
+      referrer.coins = (referrer.coins || 0) + bonusCoins;
+
+      // Record Milestone Transaction
+      await this.createCoinTransaction({
+        userId: referrer.id,
+        amount: bonusCoins,
+        type: 'referral_bonus',
+        description: `Referral Milestone: ${referrer.referralCount} Users!`,
+        metadata: JSON.stringify({ tier, bonusXP, bonusCoins })
+      });
+
+      await this.addXpHistory(referrer.id, bonusXP, `referral_milestone_${referrer.referralCount}`);
+
+      milestoneMessage = ` Milestone reached! Bonus: ${bonusXP} XP & ${bonusCoins} Coins!`;
+    }
+
     this.users.set(referrer.id, referrer);
 
     // Add XP History
     await this.addXpHistory(newUserId, 50, 'referral_bonus');
-    await this.addXpHistory(referrer.id, 100, 'referral_reward');
+    await this.addXpHistory(referrer.id, 200, 'referral_reward');
 
     // Notify Referrer
     await this.createNotification({
       userId: referrer.id,
       type: 'system',
       title: 'Referral Bonus! 🎉',
-      message: `${newUser.username} used your referral code. You earned 100 XP!`,
+      message: `${newUser.username} used your referral code. You earned 200 XP!${milestoneMessage}`,
       read: false,
       data: { referralId: newUser.id }
     });
@@ -2632,6 +2921,88 @@ export class MemStorage implements IStorage {
       .slice(0, limit);
   }
 
+  // Coins & Transactions
+  // The following methods are typically part of an interface (like IStorage)
+  // and would need concrete implementations in this class (MemStorage).
+  // As per the instruction, these are added as abstract method signatures.
+  // If this is a concrete class, these would need to be implemented.
+  // For example:
+  // async updateUserCoins(userId: string, amount: number): Promise<User> {
+  //   // Implementation here
+  //   throw new Error("Method not implemented.");
+  // }
+  // async createCoinTransaction(transaction: InsertCoinTransaction): Promise<CoinTransaction> {
+  //   // Implementation here
+  //   throw new Error("Method not implemented.");
+  async updateUserCoins(userId: string, amount: number): Promise<User> {
+    const user = this.users.get(userId);
+    if (!user) throw new Error("User not found");
+    const updatedUser = { ...user, coins: (user.coins || 0) + amount };
+    this.users.set(userId, updatedUser);
+    this.saveUsers();
+    return updatedUser;
+  }
+
+  async deductUserCoins(userId: string, amount: number): Promise<boolean> {
+    const user = this.users.get(userId);
+    if (!user) return false;
+
+    // Initialize coins if undefined
+    const currentCoins = user.coins || 0;
+
+    // Atomic check
+    if (currentCoins < amount) {
+      return false;
+    }
+
+    // Atomic update
+    const updatedUser = { ...user, coins: currentCoins - amount };
+    this.users.set(userId, updatedUser);
+    this.saveUsers();
+    return true;
+  }
+
+  async createCoinTransaction(transaction: InsertCoinTransaction): Promise<CoinTransaction> {
+    const id = randomUUID();
+    const newTransaction: CoinTransaction = {
+      ...transaction,
+      id,
+      createdAt: new Date(),
+    };
+    this.coinTransactions.set(id, newTransaction);
+    this.saveData();
+    return newTransaction;
+  }
+
+  async getUserCoinTransactions(userId: string): Promise<CoinTransaction[]> {
+    return Array.from(this.coinTransactions.values())
+      .filter(t => t.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getAllCoinTransactions(): Promise<CoinTransaction[]> {
+    return Array.from(this.coinTransactions.values())
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async searchUsers(query: string): Promise<User[]> {
+    const term = query.toLowerCase();
+    return Array.from(this.users.values())
+      .filter(u => u.username.toLowerCase().includes(term))
+      .slice(0, 10); // Limit to 10 results
+  }
+
+  // Admin stats
+  // async getStats(): Promise<{
+  //   users: number;
+  //   shows: number;
+  //   movies: number;
+  //   anime: number;
+  // }> {
+  //   // Implementation here
+  //   throw new Error("Method not implemented.");
+  // }
+
   async getBadgeStats(): Promise<{ totalBadges: number; totalAwarded: number; popularBadges: { name: string; count: number }[] }> {
     const totalBadges = this.badges.size;
     const totalAwarded = this.userBadges.size;
@@ -2650,6 +3021,33 @@ export class MemStorage implements IStorage {
       .slice(0, 5);
 
     return { totalBadges, totalAwarded, popularBadges };
+  }
+
+  async updateUserBadgeEquippedStatus(userId: string, badgeId: string, equipped: boolean): Promise<void> {
+    const userBadge = Array.from(this.userBadges.values()).find(
+      ub => ub.userId === userId && ub.badgeId === badgeId
+    );
+
+    if (userBadge) {
+      userBadge.equipped = equipped;
+      this.userBadges.set(userBadge.id, userBadge);
+      this.saveData();
+
+      // SYNC: Update the users.badges JSON column to match the new equipped state
+      // This ensures the leaderboard (which reads the JSON) reflects the change immediately.
+      try {
+        const allUserBadges = await this.getUserBadges(userId);
+        const badgesJson = allUserBadges.map(ub => ({
+          ...ub.badge,
+          equipped: ub.equipped,
+          earnedAt: ub.earnedAt
+        }));
+
+        await this.updateUser(userId, { badges: JSON.stringify(badgesJson) });
+      } catch (error) {
+        console.error("Failed to sync badges to user profile:", error);
+      }
+    }
   }
 }
 

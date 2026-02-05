@@ -25,8 +25,21 @@ export const users = pgTable("users", {
   referredBy: varchar("referred_by"),
   referralCount: integer("referral_count").default(0).notNull(),
   emailVerified: boolean("email_verified").default(false),
+  coins: integer("coins").default(0).notNull(),
+  lastActive: timestamp("last_active"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Coin Transactions for wallet history
+export const coinTransactions = pgTable("coin_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  amount: integer("amount").notNull(), // Positive for credit, negative for debit
+  type: text("type").notNull(), // "purchase", "spend", "gift", "refund", "bonus"
+  description: text("description").notNull(),
+  metadata: text("metadata"), // JSON string for storing related IDs (stripeId, productId, etc.)
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Reminders table for scheduling
@@ -120,6 +133,15 @@ export const badges = pgTable("badges", {
   description: text("description").notNull(),
   imageUrl: text("image_url").notNull(),
   category: text("category").default("general"), // "challenge", "achievement", "general"
+  // Store integration
+  price: integer("price").default(0), // Price in cents (0 = free/earned only)
+  currency: text("currency").default("USD"),
+  isForSale: boolean("is_for_sale").default(false), // Listed in store
+  giftable: boolean("giftable").default(true), // Can be gifted to others
+  displayPriority: integer("display_priority").default(0), // Higher = shown first
+  isSpecial: boolean("is_special").default(false), // VIP, Sweetie - show next to username
+  limited: boolean("limited").default(false), // Limited edition
+  stock: integer("stock"), // null = unlimited
   active: boolean("active").default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -129,7 +151,49 @@ export const userBadges = pgTable("user_badges", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(),
   badgeId: varchar("badge_id").notNull(),
+  giftedFrom: varchar("gifted_from"), // userId who gifted this badge
+  giftMessage: text("gift_message"),
+  equipped: boolean("equipped").default(true), // Show in profile
   earnedAt: timestamp("earned_at").defaultNow().notNull(),
+});
+
+// User Inventory (for purchased items)
+export const userInventory = pgTable("user_inventory", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  badgeId: varchar("badge_id").notNull(),
+  quantity: integer("quantity").default(1),
+  isGift: boolean("is_gift").default(false),
+  giftedFrom: varchar("gifted_from"),
+  giftMessage: text("gift_message"),
+  purchaseDate: timestamp("purchase_date").defaultNow().notNull(),
+});
+
+// Gift Transactions
+export const giftTransactions = pgTable("gift_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  senderId: varchar("sender_id").notNull(),
+  receiverId: varchar("receiver_id").notNull(),
+  badgeId: varchar("badge_id").notNull(),
+  message: text("message"),
+  status: text("status").default("pending"), // pending, claimed, expired
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  claimedAt: timestamp("claimed_at"),
+});
+
+// Payment Transactions (placeholder for Stripe)
+export const payments = pgTable("payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  stripeSessionId: text("stripe_session_id"),
+  stripePaymentIntent: text("stripe_payment_intent"),
+  amount: integer("amount").notNull(), // In cents
+  currency: text("currency").default("USD"),
+  status: text("status").default("pending"), // pending, completed, failed, refunded
+  badgeIds: text("badge_ids").notNull(), // JSON array of badge IDs
+  metadata: text("metadata"), // JSON for additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
 });
 
 // XP History for time-based leaderboards
@@ -294,6 +358,7 @@ export const comments = pgTable("comments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   episodeId: varchar("episode_id"), // null if it's a movie comment
   movieId: varchar("movie_id"), // null if it's an episode comment
+  blogPostId: varchar("blog_post_id"), // NEW: null if not blog post comment
   animeEpisodeId: varchar("anime_episode_id"), // null if not anime comment
   parentId: varchar("parent_id"), // null if it's a top-level comment
   userId: varchar("user_id"), // Optional: link to registered user
@@ -334,6 +399,8 @@ export const insertAnimeSchema = createInsertSchema(anime).omit({ id: true });
 export const insertAnimeEpisodeSchema = createInsertSchema(animeEpisodes).omit({ id: true });
 export const insertCommentSchema = createInsertSchema(comments).omit({ id: true, createdAt: true });
 export const insertBadgeSchema = createInsertSchema(badges).omit({ id: true, createdAt: true });
+export const insertCoinTransactionSchema = createInsertSchema(coinTransactions);
+export const selectCoinTransactionSchema = createInsertSchema(coinTransactions);
 
 // Select types
 export type Show = typeof shows.$inferSelect;
@@ -350,6 +417,7 @@ export type InsertAnimeEpisode = z.infer<typeof insertAnimeEpisodeSchema>;
 export type InsertComment = z.infer<typeof insertCommentSchema>;
 export type WatchlistItem = z.infer<typeof watchlistSchema>;
 export type ViewingProgress = z.infer<typeof viewingProgressSchema>;
+export type CoinTransaction = z.infer<typeof selectCoinTransactionSchema>;
 
 // Blog posts table
 export const blogPosts = pgTable("blog_posts", {
@@ -406,9 +474,18 @@ export type UserChallenge = typeof userChallenges.$inferSelect;
 export type Poll = typeof polls.$inferSelect;
 export type PollVote = typeof pollVotes.$inferSelect;
 
+// Store types
+export type UserInventory = typeof userInventory.$inferSelect;
+export type GiftTransaction = typeof giftTransactions.$inferSelect;
+export type Payment = typeof payments.$inferSelect;
+
 // Category type
 export type Category = {
   id: string;
   name: string;
   slug: string;
+};
+
+export type CommentWithBadges = Comment & {
+  authorBadges?: Badge[];
 };

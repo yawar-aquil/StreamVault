@@ -5,16 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { MessageCircle, Send, ThumbsUp, ThumbsDown, ChevronDown, MoreVertical, Smile, Image, X, Search } from "lucide-react";
-import type { Comment } from "@shared/schema";
+import type { Comment, CommentWithBadges } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import EmojiPicker, { Theme } from "emoji-picker-react";
 
 interface CommentsSectionProps {
   episodeId?: string;
   movieId?: string;
+  blogPostId?: string;
 }
 
-interface CommentWithReplies extends Comment {
+interface CommentWithReplies extends CommentWithBadges {
   replies?: CommentWithReplies[];
   likes?: number;
 }
@@ -95,6 +96,7 @@ function CommentItem({
   comment: CommentWithReplies;
   episodeId?: string;
   movieId?: string;
+  blogPostId?: string;
   userName: string;
   setUserName: (name: string) => void;
   isNameSaved?: boolean;
@@ -130,6 +132,7 @@ function CommentItem({
         body: JSON.stringify({
           episodeId,
           movieId,
+          blogPostId,
           parentId: data.parentId,
           userName: data.userName,
           comment: data.comment,
@@ -146,7 +149,9 @@ function CommentItem({
       queryClient.invalidateQueries({
         queryKey: episodeId
           ? [`/api/comments/episode/${episodeId}`]
-          : [`/api/comments/movie/${movieId}`],
+          : movieId
+            ? [`/api/comments/movie/${movieId}`]
+            : [`/api/comments/blog/${blogPostId}`],
       });
       setReplyText("");
       setShowReplyForm(false);
@@ -224,6 +229,24 @@ function CommentItem({
           {/* Header: Username and timestamp */}
           <div className="flex items-center gap-2 mb-1">
             <span className="font-medium text-sm text-foreground">@{comment.userName.toLowerCase().replace(/\s+/g, '')}</span>
+
+            {/* Badges Display */}
+            {comment.authorBadges && comment.authorBadges.length > 0 && (
+              <div className="flex items-center gap-1">
+                {comment.authorBadges.map((badge) => (
+                  <div key={badge.id} className="relative group/badge">
+                    <img
+                      src={badge.imageUrl}
+                      alt={badge.name}
+                      className="w-4 h-4 object-contain"
+                    />
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover/badge:block bg-popover text-popover-foreground text-[10px] px-1.5 py-0.5 rounded border whitespace-nowrap z-50">
+                      {badge.name}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             <span className="text-xs text-muted-foreground">
               {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
             </span>
@@ -231,6 +254,8 @@ function CommentItem({
               <MoreVertical className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
+
+
 
           {/* Comment Text with @mentions highlighted */}
           <p className="text-sm whitespace-pre-wrap break-words mb-2 text-foreground">
@@ -322,99 +347,104 @@ function CommentItem({
       </div>
 
       {/* Row 2: Replies Toggle (Only if hasReplies) */}
-      {hasReplies && (
-        <div className="flex gap-3">
-          {/* Connector Column */}
-          <div className="w-10 flex-shrink-0 relative">
-            <svg
-              className="absolute top-0 left-0 w-full h-full text-muted-foreground/30 pointer-events-none"
-              style={{ overflow: 'visible' }}
-            >
-              {/* 
+      {
+        hasReplies && (
+          <div className="flex gap-3">
+            {/* Connector Column */}
+            <div className="w-10 flex-shrink-0 relative">
+              <svg
+                className="absolute top-0 left-0 w-full h-full text-muted-foreground/30 pointer-events-none"
+                style={{ overflow: 'visible' }}
+              >
+                {/* 
                  If collapsed: Vertical to middle, curve right to button.
                  If expanded: Vertical straight down to connect to nested replies.
               */}
-              {showReplies ? (
-                <line x1="20" y1="0" x2="20" y2="100%" stroke="currentColor" strokeWidth="2" />
-              ) : (
-                <path d="M 20 0 L 20 16 Q 20 26 35 26" stroke="currentColor" strokeWidth="2" fill="none" />
-              )}
-            </svg>
-          </div>
+                {showReplies ? (
+                  <line x1="20" y1="0" x2="20" y2="100%" stroke="currentColor" strokeWidth="2" />
+                ) : (
+                  <path d="M 20 0 L 20 16 Q 20 26 35 26" stroke="currentColor" strokeWidth="2" fill="none" />
+                )}
+              </svg>
+            </div>
 
-          {/* Button Column */}
-          <div className="flex-1 py-1">
-            <button
-              onClick={() => setShowReplies(!showReplies)}
-              className="flex items-center gap-2 text-primary text-sm font-bold hover:bg-primary/10 px-3 py-1.5 rounded-full transition-colors w-fit"
-            >
-              {showReplies ? (
-                <ChevronDown className="w-4 h-4 rotate-180" />
-              ) : (
-                <ChevronDown className="w-4 h-4" />
-              )}
-              {(() => {
-                const totalReplies = countTotalReplies(comment);
-                return `${showReplies ? 'Hide' : ''} ${totalReplies} ${totalReplies === 1 ? 'reply' : 'replies'}`;
-              })()}
-            </button>
+            {/* Button Column */}
+            <div className="flex-1 py-1">
+              <button
+                onClick={() => setShowReplies(!showReplies)}
+                className="flex items-center gap-2 text-primary text-sm font-bold hover:bg-primary/10 px-3 py-1.5 rounded-full transition-colors w-fit"
+              >
+                {showReplies ? (
+                  <ChevronDown className="w-4 h-4 rotate-180" />
+                ) : (
+                  <ChevronDown className="w-4 h-4" />
+                )}
+                {(() => {
+                  const totalReplies = countTotalReplies(comment);
+                  return `${showReplies ? 'Hide' : ''} ${totalReplies} ${totalReplies === 1 ? 'reply' : 'replies'}`;
+                })()}
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Row 3: Nested Replies Row */}
-      {hasReplies && showReplies && (
-        <div className="flex flex-col w-full">
-          {comment.replies!.map((reply, index) => {
-            const isLast = index === comment.replies!.length - 1;
-            return (
-              <div key={reply.id} className="flex">
-                {/* Connector Column */}
-                <div className="w-10 flex-shrink-0 relative" style={{ minHeight: '48px' }}>
-                  <svg
-                    className="absolute top-0 left-0 pointer-events-none text-muted-foreground/30"
-                    style={{ overflow: 'visible', width: '60px', height: '100%' }}
-                    preserveAspectRatio="none"
-                  >
-                    {/* For non-last: vertical line from curve end (20px) to bottom */}
-                    {!isLast && (
-                      <line x1="20" y1="20" x2="20" y2="100%" stroke="currentColor" strokeWidth="2" />
-                    )}
+      {
+        hasReplies && showReplies && (
+          <div className="flex flex-col w-full">
+            {comment.replies!.map((reply, index) => {
+              const isLast = index === comment.replies!.length - 1;
+              return (
+                <div key={reply.id} className="flex">
+                  {/* Connector Column */}
+                  <div className="w-10 flex-shrink-0 relative" style={{ minHeight: '48px' }}>
+                    <svg
+                      className="absolute top-0 left-0 pointer-events-none text-muted-foreground/30"
+                      style={{ overflow: 'visible', width: '60px', height: '100%' }}
+                      preserveAspectRatio="none"
+                    >
+                      {/* For non-last: vertical line from curve end (20px) to bottom */}
+                      {!isLast && (
+                        <line x1="20" y1="20" x2="20" y2="100%" stroke="currentColor" strokeWidth="2" />
+                      )}
 
-                    {/* Curve only - L shape: vertical down to 12, curve corner, horizontal to avatar */}
-                    <path
-                      d="M 20 0 L 20 12 Q 20 20 28 20 L 60 20"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      fill="none"
+                      {/* Curve only - L shape: vertical down to 12, curve corner, horizontal to avatar */}
+                      <path
+                        d="M 20 0 L 20 12 Q 20 20 28 20 L 60 20"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        fill="none"
+                      />
+                    </svg>
+                  </div>
+                  {/* Reply Content */}
+                  <div className="flex-1">
+                    <CommentItem
+                      comment={reply}
+                      episodeId={episodeId}
+                      movieId={movieId}
+                      blogPostId={blogPostId}
+                      userName={userName}
+                      setUserName={setUserName}
+                      isNameSaved={isNameSaved}
+                      setIsNameSaved={setIsNameSaved}
+                      depth={depth + 1}
+                      parentUserName={comment.userName}
+                      parentLikes={likes}
                     />
-                  </svg>
+                  </div>
                 </div>
-                {/* Reply Content */}
-                <div className="flex-1">
-                  <CommentItem
-                    comment={reply}
-                    episodeId={episodeId}
-                    movieId={movieId}
-                    userName={userName}
-                    setUserName={setUserName}
-                    isNameSaved={isNameSaved}
-                    setIsNameSaved={setIsNameSaved}
-                    depth={depth + 1}
-                    parentUserName={comment.userName}
-                    parentLikes={likes}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
+              );
+            })}
+          </div>
+        )
+      }
+    </div >
   );
 }
 
-export function CommentsSection({ episodeId, movieId }: CommentsSectionProps) {
+export function CommentsSection({ episodeId, movieId, blogPostId }: CommentsSectionProps) {
   const { user, isAuthenticated } = useAuth();
   const [userName, setUserName] = useState("");
   const [isNameSaved, setIsNameSaved] = useState(false);
@@ -500,15 +530,17 @@ export function CommentsSection({ episodeId, movieId }: CommentsSectionProps) {
   };
 
   // Fetch comments
-  const { data: comments, isLoading } = useQuery<Comment[]>({
+  const { data: comments, isLoading } = useQuery<CommentWithBadges[]>({
     queryKey: episodeId
       ? [`/api/comments/episode/${episodeId}`]
-      : [`/api/comments/movie/${movieId}`],
-    enabled: !!(episodeId || movieId),
+      : movieId
+        ? [`/api/comments/movie/${movieId}`]
+        : [`/api/comments/blog/${blogPostId}`],
+    enabled: !!(episodeId || movieId || blogPostId),
   });
 
   // Organize comments into tree structure
-  const organizeComments = (flatComments: Comment[]): CommentWithReplies[] => {
+  const organizeComments = (flatComments: CommentWithBadges[]): CommentWithReplies[] => {
     const commentMap = new Map<string, CommentWithReplies>();
     const rootComments: CommentWithReplies[] = [];
 
@@ -546,6 +578,7 @@ export function CommentsSection({ episodeId, movieId }: CommentsSectionProps) {
         body: JSON.stringify({
           episodeId,
           movieId,
+          blogPostId,
           userName: data.userName,
           comment: data.comment,
         }),
@@ -562,7 +595,9 @@ export function CommentsSection({ episodeId, movieId }: CommentsSectionProps) {
       queryClient.invalidateQueries({
         queryKey: episodeId
           ? [`/api/comments/episode/${episodeId}`]
-          : [`/api/comments/movie/${movieId}`],
+          : movieId
+            ? [`/api/comments/movie/${movieId}`]
+            : [`/api/comments/blog/${blogPostId}`],
       });
       setComment("");
       // Only save username if it's at least 2 characters
@@ -801,6 +836,7 @@ export function CommentsSection({ episodeId, movieId }: CommentsSectionProps) {
               comment={comment}
               episodeId={episodeId}
               movieId={movieId}
+              blogPostId={blogPostId}
               userName={userName}
               setUserName={setUserName}
               isNameSaved={isNameSaved}

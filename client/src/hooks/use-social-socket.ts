@@ -49,6 +49,8 @@ export function useSocialSocket() {
     const dmReceivedCallbackRef = useRef<((dm: DMReceivedEvent) => void) | null>(null);
     const notificationCallbackRef = useRef<((notification: NotificationEvent) => void) | null>(null);
     const friendRequestCallbackRef = useRef<(() => void) | null>(null);
+    const inventoryUpdateCallbackRef = useRef<(() => void) | null>(null);
+    const friendStatusChangeCallbackRef = useRef<((friendId: string, isOnline: boolean) => void) | null>(null);
 
     useEffect(() => {
         if (!isAuthenticated || !user?.id) {
@@ -92,6 +94,9 @@ export function useSocialSocket() {
         // Friend comes online
         socket.on('friend:online', (data: { friendId: string }) => {
             setOnlineFriends(prev => new Set(Array.from(prev).concat(data.friendId)));
+            if (friendStatusChangeCallbackRef.current) {
+                friendStatusChangeCallbackRef.current(data.friendId, true);
+            }
         });
 
         // Friend goes offline
@@ -101,6 +106,9 @@ export function useSocialSocket() {
                 newSet.delete(data.friendId);
                 return newSet;
             });
+            if (friendStatusChangeCallbackRef.current) {
+                friendStatusChangeCallbackRef.current(data.friendId, false);
+            }
         });
 
         // Real-time DM received
@@ -160,6 +168,15 @@ export function useSocialSocket() {
             });
         });
 
+
+
+        // Inventory update received
+        socket.on('inventory_update', () => {
+            if (inventoryUpdateCallbackRef.current) {
+                inventoryUpdateCallbackRef.current();
+            }
+        });
+
         return () => {
             socket.disconnect();
             socketRef.current = null;
@@ -212,6 +229,14 @@ export function useSocialSocket() {
 
     const onFriendRequestReceived = useCallback((callback: () => void) => {
         friendRequestCallbackRef.current = callback;
+    }, []);
+
+    const onInventoryUpdate = useCallback((callback: () => void) => {
+        inventoryUpdateCallbackRef.current = callback;
+    }, []);
+
+    const onFriendStatusChange = useCallback((callback: (friendId: string, isOnline: boolean) => void) => {
+        friendStatusChangeCallbackRef.current = callback;
     }, []);
 
     const isFriendOnline = useCallback((friendId: string) => {
@@ -289,6 +314,8 @@ export function useSocialSocket() {
         onFriendRequestReceived,
         startActivity,
         stopActivity,
-        requestFriendActivities
+        requestFriendActivities,
+        onInventoryUpdate,
+        onFriendStatusChange
     };
 }

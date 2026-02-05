@@ -26,6 +26,14 @@ interface User {
     favorites?: Favorites | null;
     referredBy?: string | null;
     referralCount?: number;
+    badges?: string; // JSON string
+    equippedBadge?: {
+        id: string;
+        name: string;
+        imageUrl: string;
+        isSpecial?: boolean;
+    } | null;
+    coins?: number;
 }
 
 interface AuthContextType {

@@ -139,7 +139,7 @@ export function HeroCarousel({ shows }: HeroCarouselProps) {
               <Badge
                 key={genre.trim()}
                 variant="secondary"
-                className="bg-background/80 backdrop-blur-sm"
+                className="bg-black/40 backdrop-blur-md text-white border-white/10 hover:bg-black/60 transition-colors"
                 data-testid={`badge-genre-${genre.trim().toLowerCase()}`}
               >
                 {genre.trim()}

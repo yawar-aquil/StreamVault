@@ -8,6 +8,7 @@ import { SEO } from "@/components/seo";
 import type { Show, Movie, Anime, ViewingProgress } from "@shared/schema";
 import { useMemo } from "react";
 import { Link } from "wouter";
+import { GuestSignupModal } from "@/components/guest-signup-modal";
 
 export default function Home() {
   const { t } = useTranslation();
@@ -225,6 +226,9 @@ export default function Home() {
           />
         )}
       </div>
+
+      {/* Guest Signup Modal */}
+      <GuestSignupModal />
     </div>
   );
 }

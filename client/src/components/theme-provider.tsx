@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
-type Theme = "dark" | "light";
+type Theme = "dark" | "light" | "midnight" | "ocean" | "sunset" | "forest" | "neon" | "cyberpunk" | "system";
 
 type ThemeProviderProps = {
   children: React.ReactNode;
@@ -26,8 +26,20 @@ export function ThemeProvider({
 
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove("light", "dark");
-    root.classList.add(theme);
+    const standardThemes = ["light", "dark", "system"];
+    const premiumThemes = ["midnight", "ocean", "sunset", "forest", "neon", "cyberpunk", "neon-theme", "gold-theme", "gold", "vaporwave", "oled", "nord", "golden"];
+
+    // Clean up all possible classes
+    root.classList.remove(...standardThemes);
+    premiumThemes.forEach(t => root.classList.remove(`skin-${t}`)); // Remove skin-prefixed versions
+    root.classList.remove(...premiumThemes); // Safely remove raw versions just in case
+
+    if (theme !== "system" as any) {
+      const isPremium = premiumThemes.includes(theme);
+      // Premium themes need the 'skin-' prefix to match index.css
+      const className = isPremium ? `skin-${theme}` : theme;
+      root.classList.add(className);
+    }
     localStorage.setItem("streamvault-theme", theme);
   }, [theme]);
 

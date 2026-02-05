@@ -23,6 +23,7 @@ export async function apiRequest(
 ): Promise<Response> {
   const headers: HeadersInit = {
     "X-Session-ID": getSessionId(),
+    "X-Client-Source": "frontend",
   };
 
   if (data) {
@@ -45,21 +46,22 @@ export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
-  async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
-      credentials: "include",
-      headers: {
-        "X-Session-ID": getSessionId(),
-      },
-    });
+    async ({ queryKey }) => {
+      const res = await fetch(queryKey.join("/") as string, {
+        credentials: "include",
+        headers: {
+          "X-Session-ID": getSessionId(),
+          "X-Client-Source": "frontend",
+        },
+      });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
-    }
+      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        return null;
+      }
 
-    await throwIfResNotOk(res);
-    return await res.json();
-  };
+      await throwIfResNotOk(res);
+      return await res.json();
+    };
 
 export const queryClient = new QueryClient({
   defaultOptions: {

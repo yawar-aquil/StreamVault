@@ -1,5 +1,6 @@
 import { Server as HttpServer } from 'http';
 import { Server, Socket } from 'socket.io';
+import { storage } from './storage';
 
 // Types
 interface User {
@@ -8,6 +9,7 @@ interface User {
     username: string;
     avatarUrl?: string;
     authUserId?: string; // Actual authenticated user ID from database (for friend requests)
+    badges?: any[];
     isHost: boolean;
     isMuted: boolean;
 }
@@ -47,6 +49,7 @@ interface ChatMessage {
     id: string;
     username: string;
     avatarUrl?: string;
+    badges?: any[];
     message: string;
     timestamp: Date;
 }
@@ -199,7 +202,8 @@ export function setupWatchTogether(httpServer: HttpServer): Server {
                         sessionId: data.sessionId,
                         username: data.username,
                         isHost: true,
-                        isMuted: false
+                        isMuted: false,
+                        badges: existingRoom.users.get(oldHostId)?.badges
                     };
                     existingRoom.users.set(socket.id, user);
 
@@ -269,6 +273,24 @@ export function setupWatchTogether(httpServer: HttpServer): Server {
                 isHost: true,
                 isMuted: false
             };
+
+            // Fetch latest badge if authenticated
+            // Fetch latest badge if authenticated
+            if (data.authUserId) {
+                storage.getUserBadges(data.authUserId).then(userBadges => {
+                    const equipped = userBadges.filter(ub => ub.equipped).map(ub => ({
+                        id: ub.badge.id,
+                        name: ub.badge.name,
+                        imageUrl: ub.badge.imageUrl,
+                        equipped: true
+                    }));
+
+                    if (equipped.length > 0) {
+                        user.badges = equipped;
+                        watchNamespace.to(room.code).emit('room:user-updated', { user });
+                    }
+                });
+            }
 
             room.users.set(socket.id, user);
             rooms.set(code, room);
@@ -354,6 +376,25 @@ export function setupWatchTogether(httpServer: HttpServer): Server {
                 isHost: isHostReconnecting || (existingUser?.isHost ?? false),
                 isMuted: existingUser?.isMuted || false
             };
+
+            // Fetch latest badge if authenticated
+            if (data.authUserId) {
+                storage.getUserBadges(data.authUserId).then(userBadges => {
+                    const equipped = userBadges.filter(ub => ub.equipped).map(ub => ({
+                        id: ub.badge.id,
+                        name: ub.badge.name,
+                        imageUrl: ub.badge.imageUrl,
+                        equipped: true
+                    }));
+
+                    if (equipped.length > 0) {
+                        user.badges = equipped;
+                        watchNamespace.to(room.code).emit('room:user-updated', { user });
+                    }
+                });
+            } else if (existingUser?.badges) {
+                user.badges = existingUser.badges;
+            }
 
             room.users.set(socket.id, user);
             userToRoom.set(socket.id, room.code);
@@ -537,6 +578,7 @@ export function setupWatchTogether(httpServer: HttpServer): Server {
                 id: generateId(),
                 username: user.username,
                 avatarUrl: user.avatarUrl,
+                badges: user.badges,
                 message: data.message,
                 timestamp: new Date()
             };

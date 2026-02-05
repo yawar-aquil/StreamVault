@@ -388,6 +388,11 @@ export default function WatchAnime() {
                                 videoUrl={videoUrl}
                                 onTimeUpdate={handleTimeUpdate}
                                 subtitleTracks={subtitleTracks}
+                                title={anime.title}
+                                description={currentEpisodeData.description}
+                                season={currentSeason}
+                                episode={currentEpisode}
+                                episodeTitle={currentEpisodeData.title}
                             />
 
                             {/* Netflix-style Next Episode Button with Progress Bar - Only for direct video players */}

@@ -56,6 +56,7 @@ import NotFound from "@/pages/not-found";
 import PersonDetail from "@/pages/person-detail";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
+import VerifyEmail from "@/pages/verify-email";
 import ForgotPasswordPage from "@/pages/forgot-password";
 import Profile from "@/pages/profile";
 import Settings from "@/pages/settings";
@@ -66,9 +67,16 @@ import Calendar from "@/pages/calendar";
 import AchievementsPage from "@/pages/achievements";
 import ChallengesPage from "@/pages/challenges";
 import PollsPage from "@/pages/polls";
+import Store from "@/pages/store";
+import Refund from "@/pages/refund";
+import WalletPage from "@/pages/wallet";
+import InventoryPage from "@/pages/inventory";
+import ReferralProgram from "@/pages/referral-program";
+import ApiDocs from "@/pages/api-docs";
 import { AuthProvider } from "@/contexts/auth-context";
 import { NotificationsProvider } from "@/contexts/notifications-context";
 import { FriendsProvider } from "@/contexts/friends-context";
+import { ProtectedRoute } from "@/lib/protected-route";
 
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 
@@ -95,12 +103,12 @@ function Router() {
           <Route path="/watch-anime/:slug" component={WatchAnime} />
           <Route path="/search" component={Search} />
           <Route path="/category/:slug" component={Category} />
-          <Route path="/watchlist" component={Watchlist} />
+          <ProtectedRoute path="/watchlist" component={Watchlist} />
           <Route path="/admin/login" component={AdminLogin} />
           <Route path="/admin/widget" component={WidgetDashboard} />
-          <Route path="/admin/analytics" component={SiteAnalytics} />
-          <Route path="/admin" component={Admin} />
-          <Route path="/downloads" component={DownloadsPage} />
+          <ProtectedRoute path="/admin/analytics" component={SiteAnalytics} />
+          <ProtectedRoute path="/admin" component={Admin} />
+          <ProtectedRoute path="/downloads" component={DownloadsPage} />
           <Route path="/privacy" component={Privacy} />
           <Route path="/about" component={About} />
           <Route path="/contact" component={Contact} />
@@ -121,21 +129,29 @@ function Router() {
           <Route path="/continue-watching" component={ContinueWatching} />
           <Route path="/blog" component={Blog} />
           <Route path="/blog/:type/:slug" component={BlogPost} />
-          <Route path="/watch-rooms" component={WatchRooms} />
-          <Route path="/watch-together/:roomCode" component={WatchTogether} />
-          <Route path="/create-room" component={CreateRoom} />
+          <ProtectedRoute path="/watch-rooms" component={WatchRooms} />
+          <ProtectedRoute path="/watch-together/:roomCode" component={WatchTogether} />
+          <ProtectedRoute path="/create-room" component={CreateRoom} />
           <Route path="/login" component={Login} />
           <Route path="/register" component={Register} />
+          <Route path="/verify-email" component={VerifyEmail} />
           <Route path="/forgot-password" component={ForgotPasswordPage} />
-          <Route path="/profile" component={Profile} />
-          <Route path="/settings" component={Settings} />
-          <Route path="/friends" component={Friends} />
-          <Route path="/notifications" component={NotificationsPage} />
-          <Route path="/leaderboard" component={Leaderboard} />
-          <Route path="/achievements" component={AchievementsPage} />
-          <Route path="/challenges" component={ChallengesPage} />
-          <Route path="/polls" component={PollsPage} />
-          <Route path="/calendar" component={Calendar} />
+          <Route path="/forgot-password" component={ForgotPasswordPage} />
+          <ProtectedRoute path="/profile" component={Profile} />
+          <ProtectedRoute path="/settings" component={Settings} />
+          <ProtectedRoute path="/friends" component={Friends} />
+          <ProtectedRoute path="/notifications" component={NotificationsPage} />
+          <ProtectedRoute path="/leaderboard" component={Leaderboard} />
+          <ProtectedRoute path="/achievements" component={AchievementsPage} />
+          <ProtectedRoute path="/challenges" component={ChallengesPage} />
+          <ProtectedRoute path="/polls" component={PollsPage} />
+          <ProtectedRoute path="/store" component={Store} />
+          <ProtectedRoute path="/wallet" component={WalletPage} />
+          <ProtectedRoute path="/inventory" component={InventoryPage} />
+          <ProtectedRoute path="/referral-program" component={ReferralProgram} />
+          <Route path="/api-docs" component={ApiDocs} />
+          <Route path="/refund" component={Refund} />
+          <ProtectedRoute path="/calendar" component={Calendar} />
           <Route component={NotFound} />
         </Switch>
       </main>

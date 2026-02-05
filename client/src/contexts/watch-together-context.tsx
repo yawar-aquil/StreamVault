@@ -8,6 +8,7 @@ export interface User {
     username: string;
     avatarUrl?: string;
     authUserId?: string; // Actual authenticated user ID from database
+    badges?: any[]; // Updated to array of badges
     isHost: boolean;
     isMuted: boolean;
 }
@@ -23,6 +24,7 @@ export interface ChatMessage {
     id: string;
     username: string;
     avatarUrl?: string;
+    badges?: any[]; // Updated to array
     message: string;
     timestamp: Date;
 }
