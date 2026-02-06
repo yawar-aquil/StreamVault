@@ -67,7 +67,8 @@ export default function ApiDocs() {
                             To ensure fair usage and prevent scraping:
                         </p>
                         <ul className="list-disc list-inside mt-2 text-sm text-muted-foreground">
-                            <li className="font-semibold text-foreground">1000 requests per 15 minutes</li>
+                            <li className="font-semibold text-foreground">1000 requests per 24 hours</li>
+                            <li>Burst limit: 60 requests per minute</li>
                             <li>List endpoints return max 1 item</li>
                         </ul>
                     </CardContent>

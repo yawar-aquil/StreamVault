@@ -34,6 +34,8 @@ interface User {
         isSpecial?: boolean;
     } | null;
     coins?: number;
+    vaultSettings?: string | null;
+    privacySettings?: string | null;
 }
 
 interface AuthContextType {
@@ -44,6 +46,7 @@ interface AuthContextType {
     register: (email: string, username: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
     updateProfile: (data: { username?: string; bio?: string; socialLinks?: SocialLinks; favorites?: Favorites }) => Promise<void>;
+    updateSettings: (settings: any) => Promise<void>;
     uploadAvatar: (file: File) => Promise<string>;
     refetchUser: () => void;
 }
@@ -108,6 +111,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
     });
 
+    // Update settings mutation
+    const updateSettingsMutation = useMutation({
+        mutationFn: async (settings: any) => {
+            // Check if it's a specific setting type or general
+            // Previously it was only vaultSettings. Now we support privacySettings too.
+            // Helper: if settings has 'vaultSettings' key inside, use it as is?
+            // Actually, the component usually passes the full settings object for a specific features
+            // Let's adapt the call signature to be flexible.
+
+            // If the argument has specific keys we know, use them.
+            // If the caller passes { friendActivityVisible: true }, we should wrap it in privacySettings?
+
+            // Simplification: Caller should structure the data correctly OR we change this function signature.
+            // Let's make this function generic: It accepts { vaultSettings?: ..., privacySettings?: ... }
+            const response = await apiRequest('PUT', '/api/auth/settings', settings);
+            return response.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+        },
+    });
+
     // Upload avatar
     const uploadAvatar = async (file: File): Promise<string> => {
         const formData = new FormData();
@@ -154,6 +179,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    const updateSettings = async (settings: any) => {
+        const result = await updateSettingsMutation.mutateAsync(settings);
+        if (result.error) {
+            throw new Error(result.error);
+        }
+    };
+
     return (
         <AuthContext.Provider
             value={{
@@ -164,6 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 register,
                 logout,
                 updateProfile,
+                updateSettings,
                 uploadAvatar,
                 refetchUser: refetch,
             }}

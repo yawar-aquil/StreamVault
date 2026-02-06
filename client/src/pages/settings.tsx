@@ -7,11 +7,12 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Settings, Bot, Bell, Volume2, Palette, Shield, Trash2, Key, Copy, Plus, Lock, Check } from 'lucide-react';
+import { Loader2, Settings, Bot, Bell, Volume2, Palette, Shield, Trash2, Key, Copy, Plus, Lock, Check, BarChart2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from '@/components/theme-provider';
 import { apiRequest } from '@/lib/queryClient';
 import { ReferralSection } from '@/components/referral-section';
+import { VaultAISettingsCard } from '@/components/vault-ai-settings-card';
 import { THEME_MAPPING, THEME_PREVIEWS, DISPLAY_THEMES } from '@/lib/theme-data';
 import { Badge } from '@/components/ui/badge';
 import StreamCoin from '@/components/stream-coin';
@@ -45,6 +46,9 @@ const defaultSettings: AppSettings = {
     subtitlesEnabled: true,
 };
 
+import { ApiUsageModal } from '@/components/api-usage-modal';
+import { PWAIconSettings } from '@/components/pwa-icon-settings';
+
 interface ApiKey {
     id: string;
     key: string;
@@ -53,11 +57,13 @@ interface ApiKey {
     createdAt: string;
     lastUsed?: string;
     requestsToday: number;
+    totalRequests: number;
+    usageHistory: Record<string, number>;
 }
 
 export default function SettingsPage() {
     const [, navigate] = useLocation();
-    const { user, isLoading: authLoading, isAuthenticated } = useAuth();
+    const { user, isLoading: authLoading, isAuthenticated, updateSettings } = useAuth();
     const { toast } = useToast();
     const { theme, setTheme } = useTheme();
     const [, setLocation] = useLocation();
@@ -80,6 +86,11 @@ export default function SettingsPage() {
     const [newKeyName, setNewKeyName] = useState('');
     const [isCreatingKey, setIsCreatingKey] = useState(false);
     const [newlyCreatedKey, setNewlyCreatedKey] = useState<string | null>(null);
+
+    // Usage Modal
+    const [selectedApiKey, setSelectedApiKey] = useState<ApiKey | null>(null);
+    const [showUsageModal, setShowUsageModal] = useState(false);
+
 
     // Load settings from localStorage
     useEffect(() => {
@@ -240,6 +251,9 @@ export default function SettingsPage() {
                             </div>
                         </div>
 
+                        {/* App Icon (PWA Only) */}
+                        <PWAIconSettings />
+
                         <Separator />
 
                         <div className="space-y-4">
@@ -281,6 +295,10 @@ export default function SettingsPage() {
                     </CardContent>
                 </Card>
 
+                {/* Vault AI Settings */}
+                <VaultAISettingsCard user={user} updateSettings={updateSettings} />
+
+
                 {/* Features */}
                 <Card>
                     <CardHeader>
@@ -298,7 +316,7 @@ export default function SettingsPage() {
                             </div>
                             <Switch
                                 id="chatbot"
-                                checked={settings.chatbotEnabled}
+                                checked={settings.chatbotEnabled} // Keep local for this app-specific one if needed, or move to privacy? Let's keep these local for now as they are client-prefs
                                 onCheckedChange={(checked) => updateSetting('chatbotEnabled', checked)}
                             />
                         </div>
@@ -423,8 +441,11 @@ export default function SettingsPage() {
                             </div>
                             <Switch
                                 id="activity"
-                                checked={settings.friendActivityVisible}
-                                onCheckedChange={(checked) => updateSetting('friendActivityVisible', checked)}
+                                checked={user?.privacySettings ? JSON.parse(user.privacySettings).friendActivityVisible !== false : true}
+                                onCheckedChange={(checked) => {
+                                    const current = user?.privacySettings ? JSON.parse(user.privacySettings) : {};
+                                    updateSettings({ privacySettings: JSON.stringify({ ...current, friendActivityVisible: checked }) });
+                                }}
                             />
                         </div>
                         <div className="flex items-center justify-between">
@@ -434,8 +455,11 @@ export default function SettingsPage() {
                             </div>
                             <Switch
                                 id="adult"
-                                checked={settings.showAdultContent}
-                                onCheckedChange={(checked) => updateSetting('showAdultContent', checked)}
+                                checked={user?.privacySettings ? JSON.parse(user.privacySettings).showAdultContent === true : false}
+                                onCheckedChange={(checked) => {
+                                    const current = user?.privacySettings ? JSON.parse(user.privacySettings) : {};
+                                    updateSettings({ privacySettings: JSON.stringify({ ...current, showAdultContent: checked }) });
+                                }}
                             />
                         </div>
                     </CardContent>
@@ -511,14 +535,28 @@ export default function SettingsPage() {
                                                 {key.requestsToday} requests today
                                             </p>
                                         </div>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="text-destructive hover:text-destructive"
-                                            onClick={() => deleteApiKey(key.id)}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-8 gap-2"
+                                                onClick={() => {
+                                                    setSelectedApiKey(key);
+                                                    setShowUsageModal(true);
+                                                }}
+                                            >
+                                                <BarChart2 className="h-4 w-4" />
+                                                Usage
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="text-destructive hover:text-destructive h-8 w-8"
+                                                onClick={() => deleteApiKey(key.id)}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -532,10 +570,10 @@ export default function SettingsPage() {
                             Use your API key by including the <code className="bg-muted px-1 rounded">X-API-Key</code> header in your requests.
                         </p>
                     </CardContent>
-                </Card>
+                </Card >
 
                 {/* Actions */}
-                <div className="flex flex-col sm:flex-row gap-3">
+                < div className="flex flex-col sm:flex-row gap-3" >
                     <Button onClick={handleSaveSettings} disabled={isSaving} className="flex-1">
                         {isSaving ? (
                             <>
@@ -550,9 +588,15 @@ export default function SettingsPage() {
                         <Trash2 className="mr-2 h-4 w-4" />
                         Reset to Defaults
                     </Button>
-                </div>
-            </div>
-        </div>
+                </div >
+            </div >
+
+            <ApiUsageModal
+                open={showUsageModal}
+                onClose={() => setShowUsageModal(false)}
+                apiKey={selectedApiKey}
+            />
+        </div >
     );
 }
 

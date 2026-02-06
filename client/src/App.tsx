@@ -12,6 +12,7 @@ import { AdBanner } from "@/components/ad-banner";
 import { AdBlockDetector } from "@/components/adblock-detector";
 import { InstallPrompt } from "@/components/install-prompt";
 import { NotificationPrompt } from "@/components/notification-prompt";
+import { VaultAssistant } from "@/components/vault-assistant";
 import Home from "@/pages/home";
 import ShowDetail from "@/pages/show-detail";
 import Watch from "@/pages/watch";
@@ -61,6 +62,7 @@ import ForgotPasswordPage from "@/pages/forgot-password";
 import Profile from "@/pages/profile";
 import Settings from "@/pages/settings";
 import Friends from "@/pages/friends";
+import SocialPage from "@/pages/social";
 import NotificationsPage from "@/pages/notifications";
 import Leaderboard from "@/pages/leaderboard";
 import Calendar from "@/pages/calendar";
@@ -77,6 +79,7 @@ import { AuthProvider } from "@/contexts/auth-context";
 import { NotificationsProvider } from "@/contexts/notifications-context";
 import { FriendsProvider } from "@/contexts/friends-context";
 import { ProtectedRoute } from "@/lib/protected-route";
+import { useAppIcon } from "@/hooks/use-app-icon";
 
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 
@@ -86,6 +89,7 @@ function Router() {
   const isWatchTogether = location.startsWith('/watch-together');
 
   useKeyboardShortcuts();
+  useAppIcon();
 
   return (
     <>
@@ -140,6 +144,7 @@ function Router() {
           <ProtectedRoute path="/profile" component={Profile} />
           <ProtectedRoute path="/settings" component={Settings} />
           <ProtectedRoute path="/friends" component={Friends} />
+          <ProtectedRoute path="/social" component={SocialPage} />
           <ProtectedRoute path="/notifications" component={NotificationsPage} />
           <ProtectedRoute path="/leaderboard" component={Leaderboard} />
           <ProtectedRoute path="/achievements" component={AchievementsPage} />
@@ -162,6 +167,7 @@ function Router() {
       )}
       {!isWatchTogether && <Footer />}
       {!isWatchTogether && <Chatbot />}
+      <VaultAssistant />
       <InstallPrompt />
       <NotificationPrompt />
     </>

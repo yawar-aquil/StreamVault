@@ -29,6 +29,35 @@ export const users = pgTable("users", {
   lastActive: timestamp("last_active"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  // Vault AI Settings
+  vaultSettings: text("vault_settings"), // JSON string: { enabled, inputMode, activationWord, glowColor, voiceId }
+  // Privacy Settings
+  privacySettings: text("privacy_settings"), // JSON string: { friendActivityVisible, showAdultContent, ... }
+});
+
+// Social Activity Feed
+export const activities = pgTable("activities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  type: text("type").notNull(), // 'watch', 'rate', 'level_up', 'friend_add', 'custom', 'achievement', 'review'
+  contentId: varchar("content_id"), // Optional: ID of the show/movie/anime related to the activity
+  metadata: text("metadata"), // JSON string: { title, rating, posterUrl, description, ... }
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const activityLikes = pgTable("activity_likes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  activityId: varchar("activity_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const activityComments = pgTable("activity_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  activityId: varchar("activity_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Coin Transactions for wallet history
@@ -239,9 +268,11 @@ export const updateProfileSchema = z.object({
   favorites: favoritesSchema,
 });
 
+import { type InferSelectModel } from "drizzle-orm";
+
 export type SocialLinks = z.infer<typeof socialLinksSchema>;
 export type Favorites = z.infer<typeof favoritesSchema>;
-export type User = typeof users.$inferSelect;
+export interface User extends InferSelectModel<typeof users> { }
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
@@ -410,7 +441,14 @@ export type Anime = typeof anime.$inferSelect;
 export type AnimeEpisode = typeof animeEpisodes.$inferSelect;
 export type Comment = typeof comments.$inferSelect;
 export type InsertShow = z.infer<typeof insertShowSchema>;
-export type InsertEpisode = z.infer<typeof insertEpisodeSchema>;
+export const insertActivitySchema = createInsertSchema(activities);
+export const insertActivityLikeSchema = createInsertSchema(activityLikes);
+export const insertActivityCommentSchema = createInsertSchema(activityComments);
+
+export type Activity = typeof activities.$inferSelect;
+export type InsertActivity = z.infer<typeof insertActivitySchema>;
+export type ActivityLike = typeof activityLikes.$inferSelect;
+export type ActivityComment = typeof activityComments.$inferSelect;
 export type InsertMovie = z.infer<typeof insertMovieSchema>;
 export type InsertAnime = z.infer<typeof insertAnimeSchema>;
 export type InsertAnimeEpisode = z.infer<typeof insertAnimeEpisodeSchema>;

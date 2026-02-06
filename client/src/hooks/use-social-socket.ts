@@ -297,6 +297,27 @@ export function useSocialSocket() {
         }
     }, [user?.id]);
 
+    // New Activity listener
+    const newActivityCallbackRef = useRef<((activity: any) => void) | null>(null);
+
+    useEffect(() => {
+        if (!socketRef.current) return;
+
+        socketRef.current.on('activity:new', (activity: any) => {
+            if (newActivityCallbackRef.current) {
+                newActivityCallbackRef.current(activity);
+            }
+        });
+
+        return () => {
+            socketRef.current?.off('activity:new');
+        };
+    }, [isConnected]); // Re-bind if connection changes (or moving logic to main useEffect appropriately if desired)
+
+    const onNewActivity = useCallback((callback: (activity: any) => void) => {
+        newActivityCallbackRef.current = callback;
+    }, []);
+
     return {
         isConnected,
         onlineFriends,
@@ -316,6 +337,7 @@ export function useSocialSocket() {
         stopActivity,
         requestFriendActivities,
         onInventoryUpdate,
-        onFriendStatusChange
+        onFriendStatusChange,
+        onNewActivity
     };
 }

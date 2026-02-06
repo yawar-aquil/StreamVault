@@ -1,4 +1,4 @@
-import type { Show, Episode, Movie, Anime, AnimeEpisode, Comment, CommentWithBadges, InsertShow, InsertEpisode, InsertMovie, InsertAnime, InsertAnimeEpisode, InsertComment, WatchlistItem, ViewingProgress, Category, BlogPost, InsertBlogPost, User, Badge, InsertBadge, UserBadge, Reminder, InsertReminder, Review, ReviewHelpfulVote, Challenge, UserChallenge, Poll, PollVote, XpHistoryEntry, CoinTransaction, InsertCoinTransaction } from "@shared/schema";
+import type { Show, Episode, Movie, Anime, AnimeEpisode, Comment, CommentWithBadges, InsertShow, InsertEpisode, InsertMovie, InsertAnime, InsertAnimeEpisode, InsertComment, WatchlistItem, ViewingProgress, Category, BlogPost, InsertBlogPost, User, Badge, InsertBadge, UserBadge, Reminder, InsertReminder, Review, ReviewHelpfulVote, Challenge, UserChallenge, Poll, PollVote, XpHistoryEntry, CoinTransaction, InsertCoinTransaction, Activity, ActivityLike, ActivityComment, InsertActivity, InsertActivityLike, InsertActivityComment } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
@@ -94,11 +94,12 @@ export interface ApiKey {
   requestsThisMinute: number;
   lastMinuteReset: string;
   lastDayReset: string;
+  // Usage Stats
+  totalRequests: number;
+  usageHistory: Record<string, number>;
 }
 
 export interface PasswordResetToken {
-  email: string;
-  token: string;
   email: string;
   token: string;
   expiresAt: number;
@@ -232,7 +233,12 @@ export interface IStorage {
   removeFriend(userId: string, friendId: string): Promise<void>;
   areFriends(userId: string, friendId: string): Promise<boolean>;
 
-  // Friend Requests
+  declineFriendRequest(requestId: string): Promise<void>;
+  getFriendRequest(requestId: string): Promise<FriendRequest | undefined>;
+  getPendingFriendRequests(userId: string): Promise<FriendRequest[]>;
+  getSuggestedUsers(userId: string): Promise<User[]>;
+
+  // Block/MuteFriendRequest(fromUserId: string, toUserId: string): Promise<FriendRequest>;
   getFriendRequests(userId: string): Promise<FriendRequest[]>;
   getSentFriendRequests(userId: string): Promise<FriendRequest[]>;
   createFriendRequest(fromUserId: string, toUserId: string): Promise<FriendRequest>;
@@ -320,7 +326,8 @@ export interface IStorage {
   createBadge(badge: InsertBadge): Promise<Badge>;
   updateBadge(id: string, updates: Partial<InsertBadge>): Promise<Badge | undefined>;
   deleteBadge(id: string): Promise<void>;
-  getUserBadges(userId: string): Promise<(UserBadge & { badge: Badge })[]>;
+  // User Badges
+  getUserBadges(userId: string): Promise<UserBadge[]>;
   awardBadge(userId: string, badgeId: string): Promise<UserBadge>;
   revokeBadge(userId: string, badgeId: string): Promise<void>;
   getEquippedBadge(userId: string): Promise<Badge | undefined>;
@@ -333,6 +340,13 @@ export interface IStorage {
   addXpHistory(userId: string, amount: number, source: string): Promise<XpHistoryEntry>;
   getLeaderboardByPeriod(period: 'daily' | 'weekly' | 'monthly', limit: number): Promise<{ userId: string; username: string; avatarUrl: string | null; xpGained: number; level: number }[]>;
   getBadgeStats(): Promise<{ totalBadges: number; totalAwarded: number; popularBadges: { name: string; count: number }[] }>;
+
+  // Social Activity Feed
+  createActivity(activity: InsertActivity): Promise<Activity>;
+  getActivities(limit?: number): Promise<Activity[]>;
+  likeActivity(like: InsertActivityLike): Promise<ActivityLike>;
+  commentOnActivity(comment: InsertActivityComment): Promise<ActivityComment>;
+  getCommentsForActivity(activityId: string): Promise<ActivityComment[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -369,6 +383,10 @@ export class MemStorage implements IStorage {
   private dataFile: string;
   private usersFile: string;
   private friendsFile!: string;
+  private coinTransactions: Map<string, CoinTransaction>;
+  private activities: Map<string, Activity>;
+  private activityLikes: Map<string, ActivityLike>;
+  private activityComments: Map<string, ActivityComment>;
   private apiKeysFile!: string;
 
   constructor() {
@@ -398,6 +416,11 @@ export class MemStorage implements IStorage {
     this.userChallenges = new Map();
     this.polls = new Map();
     this.pollVotes = new Map();
+    this.coinTransactions = new Map();
+    this.activities = new Map();
+    this.activityLikes = new Map();
+    this.activityComments = new Map();
+
     this.xpHistory = new Map();
     this.badges = new Map();
     this.userBadges = new Map();
@@ -590,6 +613,24 @@ export class MemStorage implements IStorage {
           console.log(`✅ Loaded ${data.coinTransactions.length} coin transactions`);
         }
 
+        // Restore activities
+        if (data.activities) {
+          data.activities.forEach((a: Activity) => this.activities.set(a.id, a));
+          console.log(`✅ Loaded ${data.activities.length} activities`);
+        }
+
+        // Restore activity likes
+        if (data.activityLikes) {
+          data.activityLikes.forEach((l: ActivityLike) => this.activityLikes.set(l.id, l));
+          console.log(`✅ Loaded ${data.activityLikes.length} activity likes`);
+        }
+
+        // Restore activity comments
+        if (data.activityComments) {
+          data.activityComments.forEach((c: ActivityComment) => this.activityComments.set(c.id, c));
+          console.log(`✅ Loaded ${data.activityComments.length} activity comments`);
+        }
+
       } else {
         console.log("📦 No data file found, seeding initial data...");
         this.seedData();
@@ -636,6 +677,9 @@ export class MemStorage implements IStorage {
         badges: Array.from(this.badges.values()),
         userBadges: Array.from(this.userBadges.values()),
         coinTransactions: Array.from(this.coinTransactions.values()),
+        activities: Array.from(this.activities.values()),
+        activityLikes: Array.from(this.activityLikes.values()),
+        activityComments: Array.from(this.activityComments.values()),
         lastUpdated: new Date().toISOString(),
       };
 
@@ -1773,6 +1817,29 @@ export class MemStorage implements IStorage {
     );
   }
 
+  async getSuggestedUsers(userId: string): Promise<User[]> {
+    const allUsers = Array.from(this.users.values());
+    const friends = await this.getFriends(userId);
+    const friendIds = new Set(friends.map(f => f.userId === userId ? f.friendId : f.userId));
+
+    // Also exclude pending requests
+    const sentRequests = await this.getSentFriendRequests(userId);
+    const receivedRequests = await this.getFriendRequests(userId);
+    sentRequests.forEach(r => friendIds.add(r.toUserId));
+    receivedRequests.forEach(r => friendIds.add(r.fromUserId));
+
+    friendIds.add(userId); // Exclude self
+
+    const available = allUsers.filter(u => !friendIds.has(u.id));
+
+    // improved shuffle
+    return available
+      .map(value => ({ value, sort: Math.random() }))
+      .sort((a, b) => a.sort - b.sort)
+      .map(({ value }) => value)
+      .slice(0, 5);
+  }
+
   async addFriend(userId: string, friendId: string): Promise<Friend> {
     const id = randomUUID();
     const friend: Friend = {
@@ -2317,24 +2384,23 @@ export class MemStorage implements IStorage {
   }
 
   async createApiKey(userId: string, name: string): Promise<ApiKey> {
-    // Generate a secure random key (32 chars hex)
-    const key = randomUUID().replace(/-/g, '') + randomUUID().replace(/-/g, '').slice(0, 8);
-    const now = new Date().toISOString();
-
+    const id = randomUUID();
     const apiKey: ApiKey = {
-      id: randomUUID(),
-      key: `sv_${key}`, // Prefix for easy identification
+      id,
+      key: `sk_live_${randomUUID().replace(/-/g, '')}`,
       name,
       userId,
       scope: 'read-only',
-      createdAt: now,
+      createdAt: new Date().toISOString(),
       requestsToday: 0,
       requestsThisMinute: 0,
-      lastMinuteReset: now,
-      lastDayReset: now,
+      lastMinuteReset: new Date().toISOString(),
+      lastDayReset: new Date().toISOString(),
+      totalRequests: 0,
+      usageHistory: {}
     };
 
-    this.apiKeys.set(apiKey.id, apiKey);
+    this.apiKeys.set(id, apiKey);
     this.saveApiKeys();
     return apiKey;
   }
@@ -2349,31 +2415,59 @@ export class MemStorage implements IStorage {
 
   async updateApiKeyUsage(id: string): Promise<{ allowed: boolean; reason?: string }> {
     const apiKey = this.apiKeys.get(id);
-    if (!apiKey) {
-      return { allowed: false, reason: 'Invalid API key' };
-    }
+    if (!apiKey) return { allowed: false, reason: "API key not found" };
 
     const now = new Date();
-    const nowIso = now.toISOString();
+    const today = now.toISOString().split('T')[0];
+    const lastResetDay = new Date(apiKey.lastDayReset).toISOString().split('T')[0];
 
-    // Check and reset 15-minute window
-    const lastWindowReset = new Date(apiKey.lastMinuteReset); // Reusing this field as "lastWindowReset" to avoid schema migration issues for now
-    const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
+    // Reset daily limit if day changed
+    if (today !== lastResetDay) {
+      if (!apiKey.usageHistory) apiKey.usageHistory = {};
 
-    if (lastWindowReset < fifteenMinutesAgo) {
-      apiKey.requestsThisMinute = 0; // Reusing this field as "requestsThisWindow"
-      apiKey.lastMinuteReset = nowIso;
+      // Store yesterday's count in history before resetting
+      if (apiKey.requestsToday > 0) {
+        apiKey.usageHistory[lastResetDay] = apiKey.requestsToday;
+      }
+
+      apiKey.requestsToday = 0;
+      apiKey.lastDayReset = now.toISOString();
+
+      // Prune old history (keep last 30 days)
+      const historyKeys = Object.keys(apiKey.usageHistory).sort();
+      if (historyKeys.length > 30) {
+        const keysToDelete = historyKeys.slice(0, historyKeys.length - 30);
+        keysToDelete.forEach(k => delete apiKey.usageHistory![k]);
+      }
     }
 
-    // Check rate limits
-    if (apiKey.requestsThisMinute >= 1000) {
-      return { allowed: false, reason: 'Rate limit exceeded: 1000 requests per 15 minutes' };
+    // Reset minute limit
+    if (now.getTime() - new Date(apiKey.lastMinuteReset).getTime() > 60000) {
+      apiKey.requestsThisMinute = 0;
+      apiKey.lastMinuteReset = now.toISOString();
     }
 
-    // Increment counters
-    apiKey.requestsThisMinute++;
+    // Check limits (1000/day)
+    const DAILY_LIMIT = 1000;
+    const MINUTE_LIMIT = 60;
+
+    if (apiKey.requestsToday >= DAILY_LIMIT) {
+      return { allowed: false, reason: `Daily rate limit exceeded (${DAILY_LIMIT}/day)` };
+    }
+
+    if (apiKey.requestsThisMinute >= MINUTE_LIMIT) {
+      return { allowed: false, reason: `Rate limit exceeded (${MINUTE_LIMIT} req/min)` };
+    }
+
+    // Increment usage
     apiKey.requestsToday++;
-    apiKey.lastUsed = nowIso;
+    apiKey.requestsThisMinute++;
+    apiKey.totalRequests = (apiKey.totalRequests || 0) + 1;
+    apiKey.lastUsed = now.toISOString();
+
+    // Update active history entry for "today"
+    if (!apiKey.usageHistory) apiKey.usageHistory = {};
+    apiKey.usageHistory[today] = apiKey.requestsToday;
 
     this.apiKeys.set(id, apiKey);
     this.saveApiKeys();
@@ -3048,6 +3142,57 @@ export class MemStorage implements IStorage {
         console.error("Failed to sync badges to user profile:", error);
       }
     }
+  }
+
+  // ============================================
+  // SOCIAL ACTIVITY FEED IMPLEMENTATION
+  // ============================================
+
+  async createActivity(activity: InsertActivity): Promise<Activity> {
+    const id = randomUUID();
+    const newActivity: Activity = {
+      ...activity,
+      id,
+      contentId: activity.contentId ?? null,
+      metadata: activity.metadata ?? null,
+      createdAt: new Date(),
+    };
+    this.activities.set(id, newActivity);
+    this.saveData();
+    return newActivity;
+  }
+
+  async getActivities(limit: number = 20): Promise<Activity[]> {
+    return Array.from(this.activities.values())
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
+  }
+
+  async likeActivity(like: InsertActivityLike): Promise<ActivityLike> {
+    const id = randomUUID();
+    const newLike: ActivityLike = { ...like, id, createdAt: new Date() };
+    this.activityLikes.set(id, newLike);
+    this.saveData();
+    return newLike;
+  }
+
+  async commentOnActivity(comment: InsertActivityComment): Promise<ActivityComment> {
+    const id = randomUUID();
+    const newComment: ActivityComment = { ...comment, id, createdAt: new Date() };
+    this.activityComments.set(id, newComment);
+    this.saveData();
+    return newComment;
+  }
+
+  async getCommentsForActivity(activityId: string): Promise<ActivityComment[]> {
+    return Array.from(this.activityComments.values())
+      .filter(c => c.activityId === activityId)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }
+
+  async getActivityLikes(activityId: string): Promise<ActivityLike[]> {
+    return Array.from(this.activityLikes.values())
+      .filter(l => l.activityId === activityId);
   }
 }
 

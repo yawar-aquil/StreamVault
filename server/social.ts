@@ -117,7 +117,7 @@ export function initSocialSocket(server: HttpServer, socketio?: Server) {
                         id: fromUser.id,
                         username: fromUser.username,
                         avatarUrl: fromUser.avatarUrl,
-                        equippedBadge: fromUser.equippedBadge
+                        equippedBadge: (fromUser as any).equippedBadge
                     } : null,
                     message: message.substring(0, 100),
                 });
@@ -221,7 +221,7 @@ export function initSocialSocket(server: HttpServer, socketio?: Server) {
 
             try {
                 const friends = await storage.getFriends(userId);
-                const activities: { friendId: string; username: string; avatarUrl?: string; activity: WatchActivity }[] = [];
+                const activities: { friendId: string; username: string; avatarUrl?: string; equippedBadge?: string; activity: WatchActivity }[] = [];
 
                 for (const friend of friends) {
                     const friendId = friend.userId === userId ? friend.friendId : friend.userId;
@@ -233,7 +233,7 @@ export function initSocialSocket(server: HttpServer, socketio?: Server) {
                             friendId,
                             username: friendUser?.username || 'Unknown',
                             avatarUrl: friendUser?.avatarUrl || undefined,
-                            equippedBadge: friendUser?.equippedBadge,
+                            equippedBadge: (friendUser as any)?.equippedBadge,
                             activity,
                         });
                     }
@@ -293,7 +293,7 @@ async function notifyFriendsOfStatus(userId: string, isOnline: boolean) {
                         friendId: userId,
                         username: user?.username,
                         avatarUrl: user?.avatarUrl,
-                        equippedBadge: user?.equippedBadge,
+                        equippedBadge: (user as any)?.equippedBadge,
                     }
                 );
             }
@@ -313,13 +313,25 @@ async function broadcastActivityToFriends(userId: string, activity: WatchActivit
 
             // If friend is online, notify them
             if (onlineUsers.has(friendId)) {
-                io.of('/social').to(`user:${friendId}`).emit('friend:activity', {
-                    friendId: userId,
-                    username: user?.username,
-                    avatarUrl: user?.avatarUrl,
-                    equippedBadge: user?.equippedBadge,
-                    activity,
-                });
+                // Privacy Check: Only send if user allows it
+                // We need to parse valid settings. Default to TRUE if not set.
+                let isVisible = true;
+                if (user?.privacySettings) {
+                    try {
+                        const settings = JSON.parse(user.privacySettings);
+                        if (settings.friendActivityVisible === false) isVisible = false;
+                    } catch (e) { }
+                }
+
+                if (isVisible) {
+                    io.of('/social').to(`user:${friendId}`).emit('friend:activity', {
+                        friendId: userId,
+                        username: user?.username,
+                        avatarUrl: user?.avatarUrl,
+                        equippedBadge: (user as any)?.equippedBadge,
+                        activity,
+                    });
+                }
             }
         }
     } catch (error) {
@@ -344,5 +356,59 @@ export function sendNotificationToUser(userId: string, notification: any) {
 export function sendInventoryUpdate(userId: string) {
     if (io) {
         io.of('/social').to(`user:${userId}`).emit('inventory_update');
+    }
+}
+
+export async function broadcastNewActivity(activity: any) {
+    if (!io) return;
+    try {
+        const friends = await storage.getFriends(activity.userId);
+        const user = await storage.getUserById(activity.userId);
+
+        let metadata = activity.metadata;
+        if (typeof metadata === 'string') {
+            try {
+                metadata = JSON.parse(metadata);
+            } catch (e) {
+                // Keep as is if parsing fails
+            }
+        }
+
+        const enrichedActivity = {
+            ...activity,
+            metadata,
+            user: user ? { username: user.username, avatarUrl: user.avatarUrl } : null,
+            commentsCount: 0,
+            likesCount: 0,
+            likedByMe: false
+        };
+
+        for (const friend of friends) {
+            const friendId = friend.userId === activity.userId ? friend.friendId : friend.userId;
+
+            // If friend is online, notify them
+            if (onlineUsers.has(friendId)) {
+                // Privacy Check: Only send if user allows it
+                let isVisible = true;
+                if (user?.privacySettings) {
+                    try {
+                        const settings = JSON.parse(user.privacySettings);
+                        if (settings.friendActivityVisible === false) isVisible = false;
+                    } catch (e) { }
+                }
+
+                if (isVisible) {
+                    io.of('/social').to(`user:${friendId}`).emit('activity:new', enrichedActivity);
+                }
+            }
+        }
+
+        // Also emit to self so the feed updates instantly for the user too
+        if (onlineUsers.has(activity.userId)) {
+            io.of('/social').to(`user:${activity.userId}`).emit('activity:new', enrichedActivity);
+        }
+
+    } catch (error) {
+        console.error('Error broadcasting new activity:', error);
     }
 }

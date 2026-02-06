@@ -4,8 +4,8 @@ import http from "http";
 import https from "https";
 import { storage } from "./storage";
 import { z } from "zod";
-import { watchlistSchema, viewingProgressSchema, insertBlogPostSchema, insertUserSchema, loginSchema, updateProfileSchema } from "@shared/schema";
-import type { InsertEpisode, BlogPost, Show, Movie, Anime } from "@shared/schema";
+import { watchlistSchema, viewingProgressSchema, insertBlogPostSchema, insertUserSchema, loginSchema, updateProfileSchema, insertActivitySchema, insertActivityCommentSchema, insertActivityLikeSchema } from "@shared/schema";
+import type { InsertEpisode, BlogPost, Show, Movie, Anime, Activity, ActivityLike, ActivityComment } from "@shared/schema";
 import { readFileSync, existsSync, writeFileSync, mkdirSync, unlinkSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -18,6 +18,7 @@ import { checkAndAwardAchievements, ACHIEVEMENTS } from "./achievements";
 import { getActiveRooms, checkRoomExists } from "./watch-together";
 import webpush from "web-push";
 import { hashPassword, verifyPassword, generateToken, verifyToken, setAuthCookie, clearAuthCookie, type AuthRequest } from "./auth";
+import { broadcastNewActivity } from "./social";
 import multer from "multer";
 import storeRoutes from "./store";
 
@@ -130,6 +131,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
     next();
+  });
+
+  // Auth Settings Update Route
+  app.put("/api/auth/settings", async (req, res) => {
+    try {
+      const token = req.cookies.authToken || req.headers.authorization?.replace('Bearer ', '');
+      if (!token) return res.status(401).json({ error: "Not authenticated" });
+      const payload = verifyToken(token);
+      if (!payload) return res.status(401).json({ error: "Invalid token" });
+
+      const { vaultSettings, privacySettings } = req.body;
+      if (!vaultSettings && !privacySettings) return res.status(400).json({ error: "Settings are required" });
+
+      const updates: any = {};
+      if (vaultSettings) updates.vaultSettings = vaultSettings;
+      if (privacySettings) updates.privacySettings = privacySettings;
+
+      const updatedUser = await storage.updateUser(payload.userId, updates);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Update settings error:", error);
+      res.status(500).json({ error: "Failed to update settings" });
+    }
+  });
+
+  // Get suggested users for friends
+  app.get("/api/users/suggested", async (req, res) => {
+    try {
+      const token = req.cookies.authToken || req.headers.authorization?.replace('Bearer ', '');
+      if (!token) return res.status(401).json({ error: "Not authenticated" });
+      const payload = verifyToken(token);
+      if (!payload) return res.status(401).json({ error: "Invalid token" });
+
+      const suggestions = await storage.getSuggestedUsers(payload.userId);
+      res.json(suggestions);
+    } catch (error) {
+      console.error("Suggested users error:", error);
+      res.status(500).json({ error: "Failed to fetch suggestions" });
+    }
   });
 
   // Configure multer for avatar uploads
@@ -1193,6 +1233,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create friendship
       await storage.addFriend(request.fromUserId, request.toUserId);
+
+      // Log activity
+      try {
+        const currentUser = await storage.getUserById(payload.userId);
+        const fromUser = await storage.getUserById(request.fromUserId);
+
+        await storage.createActivity({
+          userId: payload.userId,
+          type: 'friend_add',
+          metadata: JSON.stringify({ friendId: request.fromUserId, friendUsername: fromUser?.username }),
+        });
+
+        await storage.createActivity({
+          userId: request.fromUserId,
+          type: 'friend_add',
+          metadata: JSON.stringify({ friendId: payload.userId, friendUsername: currentUser?.username }),
+        });
+      } catch (e) {
+        console.error("Failed to log friend activity:", e);
+      }
 
       // Notify the requester
       // Notify the requester
@@ -6353,6 +6413,144 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, awardedCount: results.length });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
+    }
+  });
+
+  // ============================================
+  // SOCIAL ACTIVITY FEED ROUTES
+  // ============================================
+
+  // Create a new activity (User Post)
+  app.post("/api/activities", async (req, res) => {
+    try {
+      const token = req.cookies.authToken || req.headers.authorization?.replace('Bearer ', '');
+      if (!token) return res.status(401).json({ error: "Not authenticated" });
+      const payload = verifyToken(token);
+      if (!payload) return res.status(401).json({ error: "Invalid token" });
+
+      const { content, metadata } = req.body;
+      if (!content) return res.status(400).json({ error: "Content is required" });
+
+      const activity = await storage.createActivity({
+        userId: payload.userId,
+        type: 'custom', // User created post
+        contentId: null,
+        metadata: JSON.stringify({
+          title: content, // Using title as the main content for custom posts for now, or adapt schema
+          description: metadata?.description,
+          ...metadata
+        }),
+      });
+
+      // Broadcast to friends
+      await broadcastNewActivity(activity);
+
+      res.status(201).json(activity);
+    } catch (error) {
+      console.error("Create activity error:", error);
+      res.status(500).json({ error: "Failed to create activity" });
+    }
+  });
+
+  app.get("/api/activities/feed", async (req, res) => {
+    try {
+      const token = req.cookies.authToken || req.headers.authorization?.replace('Bearer ', '');
+      // Allow public access? No, feed usually requires context.
+      // But maybe public feed is okay.
+      // Let's protect it.
+      let userId: string | undefined;
+      if (token) {
+        const payload = verifyToken(token);
+        if (payload) userId = payload.userId;
+      }
+
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const activities = await storage.getActivities(limit);
+
+      // Enrich
+      const enriched = await Promise.all(activities.map(async (activity) => {
+        const user = await storage.getUserById(activity.userId);
+        const comments = await storage.getCommentsForActivity(activity.id);
+        // Note: Likes count not yet implemented in storage interface, assuming 0 for now or filtering in memory if we could.
+        const likes = await storage.getActivityLikes(activity.id);
+
+        // Parse metadata
+        let metadata = null;
+        try { metadata = activity.metadata ? JSON.parse(activity.metadata) : null; } catch (e) { }
+
+        return {
+          ...activity,
+          metadata,
+          user: user ? { username: user.username, avatarUrl: user.avatarUrl } : null,
+          commentsCount: comments.length,
+          likesCount: likes.length,
+          likedByMe: userId ? likes.some(l => l.userId === userId) : false,
+        };
+      }));
+
+      res.json(enriched);
+    } catch (error) {
+      console.error("Get activity feed error:", error);
+      res.status(500).json({ error: "Failed to get activity feed" });
+    }
+  });
+
+  app.post("/api/activities/:id/like", async (req, res) => {
+    try {
+      const token = req.cookies.authToken || req.headers.authorization?.replace('Bearer ', '');
+      if (!token) return res.status(401).json({ error: "Not authenticated" });
+      const payload = verifyToken(token);
+      if (!payload) return res.status(401).json({ error: "Invalid token" });
+
+      const { id } = req.params;
+      const like = await storage.likeActivity({
+        activityId: id,
+        userId: payload.userId,
+      });
+
+      res.json({ success: true, like });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to like activity" });
+    }
+  });
+
+  app.post("/api/activities/:id/comment", async (req, res) => {
+    try {
+      const token = req.cookies.authToken || req.headers.authorization?.replace('Bearer ', '');
+      if (!token) return res.status(401).json({ error: "Not authenticated" });
+      const payload = verifyToken(token);
+      if (!payload) return res.status(401).json({ error: "Invalid token" });
+
+      const { id } = req.params;
+      const parsed = insertActivityCommentSchema.safeParse({ ...req.body, activityId: id, userId: payload.userId });
+
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid comment data" });
+      }
+
+      const comment = await storage.commentOnActivity(parsed.data);
+      res.json(comment);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to post comment" });
+    }
+  });
+
+  app.get("/api/activities/:id/comments", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const comments = await storage.getCommentsForActivity(id);
+
+      const enriched = await Promise.all(comments.map(async (c) => {
+        const user = await storage.getUserById(c.userId);
+        return {
+          ...c,
+          user: user ? { username: user.username, avatarUrl: user.avatarUrl } : null
+        };
+      }));
+
+      res.json(enriched);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get comments" });
     }
   });
 

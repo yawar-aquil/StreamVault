@@ -269,6 +269,14 @@ export function Header() {
                   </div>
                 </Link>
 
+                {/* Community */}
+                <Link href="/social">
+                  <div className="group flex flex-col items-center justify-center p-4 rounded-xl bg-accent/30 hover:bg-accent border border-white/5 hover:border-primary/20 transition-all cursor-pointer">
+                    <Users className="h-6 w-6 mb-2 text-indigo-500 group-hover:scale-110 transition-transform" />
+                    <span className="font-medium text-sm">Community</span>
+                  </div>
+                </Link>
+
                 {/* API Docs */}
                 <Link href="/api-docs">
                   <div className="group flex flex-col items-center justify-center p-4 rounded-xl bg-accent/30 hover:bg-accent border border-white/5 hover:border-primary/20 transition-all cursor-pointer">
@@ -280,14 +288,14 @@ export function Header() {
                 {/* Theme Toggle */}
                 <div
                   onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  className="col-span-2 group flex flex-row items-center justify-center gap-3 p-4 rounded-xl bg-accent/30 hover:bg-accent border border-white/5 hover:border-primary/20 transition-all cursor-pointer"
+                  className="group flex flex-col items-center justify-center p-4 rounded-xl bg-accent/30 hover:bg-accent border border-white/5 hover:border-primary/20 transition-all cursor-pointer"
                 >
                   {theme === 'dark' ? (
-                    <Sun className="h-5 w-5 text-yellow-500 group-hover:rotate-90 transition-transform" />
+                    <Sun className="h-6 w-6 mb-2 text-yellow-500 group-hover:rotate-90 transition-transform" />
                   ) : (
-                    <Moon className="h-5 w-5 text-indigo-500 group-hover:-rotate-12 transition-transform" />
+                    <Moon className="h-6 w-6 mb-2 text-indigo-500 group-hover:-rotate-12 transition-transform" />
                   )}
-                  <span className="font-medium text-sm">{theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}</span>
+                  <span className="font-medium text-sm">Theme</span>
                 </div>
               </div>
             </DropdownMenuContent>
