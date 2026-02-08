@@ -1638,6 +1638,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create friendship
       await storage.addFriend(request.fromUserId, request.toUserId);
 
+      // Log activity: Friend Connect (Community Feed)
+      try {
+        const fromUser = await storage.getUserById(request.fromUserId);
+        if (fromUser) {
+          await logAndBroadcastActivity({
+            userId: payload.userId, // Person who accepted
+            type: 'friend_connect',
+            entityId: requestId,
+            entityType: 'friend',
+            metadata: JSON.stringify({
+              friendId: request.fromUserId,
+              friendUsername: fromUser.username,
+              friendAvatar: fromUser.avatarUrl
+            })
+          });
+        }
+      } catch (e) {
+        console.error("Failed to log friend_connect activity", e);
+      }
+
       // Notify the requester
       // Notify the requester
       const currentUser = await storage.getUserById(payload.userId);
@@ -2210,9 +2230,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Log activity: Review Post (Community Feed)
       try {
-        // Need to fetch content title for metadata
-        // This might be expensive, so maybe skip title or do a quick lookup if possible
-        // For now, let's just log it.
+        let title = "";
+        let posterUrl = "";
+        let link = "";
+
+        if (contentType === 'movie') {
+          const movie = await storage.getMovieById(contentId);
+          if (movie) {
+            title = movie.title;
+            posterUrl = movie.posterUrl;
+            link = `/movie/${movie.slug || movie.id}`;
+          }
+        } else if (contentType === 'show') {
+          const show = await storage.getShowById(contentId);
+          if (show) {
+            title = show.title;
+            posterUrl = show.posterUrl;
+            link = `/show/${show.slug || show.id}`;
+          }
+        } else if (contentType === 'anime') {
+          const anime = await storage.getAnimeById(contentId);
+          if (anime) {
+            title = anime.title;
+            posterUrl = anime.posterUrl;
+            link = `/anime/${anime.slug || anime.id}`;
+          }
+        }
+
         await logAndBroadcastActivity({
           userId: payload.userId,
           type: 'review_post',
@@ -2221,7 +2265,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           metadata: JSON.stringify({
             contentId: contentId,
             contentType: contentType,
-            rating: rating
+            rating: rating,
+            title: title || "Unknown Content",
+            posterUrl: posterUrl,
+            link: link
           })
         });
       } catch (e) {
@@ -5081,12 +5128,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
         movieId: movieId || null,
         blogPostId: blogPostId || null,
         parentId: parentId || null,
-        parentId: parentId || null,
         userId: userId || null,
         userName,
         avatarUrl: avatarUrl || null,
         comment,
       });
+
+      // Log activity: Comment Post
+      try {
+        if (userId) { // Only log if authenticated user
+          let entityType = "";
+          let entityId = "";
+          let title = "";
+          let posterUrl = "";
+          let link = "";
+
+          if (movieId) {
+            entityType = "movie";
+            entityId = movieId;
+            const movie = await storage.getMovieById(movieId);
+            if (movie) {
+              title = movie.title;
+              posterUrl = movie.posterUrl;
+              link = `/movie/${movie.slug || movie.id}`;
+            }
+          } else if (episodeId) {
+            // Need to find show from episode?
+            const episode = await storage.getEpisodeById(episodeId);
+            if (episode) {
+              const show = await storage.getShowById(episode.showId);
+              if (show) {
+                title = `${show.title} (S${episode.season} E${episode.episodeNumber})`;
+                posterUrl = show.posterUrl;
+                link = `/show/${show.slug || show.id}`;
+                entityType = "show";
+                entityId = show.id;
+              }
+            }
+          } else if (blogPostId) {
+            entityType = "blog";
+            entityId = blogPostId;
+            const post = await storage.getBlogPostById(blogPostId);
+            if (post) {
+              title = post.title;
+              posterUrl = post.coverImage;
+              link = `/blog/${post.slug || post.id}`;
+            }
+          }
+
+          if (title) {
+            await logAndBroadcastActivity({
+              userId,
+              type: 'comment_post',
+              entityId: newComment.id,
+              entityType: 'comment',
+              metadata: JSON.stringify({
+                contentId: entityId,
+                targetType: entityType,
+                title: title,
+                posterUrl: posterUrl,
+                link: link,
+                commentExcerpt: comment.substring(0, 50) + (comment.length > 50 ? '...' : '')
+              })
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Failed to log comment activity", e);
+      }
 
       res.status(201).json(newComment);
     } catch (error) {

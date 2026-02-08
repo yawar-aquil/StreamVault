@@ -94,7 +94,7 @@ export default function CommunityFeed() {
             return friendIds.has(activity.userId) || activity.userId === user.id; // Show own activity too? Usually yes.
         }
 
-        if (activeTab === 'following') { // Mentions tab
+        if (activeTab === 'mentions') { // Mentions tab
             if (!user) return false;
             // Logic: Activity entityId is user (direct interaction) OR metadata mentions user
             if (activity.entityId === user.id) return true;
@@ -145,7 +145,7 @@ export default function CommunityFeed() {
                             <TabsList className="bg-muted/50 border border-white/5">
                                 <TabsTrigger value="all" className="gap-2"><Zap className="w-4 h-4" /> All Activity</TabsTrigger>
                                 <TabsTrigger value="friends" className="gap-2"><Users className="w-4 h-4" /> Friends Only</TabsTrigger>
-                                <TabsTrigger value="following" className="gap-2"><AtSign className="w-4 h-4" /> Mentions</TabsTrigger>
+                                <TabsTrigger value="mentions" className="gap-2"><AtSign className="w-4 h-4" /> Mentions</TabsTrigger>
                             </TabsList>
                         </div>
 
