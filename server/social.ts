@@ -225,8 +225,9 @@ export function initSocialSocket(server: HttpServer, socketio?: Server) {
                     entityType: contentType,
                     metadata: JSON.stringify({
                         title: contentTitle,
-                        poster: contentPoster,
-                        episode: episodeTitle
+                        posterUrl: contentPoster,
+                        episode: episodeTitle,
+                        link: contentType === 'movie' ? `/movie/${contentId}` : contentType === 'anime' ? `/anime/${contentId}` : `/show/${contentId}`
                     })
                 });
             } catch (e) {

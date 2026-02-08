@@ -2026,6 +2026,16 @@ export class MemStorage implements IStorage {
     this.saveFriendsData();
   }
 
+  async getUnreadCounts(userId: string): Promise<Record<string, number>> {
+    const counts: Record<string, number> = {};
+    for (const msg of this.directMessages.values()) {
+      if (msg.toUserId === userId && !msg.read) {
+        counts[msg.fromUserId] = (counts[msg.fromUserId] || 0) + 1;
+      }
+    }
+    return counts;
+  }
+
   // Save/Load friends data
   private saveFriendsData(): void {
     try {

@@ -16,7 +16,7 @@ import { convertCurrency } from "./currency";
 import { searchSubtitles, downloadSubtitle, getCachedSubtitle } from "./subtitle-service";
 import { checkAndAwardAchievements, ACHIEVEMENTS } from "./achievements";
 import { getActiveRooms, checkRoomExists } from "./watch-together";
-import { sendNotificationToUser, sendInventoryUpdate, logAndBroadcastActivity } from "./social";
+import { sendNotificationToUser, sendInventoryUpdate, logAndBroadcastActivity, emitDMReceived } from "./social";
 import webpush from "web-push";
 import { hashPassword, verifyPassword, generateToken, verifyToken, setAuthCookie, clearAuthCookie, type AuthRequest } from "./auth";
 import multer from "multer";
@@ -3241,6 +3241,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get user profile error:", error);
       res.status(500).json({ error: "Failed to get user profile" });
+    }
+  });
+
+  // Get unread message counts per friend
+  app.get("/api/messages/unread-counts", async (req, res) => {
+    try {
+      const token = req.cookies.authToken;
+      if (!token) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const payload = verifyToken(token);
+      if (!payload) {
+        return res.status(401).json({ error: "Invalid token" });
+      }
+
+      const counts = await storage.getUnreadCounts(payload.userId);
+      res.json(counts);
+    } catch (error) {
+      console.error("Get unread counts error:", error);
+      res.status(500).json({ error: "Failed to get unread counts" });
     }
   });
 

@@ -340,22 +340,28 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
         // Stop typing immediately when sending
         stopTyping(friendId);
 
+        const messageText = newMessage.trim();
+        setNewMessage(''); // Clear input immediately for better UX
         setIsSending(true);
         try {
             const response = await fetch(`/api/messages/${friendId}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ message: newMessage.trim() }),
+                body: JSON.stringify({ message: messageText }),
             });
 
             if (response.ok) {
                 const dm = await response.json();
                 setMessages(prev => [...prev, dm]);
-                setNewMessage('');
+            } else {
+                // Restore message if send failed
+                setNewMessage(messageText);
             }
         } catch (error) {
             console.error('Failed to send message:', error);
+            // Restore message if send failed
+            setNewMessage(messageText);
         } finally {
             setIsSending(false);
             // Refocus the input after sending (use setTimeout to wait for state update)
