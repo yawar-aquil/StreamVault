@@ -1,5 +1,6 @@
 import { Server as HttpServer } from 'http';
 import { Server, Socket } from 'socket.io';
+import { logAndBroadcastActivity } from './social';
 import { storage } from './storage';
 
 // Types
@@ -314,6 +315,27 @@ export function setupWatchTogether(httpServer: HttpServer): Server {
             });
 
             console.log(`🎬 Room created: ${code} by ${data.username}`);
+
+            // Log activity: Room Created
+            if (data.authUserId) {
+                try {
+                    logAndBroadcastActivity({
+                        userId: data.authUserId,
+                        type: 'room_created',
+                        entityId: room.id,
+                        entityType: 'room',
+                        metadata: JSON.stringify({
+                            title: room.contentTitle,
+                            posterUrl: room.contentPoster,
+                            roomCode: room.code,
+                            contentType: room.contentType,
+                            link: `/watch-party/${room.code}` // Add link for feed click
+                        })
+                    });
+                } catch (e) {
+                    console.error("Failed to log room_created activity", e);
+                }
+            }
         });
 
         // Join an existing room

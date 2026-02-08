@@ -46,6 +46,8 @@ export function FeedItem({ activity }: FeedItemProps) {
                 return <BookOpen className="w-4 h-4 text-emerald-400" />;
             case 'item_gift':
                 return <Gift className="w-4 h-4 text-pink-500" />;
+            case 'room_created':
+                return <Tv className="w-4 h-4 text-purple-500" />;
             default:
                 return <div className="w-4 h-4 bg-gray-500 rounded-full" />;
         }
@@ -70,6 +72,12 @@ export function FeedItem({ activity }: FeedItemProps) {
                     <span>
                         started watching <span className="text-primary font-medium">{meta.title || 'something'}</span>
                         {meta.episode && <span className="text-muted-foreground"> - {meta.episode}</span>}
+                    </span>
+                );
+            case 'room_created':
+                return (
+                    <span>
+                        created a watch party for <span className="text-primary font-medium">{meta.title || 'a movie'}</span>
                     </span>
                 );
             case 'friend_connect':
@@ -168,7 +176,7 @@ export function FeedItem({ activity }: FeedItemProps) {
                         </div>
 
                         {/* Watch Activity Poster Card */}
-                        {type === 'watch_start' && (() => {
+                        {(type === 'watch_start' || type === 'room_created') && (() => {
                             let meta: any = {};
                             try { meta = typeof metadata === 'string' ? JSON.parse(metadata) : metadata || {}; } catch (e) { }
 
@@ -191,7 +199,7 @@ export function FeedItem({ activity }: FeedItemProps) {
                                                 <div className="flex items-center gap-1 mt-1">
                                                     <Play className="w-3 h-3 text-primary fill-primary" />
                                                     <span className="text-[10px] text-primary font-medium uppercase tracking-wider">
-                                                        Watching Now
+                                                        {type === 'room_created' ? 'Join Party' : 'Watching Now'}
                                                     </span>
                                                 </div>
                                             </div>
@@ -204,7 +212,7 @@ export function FeedItem({ activity }: FeedItemProps) {
                     </div>
                 </div>
                 {/* Optional: Add a subtle bottom highlight for certain high-value activities */}
-                {(type === 'purchase' || type === 'review_post') && (
+                {(type === 'purchase' || type === 'review_post' || type === 'room_created') && (
                     <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 )}
             </Card>

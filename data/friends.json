@@ -1326,7 +1326,7 @@
       "data": {
         "fromUserId": "c47aa877-d49b-40d2-9afd-467ab293a6a1"
       },
-      "read": false,
+      "read": true,
       "id": "6c2e4997-8fb5-4e5b-b4da-25f66f993c56",
       "createdAt": "2026-02-08T17:01:23.769Z"
     }
@@ -1611,7 +1611,7 @@
       "fromUserId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
       "toUserId": "0229a46c-2302-4909-93c5-c71f80db5538",
       "message": "hiii",
-      "read": false,
+      "read": true,
       "createdAt": "2026-02-08T17:01:23.766Z"
     }
   ]

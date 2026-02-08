@@ -3847,17 +3847,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
 
             if (entityId && title) {
-              // Check if we recently logged this to avoid spamming (simple in-memory cache or db check?)
-              // For now, relies on the client sending updates every 10s. 
-              // 0-10s -> one hit. 10-20s -> maybe one hit.
+              // Check if we recently logged this to avoid spamming
               // We can query recent activities to be sure.
-              const activities = await storage.getActivities(10);
-              const recentLog = activities.find(a =>
-                a.userId === userId &&
-                a.type === 'watch_start' &&
-                a.entityId === entityId &&
-                (new Date().getTime() - a.createdAt.getTime() < 5 * 60 * 1000) // 5 minutes debounce
-              );
+              const activities = await storage.getActivities(20); // Check last 20 activities
+              const recentLog = activities.find(a => {
+                if (a.userId !== userId) return false;
+                if (a.type !== 'watch_start') return false;
+
+                // For movies, simple check on entityId (movieId)
+                if (entityType === 'movie' && a.entityId === entityId) {
+                  return (new Date().getTime() - a.createdAt.getTime() < 30 * 60 * 1000); // 30 mins debounce for movies
+                }
+
+                // For shows/anime, check if it's the SAME episode
+                if ((entityType === 'show' || entityType === 'anime') && a.entityId === entityId) { // entityId here is showId/animeId
+                  try {
+                    const meta = JSON.parse(a.metadata || '{}');
+                    // If same show AND same episode subTitle -> Debounce (prevent spam)
+                    if (meta.episode === subTitle) {
+                      return (new Date().getTime() - a.createdAt.getTime() < 20 * 60 * 1000); // 20 mins debounce for same episode
+                    }
+                    // If different episode (subTitle differs), allow it! (Continuous watching)
+                  } catch (e) {
+                    return true; // If parse fails, safer to debounce
+                  }
+                }
+                return false;
+              });
 
               if (!recentLog) {
                 await logAndBroadcastActivity({
@@ -3867,10 +3883,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   entityType,
                   metadata: JSON.stringify({
                     title: title,
-                    episode: subTitle,
+                    episode: subTitle, // S1 E1
                     posterUrl: posterUrl,
                     backdropUrl: backdropUrl,
-                    link: `/${entityType}/${progress.slug || entityId}` // Fallback link
+                    link: entityType === 'movie' ? `/movie/${slug || entityId}` :
+                      entityType === 'anime' ? `/anime/${slug || entityId}` :
+                        `/show/${slug || entityId}`,
+                    // Add generic link fallback
                   })
                 });
               }
