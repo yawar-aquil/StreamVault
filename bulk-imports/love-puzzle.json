@@ -1,0 +1,125 @@
+{
+  "showSlug": "love-puzzle",
+  "episodes": [
+    {
+      "title": "Episode 1",
+      "episodeNumber": 1,
+      "seasonNumber": 1,
+      "description": "Episode 1",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1apDezLDm7yNIHMMc4qHKJ46ZjZq139WM/preview"
+    },
+    {
+      "title": "Episode 2",
+      "episodeNumber": 2,
+      "seasonNumber": 1,
+      "description": "Episode 2",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1xxDCD91cCUW0ghbM3EvYyMQ6OywY9_Gb/preview"
+    },
+    {
+      "title": "Episode 3",
+      "episodeNumber": 3,
+      "seasonNumber": 1,
+      "description": "Episode 3",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1uUdJLHiYTZL_jByh09tAr52klsTnm9Bt/preview"
+    },
+    {
+      "title": "Episode 4",
+      "episodeNumber": 4,
+      "seasonNumber": 1,
+      "description": "Episode 4",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1wkSUkSD0N06qT-_Z_NW7ZZqKOsa0j-LM/preview"
+    },
+    {
+      "title": "Episode 5",
+      "episodeNumber": 5,
+      "seasonNumber": 1,
+      "description": "Episode 5",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1u-Ufc7cziQ3XcbzqzbniiHoTZBPVeR8y/preview"
+    },
+    {
+      "title": "Episode 6",
+      "episodeNumber": 6,
+      "seasonNumber": 1,
+      "description": "Episode 6",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/17n5F0J26FoLx_NRFI_TSlQ4i58HsGGaw/preview"
+    },
+    {
+      "title": "Episode 7",
+      "episodeNumber": 7,
+      "seasonNumber": 1,
+      "description": "Episode 7",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1p0wqLn4_lMGNWsZ4nMALzZyBv0bR7M_F/preview"
+    },
+    {
+      "title": "Episode 8",
+      "episodeNumber": 8,
+      "seasonNumber": 1,
+      "description": "Episode 8",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1j05anZ5xN_-gPOMMbbzO0_pQRmyUgxIu/preview"
+    },
+    {
+      "title": "Episode 9",
+      "episodeNumber": 9,
+      "seasonNumber": 1,
+      "description": "Episode 9",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1B2_ciOQMaURsd2geaDAy5RVboRMdUARs/preview"
+    },
+    {
+      "title": "Episode 10",
+      "episodeNumber": 10,
+      "seasonNumber": 1,
+      "description": "Episode 10",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1uKoXhPONFT-u9J0PcGOnnBT99ZXPo98X/preview"
+    },
+    {
+      "title": "Episode 11",
+      "episodeNumber": 11,
+      "seasonNumber": 1,
+      "description": "Episode 11",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/14t1_j3OvFcRVcRa6Jo3mfed86MlSYN7T/preview"
+    },
+    {
+      "title": "Episode 12",
+      "episodeNumber": 12,
+      "seasonNumber": 1,
+      "description": "Episode 12",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1EIT5zxyJZ25FPZkQ-ge4uZTKhkztEpsR/preview"
+    },
+    {
+      "title": "Episode 13",
+      "episodeNumber": 13,
+      "seasonNumber": 1,
+      "description": "Episode 13",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1IZnLCCuVmDCv1giq6d2SO4WGlH0rQFf-/preview"
+    },
+    {
+      "title": "Episode 14",
+      "episodeNumber": 14,
+      "seasonNumber": 1,
+      "description": "Episode 14",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1ucfuoHZ4Gz6Il6eaJ6otNI_vc1VDdM81/preview"
+    },
+    {
+      "title": "Episode 15",
+      "episodeNumber": 15,
+      "seasonNumber": 1,
+      "description": "Episode 15",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1E4-oRkTtJ6UB0e9IVOtk6E7pY-tn62n4/preview"
+    }
+  ]
+}

@@ -1,0 +1,114 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+server/public/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.production
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# TypeScript
+*.tsbuildinfo
+.tsbuildinfo
+
+# Testing
+coverage/
+.nyc_output/
+*.lcov
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+.parcel-cache/
+
+# Backup files
+*.backup
+*.backup.*
+*.bak
+*~
+
+# Build artifacts
+*.tar.gz
+*.zip
+*.rar
+
+# Local development
+.vercel
+.netlify
+.railway
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Misc
+.turbo
+.contentlayer
+
+# SEO Automation - Sensitive Files
+google-service-account.json
+google-submitted-urls.json
+indexnow-key.txt
+*.txt
+!client/public/*.txt
+
+# Archive folder (old docs and scripts)
+_archive/
+bulk-imports/
+
+# Script result files
+scripts/*.json
+scripts/*.txt
+
+
+# Cached subtitles
+data/subtitles/
+
+# User uploads
+uploads/

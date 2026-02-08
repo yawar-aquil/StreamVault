@@ -1,0 +1,45 @@
+{
+  "showSlug": "the-witcher-blood-origin",
+  "episodes": [
+    {
+      "title": "Episode 1",
+      "episodeNumber": 1,
+      "seasonNumber": 1,
+      "description": "Episode 1",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/11ykM4EIPicbQkKYdgdGR0XzWo1Zg9DfL/preview"
+    },
+    {
+      "title": "Episode 2",
+      "episodeNumber": 2,
+      "seasonNumber": 1,
+      "description": "Episode 2",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1ut6UR8b46OAhMCnaqVlgJYgBe7QjrFLi/preview"
+    },
+    {
+      "title": "Episode 3",
+      "episodeNumber": 3,
+      "seasonNumber": 1,
+      "description": "Episode 3",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1JIXepQ1_VYd3zF7hZh6CjouEXJboNHCg/preview"
+    },
+    {
+      "title": "Episode 4",
+      "episodeNumber": 4,
+      "seasonNumber": 1,
+      "description": "Episode 4",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1oPkFIXX4FALgmHDF9eYUBogF8JKxTu9k/preview"
+    },
+    {
+      "title": "Episode 7",
+      "episodeNumber": 7,
+      "seasonNumber": 3,
+      "description": "Episode 7",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1ft0PR1ytBkY8T8irQZtwg-fUWrAHY_Ef/preview"
+    }
+  ]
+}

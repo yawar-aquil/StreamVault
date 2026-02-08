@@ -1,0 +1,85 @@
+{
+  "showSlug": "inventing-anna",
+  "episodes": [
+    {
+      "title": "Episode 1",
+      "episodeNumber": 1,
+      "seasonNumber": 1,
+      "description": "Episode 1",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1m7QGUiUhNMEH0wSLYlbvaQEew8c3YhTS/preview"
+    },
+    {
+      "title": "Episode 2",
+      "episodeNumber": 2,
+      "seasonNumber": 1,
+      "description": "Episode 2",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1_o9A4-x2DJk4IoSZ7D-JPCE6ral7eA1g/preview"
+    },
+    {
+      "title": "Episode 3",
+      "episodeNumber": 3,
+      "seasonNumber": 1,
+      "description": "Episode 3",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1apv3xyoZXZzVSWHMmUjvtNyxcewJjZHq/preview"
+    },
+    {
+      "title": "Episode 4",
+      "episodeNumber": 4,
+      "seasonNumber": 1,
+      "description": "Episode 4",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1GhZXfJlgtcfpBouNRNN1fcXtU_L9WFAA/preview"
+    },
+    {
+      "title": "Episode 5",
+      "episodeNumber": 5,
+      "seasonNumber": 1,
+      "description": "Episode 5",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1jZMLCSeA3v9WCopXBf04y2a_c04GsGHm/preview"
+    },
+    {
+      "title": "Episode 6",
+      "episodeNumber": 6,
+      "seasonNumber": 1,
+      "description": "Episode 6",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1tMQLe4IC46iJm881Z6-ddJ63oZHdp_3h/preview"
+    },
+    {
+      "title": "Episode 7",
+      "episodeNumber": 7,
+      "seasonNumber": 1,
+      "description": "Episode 7",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1la2gCO_pB1GVAeFkDosJbE3j_MHlR9Mj/preview"
+    },
+    {
+      "title": "Episode 8",
+      "episodeNumber": 8,
+      "seasonNumber": 1,
+      "description": "Episode 8",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1dqfeAUGv4qx_H187wGGnZ8kz0ZAgasVb/preview"
+    },
+    {
+      "title": "Episode 9",
+      "episodeNumber": 9,
+      "seasonNumber": 1,
+      "description": "Episode 9",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1rbALfz4v_wpxhU697F0Q9HDmhAaEZ_7s/preview"
+    },
+    {
+      "title": "Episode 12",
+      "episodeNumber": 12,
+      "seasonNumber": 7,
+      "description": "Episode 12",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1XQiooVcxw_LUex7TAxV78jH1ph_jS9Mq/preview"
+    }
+  ]
+}

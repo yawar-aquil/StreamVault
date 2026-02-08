@@ -1,0 +1,133 @@
+{
+  "showSlug": "the-ghost-detective",
+  "episodes": [
+    {
+      "title": "Episode 1",
+      "episodeNumber": 1,
+      "seasonNumber": 1,
+      "description": "Episode 1",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1n-kdyAQGtpPlZz-Rptt4bOSyozDZ8y8Y/preview"
+    },
+    {
+      "title": "Episode 2",
+      "episodeNumber": 2,
+      "seasonNumber": 1,
+      "description": "Episode 2",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1O6ACaMZnv1qM70JrclfkIV_ZRR1wFmjG/preview"
+    },
+    {
+      "title": "Episode 3",
+      "episodeNumber": 3,
+      "seasonNumber": 1,
+      "description": "Episode 3",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/16E7yD1xt5DMDJ4oWcHEvkXADUEVTPdGG/preview"
+    },
+    {
+      "title": "Episode 4",
+      "episodeNumber": 4,
+      "seasonNumber": 1,
+      "description": "Episode 4",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/17_3gSVX9HKpMrMky3VDhjBIQ-jMA3Es2/preview"
+    },
+    {
+      "title": "Episode 5",
+      "episodeNumber": 5,
+      "seasonNumber": 1,
+      "description": "Episode 5",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1fCxJnep-MC0EgYS-CL-zm39Qbk_E75Tp/preview"
+    },
+    {
+      "title": "Episode 6",
+      "episodeNumber": 6,
+      "seasonNumber": 1,
+      "description": "Episode 6",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1EnxxGxGJKtnx8oAHXhX_uXOthN1habpB/preview"
+    },
+    {
+      "title": "Episode 7",
+      "episodeNumber": 7,
+      "seasonNumber": 1,
+      "description": "Episode 7",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1Dk0-ufC58FYI41T8diJgxqnjX7i47gx8/preview"
+    },
+    {
+      "title": "Episode 8",
+      "episodeNumber": 8,
+      "seasonNumber": 1,
+      "description": "Episode 8",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1utHr4VrxUh3IOTZ9FenbgtQQOMFOOqR3/preview"
+    },
+    {
+      "title": "Episode 9",
+      "episodeNumber": 9,
+      "seasonNumber": 1,
+      "description": "Episode 9",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1FuzRHGlQvlqXsqjtgaP5uVd_-F-HRgbf/preview"
+    },
+    {
+      "title": "Episode 10",
+      "episodeNumber": 10,
+      "seasonNumber": 1,
+      "description": "Episode 10",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/14ZpB1MFnzUA4xomVfolrimc4wxav-eCa/preview"
+    },
+    {
+      "title": "Episode 11",
+      "episodeNumber": 11,
+      "seasonNumber": 1,
+      "description": "Episode 11",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/184ep1fUBeMdR7QxOkxgOP0EaGMQD8ztc/preview"
+    },
+    {
+      "title": "Episode 12",
+      "episodeNumber": 12,
+      "seasonNumber": 1,
+      "description": "Episode 12",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1YHQ6z0XEm-BvFcJuwT2rjcxshZkpFlnt/preview"
+    },
+    {
+      "title": "Episode 13",
+      "episodeNumber": 13,
+      "seasonNumber": 1,
+      "description": "Episode 13",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1NQqViFlyUag31Sk96nWX8aKFAZd3u9xw/preview"
+    },
+    {
+      "title": "Episode 14",
+      "episodeNumber": 14,
+      "seasonNumber": 1,
+      "description": "Episode 14",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1WmnjSxjiReKX2CrogdNUt4c9jRR4MNRR/preview"
+    },
+    {
+      "title": "Episode 15",
+      "episodeNumber": 15,
+      "seasonNumber": 1,
+      "description": "Episode 15",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1Wo8NSD-jJeyMHb-2EfYz4JFP3I6_SUPA/preview"
+    },
+    {
+      "title": "Episode 16",
+      "episodeNumber": 16,
+      "seasonNumber": 1,
+      "description": "Episode 16",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1OEf8AgDj4W4luqywP9Oihn_DJpMeLpjV/preview"
+    }
+  ]
+}

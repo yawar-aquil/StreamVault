@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <!-- Rich Gold Gradient -->
+    <linearGradient id="richGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDB931"/>
+      <stop offset="30%" stop-color="#FFFFAC"/>
+      <stop offset="50%" stop-color="#D1B464"/>
+      <stop offset="80%" stop-color="#5E4B35"/>
+      <stop offset="100%" stop-color="#FDB931"/>
+      <animate attributeName="x1" values="0%;120%;0%" dur="4s" repeatCount="indefinite"/>
+    </linearGradient>
+
+    <!-- Metallic Text Gradient -->
+    <linearGradient id="metalText" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#B8860B"/>
+      <stop offset="20%" stop-color="#FFD700"/>
+      <stop offset="40%" stop-color="#FFFFE0"/>
+      <stop offset="60%" stop-color="#D4AF37"/>
+      <stop offset="80%" stop-color="#B8860B"/>
+      <animate attributeName="x1" values="-100%;100%" dur="3s" repeatCount="indefinite"/>
+    </linearGradient>
+
+    <!-- Glow Filter -->
+    <filter id="crispGlow" height="150%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1.5"/>
+      <feOffset dx="0" dy="0" result="offsetblur"/>
+      <feFlood flood-color="#FFD700" flood-opacity="0.6"/>
+      <feComposite in2="offsetblur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Sunburst Background -->
+  <g transform="translate(50,50)">
+    <g stroke="url(#richGold)" stroke-width="0.5" opacity="0.3">
+      <line x1="0" y1="-45" x2="0" y2="-35" />
+      <line x1="0" y1="45" x2="0" y2="35" />
+      <line x1="-45" y1="0" x2="-35" y2="0" />
+      <line x1="45" y1="0" x2="35" y2="0" />
+      <line x1="30" y1="-30" x2="24" y2="-24" />
+      <line x1="-30" y1="30" x2="-24" y2="24" />
+      <line x1="-30" y1="-30" x2="-24" y2="-24" />
+      <line x1="30" y1="30" x2="24" y2="24" />
+      <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="20s" repeatCount="indefinite"/>
+    </g>
+  </g>
+
+  <!-- Shield/Hexagon Shape Base -->
+  <path d="M50 5 L90 25 L90 65 L50 95 L10 65 L10 25 Z" 
+        fill="#111" stroke="url(#richGold)" stroke-width="3" filter="url(#crispGlow)">
+    <animate attributeName="stroke-width" values="3;4;3" dur="3s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Inner Diamond Border -->
+  <path d="M50 15 L80 50 L50 85 L20 50 Z" 
+        fill="none" stroke="url(#richGold)" stroke-width="1" opacity="0.5">
+     <animate attributeName="opacity" values="0.2;0.8;0.2" dur="2s" repeatCount="indefinite"/>
+  </path>
+
+  <!-- Sparkling Particles -->
+  <circle cx="20" cy="50" r="1.5" fill="#FFF">
+    <animate attributeName="opacity" values="0;1;0" dur="1s" repeatCount="indefinite" begin="0.1s"/>
+  </circle>
+  <circle cx="80" cy="50" r="1.5" fill="#FFF">
+    <animate attributeName="opacity" values="0;1;0" dur="1.2s" repeatCount="indefinite" begin="0.6s"/>
+  </circle>
+  <circle cx="50" cy="15" r="1.5" fill="#FFF">
+    <animate attributeName="opacity" values="0;1;0" dur="0.8s" repeatCount="indefinite" begin="0.3s"/>
+  </circle>
+
+  <!-- Bold VIP Text -->
+  <text x="50" y="62" text-anchor="middle" font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-size="36" 
+        fill="url(#metalText)" stroke="#3f2a00" stroke-width="1" letter-spacing="2">
+    VIP
+    <animate attributeName="font-size" values="36;37;36" dur="3s" repeatCount="indefinite"/>
+  </text>
+  
+  <!-- "MEMBER" Subtext Ribbon -->
+  <path d="M20 70 Q50 80 80 70" stroke="url(#richGold)" stroke-width="1" fill="none"/>
+  
+</svg>

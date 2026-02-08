@@ -1,0 +1,101 @@
+{
+  "showSlug": "one-dollar-lawyer",
+  "episodes": [
+    {
+      "title": "Episode 1",
+      "episodeNumber": 1,
+      "seasonNumber": 1,
+      "description": "Episode 1",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1B9hXGw1zNMaUs5e4y1-v8PvBG3qgkJyK/preview"
+    },
+    {
+      "title": "Episode 2",
+      "episodeNumber": 2,
+      "seasonNumber": 1,
+      "description": "Episode 2",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1pLla-T35r7gHA2UP7YWcuDu3OHmsTKcW/preview"
+    },
+    {
+      "title": "Episode 3",
+      "episodeNumber": 3,
+      "seasonNumber": 1,
+      "description": "Episode 3",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/12s3Rj6M44uAqnHuKbHM5vPya2mx5RWSW/preview"
+    },
+    {
+      "title": "Episode 4",
+      "episodeNumber": 4,
+      "seasonNumber": 1,
+      "description": "Episode 4",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1aQp5HnKZW0Y0sMTHE7LNqExPwXovO0kl/preview"
+    },
+    {
+      "title": "Episode 5",
+      "episodeNumber": 5,
+      "seasonNumber": 1,
+      "description": "Episode 5",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/11SpkAbBxMGQqn0e3QclRbImWoCNA2dS7/preview"
+    },
+    {
+      "title": "Episode 6",
+      "episodeNumber": 6,
+      "seasonNumber": 1,
+      "description": "Episode 6",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1eVHF5znIuazJ28V6AAhAa2L2zSMfq_S2/preview"
+    },
+    {
+      "title": "Episode 7",
+      "episodeNumber": 7,
+      "seasonNumber": 1,
+      "description": "Episode 7",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1y7WbbKGNrsFseizcCnWNHEd6xKkQyopF/preview"
+    },
+    {
+      "title": "Episode 8",
+      "episodeNumber": 8,
+      "seasonNumber": 1,
+      "description": "Episode 8",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1DnL5atFTA04KCVIMHNKaTMJNLkHM8bC5/preview"
+    },
+    {
+      "title": "Episode 9",
+      "episodeNumber": 9,
+      "seasonNumber": 1,
+      "description": "Episode 9",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1AOPavV3SpKIoYhMo8Jqa-YvqhD9J81Rr/preview"
+    },
+    {
+      "title": "Episode 10",
+      "episodeNumber": 10,
+      "seasonNumber": 1,
+      "description": "Episode 10",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1FnfHNAlc1BXmGCItO46aKYlofikuQ4pj/preview"
+    },
+    {
+      "title": "Episode 11",
+      "episodeNumber": 11,
+      "seasonNumber": 1,
+      "description": "Episode 11",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1c4D77wwVEL2h_g7Qf7dGJPism0_9xUYy/preview"
+    },
+    {
+      "title": "Episode 12",
+      "episodeNumber": 12,
+      "seasonNumber": 1,
+      "description": "Episode 12",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1Mi3J_k9z4fEg_VFlxfo9g3qT8sJs4LKs/preview"
+    }
+  ]
+}

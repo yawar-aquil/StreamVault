@@ -1,0 +1,405 @@
+{
+  "showSlug": "the-untamed",
+  "episodes": [
+    {
+      "title": "Episode 1",
+      "episodeNumber": 1,
+      "seasonNumber": 1,
+      "description": "Episode 1",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1zyAniZr3GhQVZuElHNZtsECuqHiVybsg/preview"
+    },
+    {
+      "title": "Episode 2",
+      "episodeNumber": 2,
+      "seasonNumber": 1,
+      "description": "Episode 2",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1AgVZJBBL6gSAZDN58_TIV1rRyH4zMNfD/preview"
+    },
+    {
+      "title": "Episode 3",
+      "episodeNumber": 3,
+      "seasonNumber": 1,
+      "description": "Episode 3",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1X2PTHQHS3nRdm2S7lXD2ap0nyiOlM7J2/preview"
+    },
+    {
+      "title": "Episode 4",
+      "episodeNumber": 4,
+      "seasonNumber": 1,
+      "description": "Episode 4",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1eIP6Tv1qN-rO74h0sVZttwXZJ6J-_HSp/preview"
+    },
+    {
+      "title": "Episode 5",
+      "episodeNumber": 5,
+      "seasonNumber": 1,
+      "description": "Episode 5",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1j6o6suv0zmbnUFiaTjboHbjiIMyui9gC/preview"
+    },
+    {
+      "title": "Episode 6",
+      "episodeNumber": 6,
+      "seasonNumber": 1,
+      "description": "Episode 6",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1ZZCV0P01_ccGXlOMFminozF7H2WT83h7/preview"
+    },
+    {
+      "title": "Episode 7",
+      "episodeNumber": 7,
+      "seasonNumber": 1,
+      "description": "Episode 7",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1lzI65vtETbtebmTSuPu57ktw70N4Q_Ff/preview"
+    },
+    {
+      "title": "Episode 8",
+      "episodeNumber": 8,
+      "seasonNumber": 1,
+      "description": "Episode 8",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1fhZEIGZrmm8_fj3TJ1LpKjRjOrOHzG18/preview"
+    },
+    {
+      "title": "Episode 9",
+      "episodeNumber": 9,
+      "seasonNumber": 1,
+      "description": "Episode 9",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/15j1FxKkr717kIqxyMGtedNKrYKlqqz5M/preview"
+    },
+    {
+      "title": "Episode 10",
+      "episodeNumber": 10,
+      "seasonNumber": 1,
+      "description": "Episode 10",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1ovElnBzjkvI3mlqQt24WPAzX8BUMcB64/preview"
+    },
+    {
+      "title": "Episode 11",
+      "episodeNumber": 11,
+      "seasonNumber": 1,
+      "description": "Episode 11",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1qclpuo9BQQkAEZY3NootB0dmS1q2qW64/preview"
+    },
+    {
+      "title": "Episode 12",
+      "episodeNumber": 12,
+      "seasonNumber": 1,
+      "description": "Episode 12",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1k8jYu50m7u5-B_dyyALcZ2QFM03mA1ge/preview"
+    },
+    {
+      "title": "Episode 13",
+      "episodeNumber": 13,
+      "seasonNumber": 1,
+      "description": "Episode 13",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1Gl5TRo-9meuQUkGWw-kxuEwI_5rTyctF/preview"
+    },
+    {
+      "title": "Episode 14",
+      "episodeNumber": 14,
+      "seasonNumber": 1,
+      "description": "Episode 14",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1kCevaHVt058YhlqRt4fg7a-QTpsZhMuc/preview"
+    },
+    {
+      "title": "Episode 15",
+      "episodeNumber": 15,
+      "seasonNumber": 1,
+      "description": "Episode 15",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1h7T-2WOBEpoEmvU74LgjYxpKvB9Z4VNo/preview"
+    },
+    {
+      "title": "Episode 16",
+      "episodeNumber": 16,
+      "seasonNumber": 1,
+      "description": "Episode 16",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1DgzOpEp6__K99itePQtyGGZ9PBKHYzu_/preview"
+    },
+    {
+      "title": "Episode 17",
+      "episodeNumber": 17,
+      "seasonNumber": 1,
+      "description": "Episode 17",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1LgbAerCfcVYgAVP5LV5K0GqsLO98YdtU/preview"
+    },
+    {
+      "title": "Episode 18",
+      "episodeNumber": 18,
+      "seasonNumber": 1,
+      "description": "Episode 18",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1Gaw14Q1fnUZICffyqJhBxgtkv4jEKBqa/preview"
+    },
+    {
+      "title": "Episode 19",
+      "episodeNumber": 19,
+      "seasonNumber": 1,
+      "description": "Episode 19",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1LFG7aGHoS-rU1yOK9sfbzS27j3w7z8dg/preview"
+    },
+    {
+      "title": "Episode 20",
+      "episodeNumber": 20,
+      "seasonNumber": 1,
+      "description": "Episode 20",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1O4PCRssIHGkAMg3AfeTuh5HzXMnp4AVK/preview"
+    },
+    {
+      "title": "Episode 21",
+      "episodeNumber": 21,
+      "seasonNumber": 1,
+      "description": "Episode 21",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1ojKYWM5X-3Y0-Z95rXtWEQwLZ20DOyj0/preview"
+    },
+    {
+      "title": "Episode 22",
+      "episodeNumber": 22,
+      "seasonNumber": 1,
+      "description": "Episode 22",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1PC8K_pl-k0DgWSJrMvrYAoao8lWQPmYe/preview"
+    },
+    {
+      "title": "Episode 23",
+      "episodeNumber": 23,
+      "seasonNumber": 1,
+      "description": "Episode 23",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/12lwWbvSfoEOGKftEH3C208x9H4LYxm4L/preview"
+    },
+    {
+      "title": "Episode 24",
+      "episodeNumber": 24,
+      "seasonNumber": 1,
+      "description": "Episode 24",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1NGJrmY0WIDOIViAeSp-J_Y0_mM6xgNCA/preview"
+    },
+    {
+      "title": "Episode 25",
+      "episodeNumber": 25,
+      "seasonNumber": 1,
+      "description": "Episode 25",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1_KWQpzPLVbgBOncTIk04gaKfnOfBjhXm/preview"
+    },
+    {
+      "title": "Episode 26",
+      "episodeNumber": 26,
+      "seasonNumber": 1,
+      "description": "Episode 26",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1WJLRVHHpbqt8FUfQuSrQhw_a2QDEdvPR/preview"
+    },
+    {
+      "title": "Episode 27",
+      "episodeNumber": 27,
+      "seasonNumber": 1,
+      "description": "Episode 27",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/19HhvDpbGkt5TJZ0M6KzhqkHYG9gWUU1u/preview"
+    },
+    {
+      "title": "Episode 28",
+      "episodeNumber": 28,
+      "seasonNumber": 1,
+      "description": "Episode 28",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1R4SRbS-qf47QVUEiRvmVCWaW4MVwh9xy/preview"
+    },
+    {
+      "title": "Episode 29",
+      "episodeNumber": 29,
+      "seasonNumber": 1,
+      "description": "Episode 29",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1HgjxKUQn3qI9DzmCrRTASaBYGKb9cn4G/preview"
+    },
+    {
+      "title": "Episode 30",
+      "episodeNumber": 30,
+      "seasonNumber": 1,
+      "description": "Episode 30",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1sMWCVhJmFnwivqjPf5Zszl-6ZFbawtrc/preview"
+    },
+    {
+      "title": "Episode 31",
+      "episodeNumber": 31,
+      "seasonNumber": 1,
+      "description": "Episode 31",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1MiOAn9mapaXEim19kKUTuAKKVl0ebP19/preview"
+    },
+    {
+      "title": "Episode 32",
+      "episodeNumber": 32,
+      "seasonNumber": 1,
+      "description": "Episode 32",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1vc_4Jws8kzD5H6SsPmps2ubZzwk236LW/preview"
+    },
+    {
+      "title": "Episode 33",
+      "episodeNumber": 33,
+      "seasonNumber": 1,
+      "description": "Episode 33",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1WF_tg-j6nr6f2LpjTT_4eJLlaTG6WfWI/preview"
+    },
+    {
+      "title": "Episode 34",
+      "episodeNumber": 34,
+      "seasonNumber": 1,
+      "description": "Episode 34",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1Rr5UU_OTpDjP7Hx5IWAieSVzNgmt6695/preview"
+    },
+    {
+      "title": "Episode 35",
+      "episodeNumber": 35,
+      "seasonNumber": 1,
+      "description": "Episode 35",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1afsThPue2kdDbT7qs4gFE81mTShsWIUb/preview"
+    },
+    {
+      "title": "Episode 36",
+      "episodeNumber": 36,
+      "seasonNumber": 1,
+      "description": "Episode 36",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1wm6x_q58vKgwp3yyaD8qyW9FNiFi27I_/preview"
+    },
+    {
+      "title": "Episode 37",
+      "episodeNumber": 37,
+      "seasonNumber": 1,
+      "description": "Episode 37",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1rUqGlQi06XQEXg_PQ-rIe7vH4yX3P5af/preview"
+    },
+    {
+      "title": "Episode 38",
+      "episodeNumber": 38,
+      "seasonNumber": 1,
+      "description": "Episode 38",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1Y5yHaK1bgAGWRt-X2fMP6E8KfQppZZTN/preview"
+    },
+    {
+      "title": "Episode 39",
+      "episodeNumber": 39,
+      "seasonNumber": 1,
+      "description": "Episode 39",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1BkYZqxl-SZ3_KuWf7sGR3fCcRaWq4KGx/preview"
+    },
+    {
+      "title": "Episode 40",
+      "episodeNumber": 40,
+      "seasonNumber": 1,
+      "description": "Episode 40",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1HrEJMaLkwODAJ3igqWakQM52z-E5MsEu/preview"
+    },
+    {
+      "title": "Episode 41",
+      "episodeNumber": 41,
+      "seasonNumber": 1,
+      "description": "Episode 41",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1dg5n03SLluVQGJO9DRQEo5Ru_X_fNMO9/preview"
+    },
+    {
+      "title": "Episode 42",
+      "episodeNumber": 42,
+      "seasonNumber": 1,
+      "description": "Episode 42",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1SDRqHoK0Mlb-BLqG0sh8Jjx8DbBkyPx0/preview"
+    },
+    {
+      "title": "Episode 43",
+      "episodeNumber": 43,
+      "seasonNumber": 1,
+      "description": "Episode 43",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1cSlAltnJ4f6rbd5ERBPrV7IFevfcMjOW/preview"
+    },
+    {
+      "title": "Episode 44",
+      "episodeNumber": 44,
+      "seasonNumber": 1,
+      "description": "Episode 44",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1MW92Z_kDlR4BoAxPbSNpLCVeBa-4t5Ks/preview"
+    },
+    {
+      "title": "Episode 45",
+      "episodeNumber": 45,
+      "seasonNumber": 1,
+      "description": "Episode 45",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/19RaTfjnc6sb3HOT-kv2eFC-tdOq7RuZL/preview"
+    },
+    {
+      "title": "Episode 46",
+      "episodeNumber": 46,
+      "seasonNumber": 1,
+      "description": "Episode 46",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/182LDX7m8QVwE_iDuO0BrYWB9aS7V9bUM/preview"
+    },
+    {
+      "title": "Episode 47",
+      "episodeNumber": 47,
+      "seasonNumber": 1,
+      "description": "Episode 47",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/15Jh1vKTRluKR7D-LjojHeGbfpY5ywohS/preview"
+    },
+    {
+      "title": "Episode 48",
+      "episodeNumber": 48,
+      "seasonNumber": 1,
+      "description": "Episode 48",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1M3NMwbRsdNZC27l0HaSVGnL5rK0XDriO/preview"
+    },
+    {
+      "title": "Episode 49",
+      "episodeNumber": 49,
+      "seasonNumber": 1,
+      "description": "Episode 49",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1Q_jgl_TBVfGDE7nr-k0jwKUHbMJWcf39/preview"
+    },
+    {
+      "title": "Episode 50",
+      "episodeNumber": 50,
+      "seasonNumber": 1,
+      "description": "Episode 50",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1hjE-e9pTYGFZ5KA-4RrwH3YtgEInE1bk/preview"
+    }
+  ]
+}

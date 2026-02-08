@@ -1,0 +1,24 @@
+{
+  "success": true,
+  "identifier": "movies-streamvault.live",
+  "details_url": "https://archive.org/details/movies-streamvault.live",
+  "embed_url": "https://archive.org/embed/movies-streamvault.live",
+  "total_files": 3,
+  "uploaded": 3,
+  "failed": 0,
+  "videos": [
+    {
+      "filename": "Border-2.mp4",
+      "video_url": "https://archive.org/download/movies-streamvault.live/Border-2.mp4"
+    },
+    {
+      "filename": "Spartacus.House.of.Ashur.S01E08.720p.x264-Vegamovies.Hot.mp4",
+      "video_url": "https://archive.org/download/movies-streamvault.live/Spartacus.House.of.Ashur.S01E08.720p.x264-Vegamovies.Hot.mp4"
+    },
+    {
+      "filename": "The Exorcist.mp4",
+      "video_url": "https://archive.org/download/movies-streamvault.live/The Exorcist.mp4"
+    }
+  ],
+  "failed_files": []
+}

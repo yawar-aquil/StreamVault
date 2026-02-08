@@ -1,0 +1,26 @@
+[
+  {
+    "id": "23e212fe-8829-4a53-9f08-b88310436134",
+    "key": "sv_2608cd3d218f4d76bd2cb82b5244064c91a9b9c6",
+    "name": "oo",
+    "userId": "b59fe60c-35c8-4689-b83a-feda335caa19",
+    "scope": "read-only",
+    "createdAt": "2026-01-22T11:40:39.910Z",
+    "requestsToday": 0,
+    "requestsThisMinute": 0,
+    "lastMinuteReset": "2026-01-22T11:40:39.910Z",
+    "lastDayReset": "2026-01-22T11:40:39.910Z"
+  },
+  {
+    "id": "b8f7d09f-8650-47bc-88d1-7da1b1b6b0a8",
+    "key": "sv_07ecbbd8cebc4efa977d993e930f5ffbb64d2b62",
+    "name": "test",
+    "userId": "0229a46c-2302-4909-93c5-c71f80db5538",
+    "scope": "read-only",
+    "createdAt": "2026-02-07T16:19:28.247Z",
+    "requestsToday": 0,
+    "requestsThisMinute": 0,
+    "lastMinuteReset": "2026-02-07T16:19:28.247Z",
+    "lastDayReset": "2026-02-07T16:19:28.247Z"
+  }
+]

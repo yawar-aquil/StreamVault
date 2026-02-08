@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <!-- Golden gradient -->
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700"/>
+      <stop offset="25%" style="stop-color:#FFF4B8"/>
+      <stop offset="50%" style="stop-color:#FFD700"/>
+      <stop offset="75%" style="stop-color:#B8860B"/>
+      <stop offset="100%" style="stop-color:#FFD700"/>
+      <animate attributeName="x1" values="0%;100%;0%" dur="3s" repeatCount="indefinite"/>
+      <animate attributeName="x2" values="100%;200%;100%" dur="3s" repeatCount="indefinite"/>
+    </linearGradient>
+    
+    <!-- Shimmer effect -->
+    <linearGradient id="shimmer" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:rgba(255,255,255,0)"/>
+      <stop offset="50%" style="stop-color:rgba(255,255,255,0.8)"/>
+      <stop offset="100%" style="stop-color:rgba(255,255,255,0)"/>
+      <animate attributeName="x1" values="-100%;100%" dur="2s" repeatCount="indefinite"/>
+      <animate attributeName="x2" values="0%;200%" dur="2s" repeatCount="indefinite"/>
+    </linearGradient>
+    
+    <!-- Shadow filter -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Text outline -->
+    <filter id="textShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="#B8860B" flood-opacity="0.8"/>
+    </filter>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="50" cy="50" r="45" fill="#1a1a2e" stroke="url(#goldGradient)" stroke-width="3">
+    <animate attributeName="stroke-width" values="3;4;3" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Inner glow ring -->
+  <circle cx="50" cy="50" r="38" fill="none" stroke="url(#goldGradient)" stroke-width="1" opacity="0.5">
+    <animate attributeName="opacity" values="0.3;0.7;0.3" dur="1.5s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Crown decoration at top -->
+  <path d="M35 28 L40 20 L45 26 L50 18 L55 26 L60 20 L65 28" 
+        fill="none" stroke="url(#goldGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+        filter="url(#glow)">
+    <animate attributeName="opacity" values="0.8;1;0.8" dur="1.5s" repeatCount="indefinite"/>
+  </path>
+  
+  <!-- VIP Text -->
+  <text x="50" y="58" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="26" font-weight="900"
+        fill="url(#goldGradient)" filter="url(#textShadow)">
+    VIP
+    <animate attributeName="opacity" values="0.9;1;0.9" dur="2s" repeatCount="indefinite"/>
+  </text>
+  
+  <!-- Shimmer overlay on text -->
+  <text x="50" y="58" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="26" font-weight="900"
+        fill="url(#shimmer)" opacity="0.6">
+    VIP
+  </text>
+  
+  <!-- Star decorations -->
+  <g fill="url(#goldGradient)" filter="url(#glow)">
+    <!-- Left star -->
+    <polygon points="25,50 27,48 29,50 27,52" opacity="0.8">
+      <animate attributeName="opacity" values="0.4;1;0.4" dur="1s" repeatCount="indefinite"/>
+    </polygon>
+    <!-- Right star -->
+    <polygon points="71,50 73,48 75,50 73,52" opacity="0.8">
+      <animate attributeName="opacity" values="0.4;1;0.4" dur="1s" repeatCount="indefinite" begin="0.5s"/>
+    </polygon>
+  </g>
+  
+  <!-- Bottom accent line -->
+  <path d="M30 72 Q50 78 70 72" fill="none" stroke="url(#goldGradient)" stroke-width="2" stroke-linecap="round">
+    <animate attributeName="stroke-width" values="1.5;2.5;1.5" dur="2s" repeatCount="indefinite"/>
+  </path>
+</svg>

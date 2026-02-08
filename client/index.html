@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <!-- Polyfill for Node.js globals required by simple-peer -->
+  <script>
+    if (typeof global === 'undefined') {
+      window.global = window;
+    }
+    if (typeof process === 'undefined') {
+      window.process = { env: {} };
+    }
+    if (typeof Buffer === 'undefined') {
+      window.Buffer = { isBuffer: () => false };
+    }
+  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="alternate icon" type="image/png" href="/favicon.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+  <!-- PWA Manifest -->
+
+  <meta name="theme-color" content="#e50914" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="StreamVault" />
+  <meta name="application-name" content="StreamVault" />
+
+  <!-- Google Search Console Verification -->
+  <meta name="google-site-verification" content="Qqtb-y2r9WUEH9HRz6S-AVovZxxe1M7QKph0joYkbUg" />
+  <meta name="google-site-verification" content="7lp4Jlf-gO0JM1axskNj-uzlz0SfCN7aGG_4aej-pok" />
+
+  <!-- Bing Webmaster Tools Verification -->
+  <meta name="msvalidate.01" content="4AD82870C99F53C4DEF0265B3AFE6EAB" />
+
+  <!-- Primary Meta Tags -->
+  <meta name="title" content="Free Movies Online | Watch TV Shows Free | HD Streaming">
+  <meta name="description"
+    content="Watch 200+ movies & TV shows free in HD. No registration required. Stream Hollywood, Bollywood & international content instantly on any device.">
+  <meta name="keywords"
+    content="free movies online, watch movies free, watch tv shows free, stream movies free, movies in hd, 4k movies online, movies without registration, hollywood movies online, bollywood movies free, free streaming without registration, netflix free alternative, best free streaming sites">
+  <title>Free Movies Online | Watch TV Shows Free | HD Streaming</title>
+  <meta name="author" content="StreamVault">
+  <meta name="robots" content="index, follow">
+
+  <!-- Open Graph / Facebook - Will be dynamically replaced for show pages -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://streamvault.live">
+  <meta property="og:title" content="Free Movies Online | Watch TV Shows Free | HD Streaming">
+  <meta property="og:description"
+    content="Watch 200+ movies & TV shows free in HD. No registration required. Stream Hollywood, Bollywood & international content instantly.">
+  <meta property="og:image" content="https://i.ibb.co/N2jssrLd/17e34644-29fb-4a5d-a2e8-e96bee27756f.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="StreamVault - Free Movies and TV Shows">
+  <meta property="og:image" content="https://i.ibb.co/dw7gjLzf/task-01kb2v4eqcfydrfp41r8p06enz-1764253581-img-1.webp">
+  <meta property="og:site_name" content="StreamVault">
+
+  <!-- Twitter - Will be dynamically replaced for show pages -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Free Movies Online | Watch TV Shows Free | HD Streaming">
+  <meta name="twitter:description"
+    content="Watch 200+ movies & TV shows free in HD. No registration. Stream Hollywood, Bollywood & international content on any device.">
+  <meta name="twitter:image" content="https://i.ibb.co/N2jssrLd/17e34644-29fb-4a5d-a2e8-e96bee27756f.png">
+
+  <!-- Google AdSense - TEMPORARILY DISABLED -->
+  <!--
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8845483795374352"
+     crossorigin="anonymous"></script>
+    -->
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- JW Player CDN -->
+  <script src="https://cdn.jwplayer.com/libraries/KB5zFt7A.js"></script>
+
+  <!-- Preload critical resources -->
+  <link rel="preload" as="style"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+
+  <!-- Structured Data (JSON-LD) for SEO -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "StreamVault",
+      "alternateName": "Free Movies Online | Watch TV Shows Free",
+      "url": "https://streamvault.live",
+      "description": "Watch 200+ movies & TV shows free in HD. No registration required. Stream Hollywood, Bollywood & international content instantly on any device.",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://streamvault.live/search?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "StreamVault",
+      "url": "https://streamvault.live",
+      "logo": "https://streamvault.live/favicon.svg",
+      "description": "Free streaming platform for movies and TV shows in HD quality",
+      "sameAs": []
+    }
+    </script>
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "StreamVault",
+      "url": "https://streamvault.live",
+      "applicationCategory": "EntertainmentApplication",
+      "operatingSystem": "Any",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.5",
+        "ratingCount": "1000",
+        "bestRating": "5",
+        "worstRating": "1"
+      }
+    }
+    </script>
+
+  <!-- JW Player Library for direct video playback -->
+  <script src="https://cdn.jwplayer.com/libraries/KB5zFt7A.js"></script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+
+
+
+  <!-- Disable right-click and DevTools shortcuts -->
+  <script>
+    // Disable right-click
+    document.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+    });
+
+    // Disable keyboard shortcuts for DevTools
+    document.addEventListener('keydown', function (e) {
+      if (e.keyCode === 123 || // F12
+        (e.ctrlKey && e.shiftKey && e.keyCode === 73) || // Ctrl+Shift+I
+        (e.ctrlKey && e.shiftKey && e.keyCode === 74) || // Ctrl+Shift+J
+        (e.ctrlKey && e.shiftKey && e.keyCode === 67) || // Ctrl+Shift+C
+        (e.ctrlKey && e.keyCode === 85)) { // Ctrl+U
+        e.preventDefault();
+        return false;
+      }
+    });
+
+    // DevTools detection using debugger - pauses page when DevTools are open
+    (function () {
+      function check() {
+        debugger;
+      }
+      setInterval(check, 1000);
+    })();
+  </script>
+
+  <!-- Adsterra Social Bar - TEMPORARILY DISABLED -->
+  <!--
+    <script
+      type="text/javascript"
+      src="https://pl28240125.effectivegatecpm.com/78/e6/28/78e628440ca4b8a24681f964e395cc22.js"
+    ></script>
+    -->
+
+  <!-- Adsterra Native Banner - ACTIVE 
+    <script
+      async="async"
+      data-cfasync="false"
+      src="https://pl28242823.effectivegatecpm.com/326e4e570b95e9b55f432cac93890441/invoke.js"
+    ></script>
+    -->
+
+  <!-- Adsterra Popunder - TEMPORARILY DISABLED -->
+  <!--
+    <script
+      type="text/javascript"
+      src="https://pl28243594.effectivegatecpm.com/66/31/27/6631276d2c5a866d3fe3cc6b12c94319.js"
+    ></script>
+    -->
+
+  <!-- Adsterra Anti-Adblock - TEMPORARILY DISABLED -->
+  <!--
+    <script
+      type="text/javascript"
+      src="https://packlenseavesdrop.com/66/31/27/6631276d2c5a866d3fe3cc6b12c94319.js"
+    ></script>
+    -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</body>
+
+</html>

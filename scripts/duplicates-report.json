@@ -1,0 +1,109 @@
+[
+  {
+    "title": "girl in the mirror",
+    "count": 2,
+    "shows": [
+      {
+        "id": "044d3699-dca1-42d2-8707-4ac3a64c6023",
+        "title": "Girl in the Mirror",
+        "slug": "girl-in-the-mirror",
+        "year": 2023,
+        "totalSeasons": 1
+      },
+      {
+        "id": "8d02cfe9-9e8b-4cac-bcd4-a792ddccc16b",
+        "title": "Girl in the Mirror",
+        "slug": "the-girl-in-the-mirror",
+        "year": 2023,
+        "totalSeasons": 1
+      }
+    ]
+  },
+  {
+    "title": "the tempest",
+    "count": 2,
+    "shows": [
+      {
+        "id": "2f4b9ba4-d054-4baf-b8d8-42ccd1892cec",
+        "title": "The Tempest",
+        "slug": "the-tempest",
+        "year": 2013,
+        "totalSeasons": 1
+      },
+      {
+        "id": "40185215-9208-4651-907e-c861f3fbdbd7",
+        "title": "The Tempest",
+        "slug": "tempest",
+        "year": 2013,
+        "totalSeasons": 1
+      }
+    ]
+  },
+  {
+    "title": "hound's hill",
+    "count": 3,
+    "shows": [
+      {
+        "id": "bb4364e1-33bc-4a3d-b222-0c3196c57b95",
+        "title": "Hound's Hill",
+        "slug": "hounds-hill",
+        "year": 2025,
+        "totalSeasons": 1
+      },
+      {
+        "id": "c24df350-3ec6-477e-9142-656f22851a39",
+        "title": "Hound's Hill",
+        "slug": "hound-hills",
+        "year": 2025,
+        "totalSeasons": 1
+      },
+      {
+        "id": "14b4f364-3a12-4d97-9600-d9f224b69502",
+        "title": "Hound's Hill",
+        "slug": "hounds-hill",
+        "year": 2025,
+        "totalSeasons": 1
+      }
+    ]
+  },
+  {
+    "title": "good morning, verônica",
+    "count": 2,
+    "shows": [
+      {
+        "id": "268c5ba6-f13a-43c3-963b-469cb813e574",
+        "title": "Good Morning, Verônica",
+        "slug": "good-morning-veronica",
+        "year": 2020,
+        "totalSeasons": 3
+      },
+      {
+        "id": "8d4e5787-288a-43a8-b321-1eea47d67f3e",
+        "title": "Good Morning, Verônica",
+        "slug": "good-morning-vernica",
+        "year": 2020,
+        "totalSeasons": 3
+      }
+    ]
+  },
+  {
+    "title": "locke & key",
+    "count": 2,
+    "shows": [
+      {
+        "id": "31d0b5c5-b314-4940-9dcd-0bd4916c8fcc",
+        "title": "Locke & Key",
+        "slug": "locke-key",
+        "year": 2020,
+        "totalSeasons": 3
+      },
+      {
+        "id": "02acf954-7ae6-4904-b283-e26390e92a19",
+        "title": "Locke & Key",
+        "slug": "locke-key",
+        "year": 2020,
+        "totalSeasons": 3
+      }
+    ]
+  }
+]

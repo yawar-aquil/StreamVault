@@ -1,0 +1,141 @@
+{
+  "showSlug": "lupin",
+  "episodes": [
+    {
+      "title": "Episode 1",
+      "episodeNumber": 1,
+      "seasonNumber": 1,
+      "description": "Episode 1",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/16wv-Ubd_n_Nlm3WqOHvsScSE12ijxIxG/preview"
+    },
+    {
+      "title": "Episode 2",
+      "episodeNumber": 2,
+      "seasonNumber": 1,
+      "description": "Episode 2",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1MgtNau_TyMy87ZaJ0P_rx-oAhco_ecXB/preview"
+    },
+    {
+      "title": "Episode 3",
+      "episodeNumber": 3,
+      "seasonNumber": 1,
+      "description": "Episode 3",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1qudoK4M3bkCHHmp-_dxz4-_gJ5Npgu31/preview"
+    },
+    {
+      "title": "Episode 4",
+      "episodeNumber": 4,
+      "seasonNumber": 1,
+      "description": "Episode 4",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1i695W8HE4lrQT8-xPrazvQFDMvBLiR_I/preview"
+    },
+    {
+      "title": "Episode 5",
+      "episodeNumber": 5,
+      "seasonNumber": 1,
+      "description": "Episode 5",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1FnWvjGjTJvTTmbO0IiZmsK2dl04u1u1E/preview"
+    },
+    {
+      "title": "Episode 1",
+      "episodeNumber": 1,
+      "seasonNumber": 2,
+      "description": "Episode 1",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1kGfe5Rn_HnU4GXYMyHbHuuvm1qFiiui6/preview"
+    },
+    {
+      "title": "Episode 2",
+      "episodeNumber": 2,
+      "seasonNumber": 2,
+      "description": "Episode 2",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1ExwGVpq2KbN0RE92t3YgsHSnaSNPZDbI/preview"
+    },
+    {
+      "title": "Episode 3",
+      "episodeNumber": 3,
+      "seasonNumber": 2,
+      "description": "Episode 3",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1hkp9OPDQc4VqS7_UndxQ3KtH5tbY4OKN/preview"
+    },
+    {
+      "title": "Episode 4",
+      "episodeNumber": 4,
+      "seasonNumber": 2,
+      "description": "Episode 4",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/10A8COodU2uYq4amkuQbWfyidkeNxqEEk/preview"
+    },
+    {
+      "title": "Episode 5",
+      "episodeNumber": 5,
+      "seasonNumber": 2,
+      "description": "Episode 5",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1GVS0clNfUpCeCwTO_1FG6fQZ-kzNOWYA/preview"
+    },
+    {
+      "title": "Episode 1",
+      "episodeNumber": 1,
+      "seasonNumber": 3,
+      "description": "Episode 1",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1FXuzJHjaN1TBDC_DUMlOkkjh6bUSa-Xg/preview"
+    },
+    {
+      "title": "Episode 2",
+      "episodeNumber": 2,
+      "seasonNumber": 3,
+      "description": "Episode 2",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1hqw0kMT1xaO6ycqlrgX2vgXqfPyN2JMo/preview"
+    },
+    {
+      "title": "Episode 3",
+      "episodeNumber": 3,
+      "seasonNumber": 3,
+      "description": "Episode 3",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1_XUKUmAFYOupeEKYN4jyRQ5XIFSGl-ao/preview"
+    },
+    {
+      "title": "Episode 4",
+      "episodeNumber": 4,
+      "seasonNumber": 3,
+      "description": "Episode 4",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/18oz7E6ucw9OGFRsZduOS2Z3Be_I5vUZh/preview"
+    },
+    {
+      "title": "Episode 5",
+      "episodeNumber": 5,
+      "seasonNumber": 3,
+      "description": "Episode 5",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1eNZKvg9dCcDzbzqIK05aYrVtDMNdLliQ/preview"
+    },
+    {
+      "title": "Episode 6",
+      "episodeNumber": 6,
+      "seasonNumber": 3,
+      "description": "Episode 6",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1IqMq4frhP-_H7X9xK90nh1nwgHikHnmw/preview"
+    },
+    {
+      "title": "Episode 7",
+      "episodeNumber": 7,
+      "seasonNumber": 3,
+      "description": "Episode 7",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/19qBNtuSFAK1zTx5Wdjbtb0Z5tKN4ADRw/preview"
+    }
+  ]
+}

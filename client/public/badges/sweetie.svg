@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -12 48 48" fill="none">
+  <defs>
+    <filter id="neon-glow" x="-200%" y="-200%" width="500%" height="500%">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="heartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff00cc" />
+      <stop offset="100%" stop-color="#333399" />
+    </linearGradient>
+  </defs>
+  
+  <g filter="url(#neon-glow)" transform="scale(1.6)" transform-origin="12 12">
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" 
+          fill="#ff4d4d" stroke="#ffcccc" stroke-width="1.5">
+          <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite" />
+          <animate attributeName="stroke-width" values="1;2;1" dur="2s" repeatCount="indefinite" />
+    </path>
+  </g>
+</svg>

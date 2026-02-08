@@ -1,0 +1,21 @@
+{
+  "showSlug": "queenmaker",
+  "episodes": [
+    {
+      "title": "Episode 9",
+      "episodeNumber": 9,
+      "seasonNumber": 1,
+      "description": "Episode 9",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/17a3YM8Dbx2ZdgTJHxSkwcKYiqa-RYEXP/preview"
+    },
+    {
+      "title": "Episode 10",
+      "episodeNumber": 10,
+      "seasonNumber": 1,
+      "description": "Episode 10",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1vk1mPqa4F_j8rm86Z6-aa8KL0UEM5_dB/preview"
+    }
+  ]
+}

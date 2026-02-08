@@ -1,0 +1,77 @@
+{
+  "showSlug": "the-helicopter-heist",
+  "episodes": [
+    {
+      "title": "Episode 1",
+      "episodeNumber": 1,
+      "seasonNumber": 1,
+      "description": "Episode 1",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1F7EQ-L4EgE1lmsBcDVxr3QkZRfjALYvh/preview"
+    },
+    {
+      "title": "Episode 2",
+      "episodeNumber": 2,
+      "seasonNumber": 1,
+      "description": "Episode 2",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1vwomXq6VVDb-6hxV1SYryu9zz_Kwrdzq/preview"
+    },
+    {
+      "title": "Episode 3",
+      "episodeNumber": 3,
+      "seasonNumber": 1,
+      "description": "Episode 3",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1UedZMZ3DXK7Ih0WZ4n1T-AidAYcr20DV/preview"
+    },
+    {
+      "title": "Episode 4",
+      "episodeNumber": 4,
+      "seasonNumber": 1,
+      "description": "Episode 4",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1RJHSnaU8lRh75CGQvHU-2nIzPGfFCY9z/preview"
+    },
+    {
+      "title": "Episode 5",
+      "episodeNumber": 5,
+      "seasonNumber": 1,
+      "description": "Episode 5",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1AseKRy7TCiOL_uELk8xp8AVbE_-wj-UV/preview"
+    },
+    {
+      "title": "Episode 6",
+      "episodeNumber": 6,
+      "seasonNumber": 1,
+      "description": "Episode 6",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/123a1cKC8tvE5rUgrY8fJrT9OXinJqhG7/preview"
+    },
+    {
+      "title": "Episode 7",
+      "episodeNumber": 7,
+      "seasonNumber": 1,
+      "description": "Episode 7",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1Fc4h5tloC-dMcmNsKJ_allhDj9DfhXij/preview"
+    },
+    {
+      "title": "Episode 8",
+      "episodeNumber": 8,
+      "seasonNumber": 1,
+      "description": "Episode 8",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1Dz-P8kZVdFFqXpvZulkYrtjAWgxwExPO/preview"
+    },
+    {
+      "title": "Episode 32",
+      "episodeNumber": 32,
+      "seasonNumber": 2,
+      "description": "Episode 32",
+      "duration": 45,
+      "videoUrl": "https://drive.google.com/file/d/1fLuVVLQbv6MuKHonZlAP9txOLgBVqdyF/preview"
+    }
+  ]
+}

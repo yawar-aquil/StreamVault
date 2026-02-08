@@ -1,0 +1,147 @@
+{
+  "matches": [
+    {
+      "extracted": "Almost Human",
+      "streamvault": "Almost Human",
+      "id": "c55da124-926a-4881-a10b-3c073580aafe"
+    },
+    {
+      "extracted": "As You Stood By Tv Series",
+      "streamvault": "You",
+      "id": "5b5fa8fb-2cca-4b8c-9d2f-269483ac0007"
+    },
+    {
+      "extracted": "Black Knight Tv Series Online English Dubbed",
+      "streamvault": "Black Knight",
+      "id": "b25349f9-8fb9-4c45-8278-7162e6719862"
+    },
+    {
+      "extracted": "Black Out Tv Series Online English Dubbed",
+      "streamvault": "Black Out",
+      "id": "91c76664-ef36-4887-82b0-8fc51a084d8f"
+    },
+    {
+      "extracted": "Bunheads Tv Series",
+      "streamvault": "Bunheads",
+      "id": "5e3e58cf-bf90-483c-844b-17d4ae9d43d0"
+    },
+    {
+      "extracted": "Confidence Queen Tv Series Online English Dubbed",
+      "streamvault": "Confidence Queen",
+      "id": "2688ad18-bbfc-4c4d-9b9f-524c4b0c0bae"
+    },
+    {
+      "extracted": "Dark Matter 2024 Tv Series",
+      "streamvault": "Dark",
+      "id": "cd1adee4-a3f1-4385-8711-d7e9d5b803d3"
+    },
+    {
+      "extracted": "Fatal Attraction Tv Series",
+      "streamvault": "Fatal Attraction",
+      "id": "a885802f-849d-49e3-a163-549e07077107"
+    },
+    {
+      "extracted": "Fellow Travelers Tv Series",
+      "streamvault": "Travelers",
+      "id": "3643a96d-9411-46b4-a4a3-31be0843b3e7"
+    },
+    {
+      "extracted": "Forever",
+      "streamvault": "Forever",
+      "id": "bc60e674-57a3-4f31-ad28-50c6034b6c08"
+    },
+    {
+      "extracted": "Generation Tv Series",
+      "streamvault": "Generation Z",
+      "id": "da4cdd04-a036-4c6e-9793-3d71a44a6b71"
+    },
+    {
+      "extracted": "Good Behavior Tv Series",
+      "streamvault": "Good Behavior",
+      "id": "27faef30-0c42-4ad7-b125-f5f5364e0674"
+    },
+    {
+      "extracted": "Kin Tv Series",
+      "streamvault": "Breaking Bad",
+      "id": "e2e3bcd6-f766-400c-a4ea-eef1885b6f04"
+    },
+    {
+      "extracted": "Lazarus Tv Series",
+      "streamvault": "Lazarus",
+      "id": "616ab9d7-6826-4ffc-b3ae-f84f36d621ce"
+    },
+    {
+      "extracted": "Little Birds Tv Series",
+      "streamvault": "Little Birds",
+      "id": "76569e23-17da-4e3f-9fb7-3ed0c36d2fd2"
+    },
+    {
+      "extracted": "Now Apocalypse Tv Series",
+      "streamvault": "Now Apocalypse",
+      "id": "ddcd2cdd-5bd8-43d5-9afa-c511b62946e8"
+    },
+    {
+      "extracted": "Obsession Tv Series",
+      "streamvault": "Obsession",
+      "id": "8a9844ce-8961-48fd-9e71-673f84e56552"
+    },
+    {
+      "extracted": "Rome Tv Series",
+      "streamvault": "Rome",
+      "id": "e73aa81b-5a7c-44c0-a448-d711f1668305"
+    },
+    {
+      "extracted": "The Asset Tv Series",
+      "streamvault": "The Asset",
+      "id": "12294002-8227-42ef-abf8-65c2a7f9df96"
+    },
+    {
+      "extracted": "The Hunting Wives Tv Series",
+      "streamvault": "The Hunting Wives",
+      "id": "0af54a10-8f04-4ca8-98a2-e92a6bfb8b28"
+    },
+    {
+      "extracted": "The L Word Generation Q Tv Series",
+      "streamvault": "The L Word",
+      "id": "3ba6270e-e8de-4556-a569-21b5c0667e65"
+    },
+    {
+      "extracted": "The Last Of Us Tv Series",
+      "streamvault": "The Last of Us",
+      "id": "1fada4d3-8801-4aed-8307-176a3f3a0968"
+    },
+    {
+      "extracted": "Vienna Blood Tv Series",
+      "streamvault": "Vienna Blood",
+      "id": "1fa8dac3-dde1-4be1-b57e-08e373b2f2fe"
+    },
+    {
+      "extracted": "Wayward Tv Series",
+      "streamvault": "Wayward Pines",
+      "id": "b6053615-0ad9-4925-977a-7874b56a42b6"
+    },
+    {
+      "extracted": "Wynonna Earp Tv Series",
+      "streamvault": "Wynonna Earp",
+      "id": "0c60c076-c805-4603-9948-7d6b94ffdd3c"
+    }
+  ],
+  "new_shows": [
+    "Absentia Tv Series",
+    "Dangerous Liaisons Tv Series",
+    "Dexter Tv Series",
+    "Etoile Tv Series Online English Dubbed",
+    "Lip Service Tv Series",
+    "Tales Of The City Tv Series",
+    "The Cleaning Lady",
+    "The Flash",
+    "The Monster Of Florence Tv Series",
+    "The Patient Tv Series",
+    "Wentworth Tv Series"
+  ],
+  "summary": {
+    "total_extracted": 36,
+    "already_in_streamvault": 25,
+    "new_shows": 11
+  }
+}

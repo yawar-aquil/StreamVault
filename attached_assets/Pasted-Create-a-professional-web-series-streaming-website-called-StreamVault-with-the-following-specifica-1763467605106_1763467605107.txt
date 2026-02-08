@@ -1,0 +1,600 @@
+Create a professional web series streaming website called "StreamVault" with the following specifications:
+
+═══════════════════════════════════════════════════════════════
+
+WEBSITE NAME & BRANDING:
+- Site Name: StreamVault
+- Tagline: "Your Premium Web Series Destination"
+- Logo: Modern, minimalist logo with play button icon integrated
+
+═══════════════════════════════════════════════════════════════
+
+DESIGN SYSTEM - NETFLIX-INSPIRED UI:
+
+COLOR SCHEME:
+Light Mode:
+- Primary Background: #FFFFFF (Pure White)
+- Secondary Background: #F5F5F5 (Light Gray)
+- Card Background: #FFFFFF with subtle shadow
+- Text Primary: #141414 (Netflix Dark)
+- Text Secondary: #666666
+- Accent/CTA Color: #E50914 (Netflix Red)
+- Hover State: #B20710 (Darker Red)
+
+Dark Mode (Default):
+- Primary Background: #141414 (Netflix Black)
+- Secondary Background: #1F1F1F
+- Card Background: #2F2F2F
+- Text Primary: #FFFFFF
+- Text Secondary: #B3B3B3
+- Accent/CTA Color: #E50914
+- Hover State: #B20710
+
+TYPOGRAPHY:
+- Primary Font: 'Inter', 'Helvetica Neue', sans-serif
+- Headings: 600-700 weight
+- Body Text: 400-500 weight
+- Font Sizes: 
+  - Hero Title: 48-56px
+  - Section Headers: 24-32px
+  - Card Titles: 16-18px
+  - Body: 14-16px
+
+═══════════════════════════════════════════════════════════════
+
+LAYOUT & STRUCTURE:
+
+HEADER/NAVIGATION:
+- Sticky header with blur effect on scroll
+- Left: StreamVault logo (clickable to home)
+- Center: Navigation menu
+  * Home
+  * Web Series
+  * Movies
+  * Trending
+  * Categories (dropdown)
+- Right: 
+  * Search icon (expands to search bar)
+  * Theme toggle (Light/Dark mode)
+  * User profile icon
+
+HOMEPAGE SECTIONS:
+
+1. HERO BANNER (Full-screen slider):
+   - Auto-playing carousel (4-5 featured shows)
+   - Large background poster image with gradient overlay
+   - Show title, description (2-3 lines), IMDb rating, year, genre tags
+   - Two CTA buttons: "▶ Play Now" (primary) and "ℹ More Info" (secondary)
+   - Navigation dots and arrow controls
+   - Auto-advance every 5 seconds with smooth transitions
+
+2. TRENDING NOW:
+   - Horizontal scrollable row
+   - 6-8 items visible at once
+   - Smooth scroll with arrow navigation
+   - Card design: Thumbnail with title overlay on hover
+   - Hover effect: Scale up (1.05x) with shadow
+
+3. CONTINUE WATCHING:
+   - Similar horizontal scroll layout
+   - Progress bar on thumbnails showing watch progress
+   - "Remove" option on hover
+
+4. CATEGORIES (Multiple rows):
+   - Action & Thriller
+   - Drama & Romance
+   - Comedy
+   - Horror & Mystery
+   - International
+   - New Releases
+   Each with horizontal scrollable content grid
+
+5. RECENTLY ADDED:
+   - 3-column grid layout (desktop)
+   - Card with thumbnail, title, release date, duration
+
+6. TOP PICKS FOR YOU:
+   - Algorithm-style recommendation section
+   - 4-column grid with rating badges
+
+═══════════════════════════════════════════════════════════════
+
+INDIVIDUAL SHOW/SERIES PAGE:
+
+HERO SECTION:
+- Full-width background banner (blurred poster)
+- Left side: Vertical poster image
+- Right side:
+  * Title (large, bold)
+  * Metadata: Year | Rating | Seasons | Language
+  * Genre tags (clickable chips)
+  * IMDb rating with star icon
+  * Description (3-4 lines)
+  * CTA buttons: "▶ Play Episode 1" and "+ Add to Watchlist"
+
+TABS SECTION:
+- Episodes
+- About
+- Cast & Crew
+- Similar Shows
+
+EPISODES TAB:
+- Season selector dropdown
+- Episode grid/list:
+  * Episode thumbnail (16:9)
+  * Episode number and title
+  * Duration and air date
+  * Short description
+  * Play button overlay on hover
+
+═══════════════════════════════════════════════════════════════
+
+VIDEO PLAYER INTEGRATION:
+
+GOOGLE DRIVE EMBED SETUP:
+- Full-screen responsive video player
+- Custom controls overlay:
+  * Play/Pause button
+  * Progress bar with preview thumbnails on hover
+  * Volume control
+  * Quality selector (Auto, 1080p, 720p, 480p)
+  * Subtitles toggle
+  * Fullscreen button
+  * Next Episode button (auto-show at video end)
+  * 10-second skip forward/backward buttons
+
+EMBED CODE STRUCTURE:
+<div class="video-container"> <iframe src="https://drive.google.com/file/d/[FILE_ID]/preview" width="100%" height="100%" allow="autoplay; fullscreen" allowfullscreen> </iframe> </div> ```
+VIDEO PAGE FEATURES:
+
+Up Next sidebar (3-4 upcoming episodes)
+
+Auto-play next episode (with 10-second countdown)
+
+Comments section (optional, can disable)
+
+Share buttons (WhatsApp, Facebook, Twitter, Copy Link)
+
+═══════════════════════════════════════════════════════════════
+
+GOOGLE ADSENSE INTEGRATION:
+
+AD PLACEMENTS (Strategic, non-intrusive):
+
+Homepage Ads:
+
+Top banner ad (728x90 Leaderboard) below header
+
+Sidebar ad (300x250 Medium Rectangle) after 2nd category row
+
+In-feed native ads between category rows (every 3rd row)
+
+Bottom sticky ad (responsive)
+
+Video Page Ads:
+
+Pre-roll video ad (before content starts)
+
+Mid-roll ad breaks (every 15 minutes for long content)
+
+Sidebar display ad (300x600 Half Page)
+
+Below video ad (responsive)
+
+Between episode recommendations
+
+Ad Implementation Code Areas:
+
+text
+<!-- Header Ad -->
+<div class="ad-container ad-header">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+  <ins class="adsbygoogle"
+       data-ad-client="ca-pub-XXXXXXXX"
+       data-ad-slot="XXXXXXXXX"
+       data-ad-format="auto"></ins>
+</div>
+
+<!-- Video Pre-roll Ad -->
+<div id="video-ad-container"></div>
+AD BEST PRACTICES:
+
+Lazy loading for ads (load when in viewport)
+
+Non-blocking ad scripts
+
+Clear "Advertisement" labels
+
+Skip button on video ads after 5 seconds
+
+Responsive ad units for mobile
+
+Ad refresh on page navigation
+
+═══════════════════════════════════════════════════════════════
+
+SEARCH FUNCTIONALITY:
+
+SEARCH BAR FEATURES:
+
+Real-time search suggestions (auto-complete)
+
+Search by: Title, Genre, Actor, Director, Year
+
+Recent searches memory
+
+Popular searches suggestions
+
+Voice search icon (bonus feature)
+
+SEARCH RESULTS PAGE:
+
+Grid layout (4 columns desktop, 2 mobile)
+
+Filter sidebar:
+
+Genre checkboxes
+
+Year range slider
+
+IMDb rating filter
+
+Sort by: Relevance, Latest, Rating, A-Z
+
+"No results" page with suggestions
+
+═══════════════════════════════════════════════════════════════
+
+RESPONSIVE DESIGN:
+
+BREAKPOINTS:
+
+Desktop: 1200px+
+
+Laptop: 992px - 1199px
+
+Tablet: 768px - 991px
+
+Mobile: 320px - 767px
+
+MOBILE OPTIMIZATIONS:
+
+Hamburger menu for navigation
+
+Single column layout
+
+Touch-optimized buttons (48px minimum)
+
+Swipe gestures for carousels
+
+Bottom navigation bar (Home, Search, Library, Profile)
+
+Reduced animation for performance
+
+Mobile-first ad formats
+
+═══════════════════════════════════════════════════════════════
+
+INTERACTIVE ELEMENTS:
+
+ANIMATIONS & TRANSITIONS:
+
+Smooth scroll behavior
+
+Card hover effects (scale, shadow, brightness)
+
+Page transitions (fade in)
+
+Skeleton loading screens
+
+Progress indicators
+
+Micro-interactions on buttons
+
+HOVER STATES:
+
+Show cards: Scale to 1.05, show metadata overlay
+
+Buttons: Color change, slight lift shadow
+
+Navigation links: Underline animation
+
+Thumbnails: Brightness increase, play icon appears
+
+═══════════════════════════════════════════════════════════════
+
+FOOTER:
+
+STRUCTURE:
+
+4-column layout
+
+Column 1 - Quick Links:
+
+About Us
+
+Contact
+
+Terms of Service
+
+Privacy Policy
+
+DMCA
+
+Column 2 - Categories:
+
+Action
+
+Drama
+
+Comedy
+
+Thriller
+
+Romance
+
+Column 3 - Support:
+
+Help Center
+
+FAQs
+
+Report Issue
+
+Request Content
+
+Column 4 - Social & Newsletter:
+
+Social media icons (Facebook, Instagram, Twitter, Telegram)
+
+Newsletter signup form
+
+App download badges (future)
+
+Bottom bar:
+
+Copyright text
+
+Payment methods icons (if premium)
+
+Language selector
+
+═══════════════════════════════════════════════════════════════
+
+PERFORMANCE OPTIMIZATION:
+
+SPEED ENHANCEMENTS:
+
+Lazy loading for images (load on scroll)
+
+Compressed images (WebP format)
+
+Minified CSS/JS
+
+CDN integration for assets
+
+Browser caching headers
+
+Defer non-critical JavaScript
+
+Optimize Google Drive embed loading
+
+IMAGE SPECIFICATIONS:
+
+Thumbnails: 500x750px (portrait), 1280x720px (landscape)
+
+Hero banners: 1920x800px
+
+Posters: 600x900px
+
+Optimize to under 200KB each
+
+═══════════════════════════════════════════════════════════════
+
+SEO OPTIMIZATION:
+
+META TAGS (Per Page):
+
+text
+<title>Watch [Show Name] - StreamVault | HD Web Series Online</title>
+<meta name="description" content="Watch [Show Name] in HD quality. Stream all episodes of [Show Name] online for free on StreamVault.">
+<meta name="keywords" content="[show name], watch online, web series, streaming, HD">
+<meta property="og:title" content="[Show Name] - StreamVault">
+<meta property="og:image" content="[thumbnail URL]">
+<meta property="og:description" content="[show description]">
+<meta name="twitter:card" content="summary_large_image">
+STRUCTURED DATA (Schema.org):
+
+text
+{
+  "@context": "https://schema.org",
+  "@type": "WebSeries",
+  "name": "[Show Name]",
+  "description": "[Description]",
+  "image": "[Poster URL]",
+  "genre": ["Action", "Drama"],
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "8.5",
+    "ratingCount": "1234"
+  }
+}
+URL STRUCTURE:
+
+Homepage: streamvault.com
+
+Category: streamvault.com/category/action
+
+Series: streamvault.com/series/show-name
+
+Episode: streamvault.com/watch/show-name-s01e01
+
+SITEMAP & ROBOTS:
+
+Auto-generate XML sitemap
+
+Robots.txt optimization
+
+Canonical URLs to prevent duplicates
+
+═══════════════════════════════════════════════════════════════
+
+ADDITIONAL FEATURES:
+
+USER FEATURES:
+
+Watchlist/Favorites (localStorage based)
+
+Continue watching progress tracking
+
+Recently viewed history
+
+Light/Dark mode preference saved
+
+Playback speed control (0.5x to 2x)
+
+ADMIN FEATURES (Basic):
+
+Add new show form
+
+Upload Drive link interface
+
+Category management
+
+Featured content selector
+
+ACCESSIBILITY:
+
+ARIA labels for screen readers
+
+Keyboard navigation support
+
+High contrast mode option
+
+Text size adjustment
+
+Focus indicators
+
+SECURITY:
+
+HTTPS enforcement
+
+Content Security Policy headers
+
+XSS protection
+
+Referrer policy
+
+Drive link obfuscation (basic)
+
+═══════════════════════════════════════════════════════════════
+
+TECHNICAL STACK PREFERENCE:
+
+FRONTEND:
+
+HTML5 semantic markup
+
+CSS3 (Flexbox & Grid)
+
+Vanilla JavaScript or lightweight framework
+
+No heavy dependencies
+
+OPTIONAL ENHANCEMENTS:
+
+Service Worker for offline capability
+
+PWA features (Add to Home Screen)
+
+Push notifications for new episodes
+
+Multi-language support (i18n)
+
+═══════════════════════════════════════════════════════════════
+
+BUILD REQUIREMENTS:
+
+DELIVERABLES:
+
+Fully functional single-page application
+
+Clean, commented code
+
+Mobile-responsive design
+
+Google AdSense integration points ready
+
+Google Drive video embed working
+
+SEO-optimized structure
+
+Loading states and error handling
+
+Cross-browser compatible (Chrome, Firefox, Safari, Edge)
+
+STYLE GUIDELINES:
+
+Modern, clean aesthetic
+
+Netflix-inspired but unique
+
+Professional typography
+
+Consistent spacing (8px grid system)
+
+Smooth animations (300ms duration)
+
+Accessible color contrasts (WCAG AA compliant)
+
+═══════════════════════════════════════════════════════════════
+
+TESTING CHECKLIST:
+✓ All pages load without errors
+✓ Videos play correctly from Google Drive
+✓ Responsive on all device sizes
+✓ Theme toggle works perfectly
+✓ Search returns accurate results
+✓ Navigation is intuitive
+✓ Ads load without breaking layout
+✓ Page load time under 3 seconds
+✓ No console errors
+✓ Forms validate properly
+
+═══════════════════════════════════════════════════════════════
+
+text
+
+***
+
+## 🎯 Alternative SEO-Optimized Names (Choose One):
+
+1. **StreamVault** - Premium, secure feeling
+2. **FlixHub** - Modern, Netflix-inspired
+3. **WatchNest** - Cozy, home entertainment
+4. **ViewSphere** - Professional, comprehensive
+5. **CineStream** - Classic, movie-focused
+6. **MediaMingle** - Social, engaging
+7. **ReelRush** - Fast, exciting content
+8. **StreamSavvy** - Smart, curated experience
+9. **FlickFusion** - Diverse content mix
+10. **WatchWave** - Trending, modern
+
+**SEO Keyword Strategy:**
+- Primary: "watch web series online free"
+- Secondary: "hindi web series streaming", "latest web series", "free streaming site"
+- Long-tail: "watch [series name] all episodes online free"
+
+***
+
+## 💡 Additional Tips for Windsurf:
+
+1. **Ask Windsurf to prioritize**: Mobile responsiveness first
+2. **Request**: Placeholder content initially, then you'll replace with real data
+3. **Specify**: Clean code with comments for easy customization
+4. **Mention**: Make ad containers clearly marked for easy AdSense code insertion
+5. **Request**: A simple admin panel interface for adding new content
+
+***
+
+This prompt gives Windsurf everything needed to create a professional, SEO-optimized streaming website that looks like Netflix, integrates Google Drive videos seamlessly, and has strategic AdSense placement for monetization. The design will be clean, modern, and ready for scaling!

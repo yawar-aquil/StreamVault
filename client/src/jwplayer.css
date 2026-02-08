@@ -1,0 +1,26 @@
+/* JW Player Red Skin (Netflix Style) */
+.jwplayer .jw-progress {
+    background-color: #e50914 !important;
+}
+
+.jwplayer .jw-knob {
+    background-color: #e50914 !important;
+    border-color: #e50914 !important;
+}
+
+.jwplayer .jw-rail {
+    background-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.jwplayer .jw-buffer {
+    background-color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.jwplayer .jw-color-active {
+    color: #e50914 !important;
+}
+
+.jwplayer .jw-icon-display:hover,
+.jwplayer .jw-icon-bar:hover {
+    color: #e50914 !important;
+}

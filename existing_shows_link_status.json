@@ -1,0 +1,176 @@
+{
+  "shows_with_links": [
+    {
+      "name": "You",
+      "extracted_name": "As You Stood By Tv Series",
+      "id": "5b5fa8fb-2cca-4b8c-9d2f-269483ac0007",
+      "streamvault_episodes": 50,
+      "extracted_episodes": 6
+    },
+    {
+      "name": "Fatal Attraction",
+      "extracted_name": "Fatal Attraction Tv Series",
+      "id": "a885802f-849d-49e3-a163-549e07077107",
+      "streamvault_episodes": 8,
+      "extracted_episodes": 8
+    },
+    {
+      "name": "Travelers",
+      "extracted_name": "Fellow Travelers Tv Series",
+      "id": "3643a96d-9411-46b4-a4a3-31be0843b3e7",
+      "streamvault_episodes": 34,
+      "extracted_episodes": 8
+    },
+    {
+      "name": "Generation Z",
+      "extracted_name": "Generation Tv Series",
+      "id": "da4cdd04-a036-4c6e-9793-3d71a44a6b71",
+      "streamvault_episodes": 7,
+      "extracted_episodes": 16
+    },
+    {
+      "name": "Breaking Bad",
+      "extracted_name": "Kin Tv Series",
+      "id": "e2e3bcd6-f766-400c-a4ea-eef1885b6f04",
+      "streamvault_episodes": 62,
+      "extracted_episodes": 16
+    },
+    {
+      "name": "Now Apocalypse",
+      "extracted_name": "Now Apocalypse Tv Series",
+      "id": "ddcd2cdd-5bd8-43d5-9afa-c511b62946e8",
+      "streamvault_episodes": 10,
+      "extracted_episodes": 9
+    },
+    {
+      "name": "The Asset",
+      "extracted_name": "The Asset Tv Series",
+      "id": "12294002-8227-42ef-abf8-65c2a7f9df96",
+      "streamvault_episodes": 6,
+      "extracted_episodes": 6
+    },
+    {
+      "name": "The Hunting Wives",
+      "extracted_name": "The Hunting Wives Tv Series",
+      "id": "0af54a10-8f04-4ca8-98a2-e92a6bfb8b28",
+      "streamvault_episodes": 8,
+      "extracted_episodes": 8
+    },
+    {
+      "name": "The L Word",
+      "extracted_name": "The L Word Generation Q Tv Series",
+      "id": "3ba6270e-e8de-4556-a569-21b5c0667e65",
+      "streamvault_episodes": 71,
+      "extracted_episodes": 28
+    },
+    {
+      "name": "The Last of Us",
+      "extracted_name": "The Last Of Us Tv Series",
+      "id": "1fada4d3-8801-4aed-8307-176a3f3a0968",
+      "streamvault_episodes": 16,
+      "extracted_episodes": 14
+    },
+    {
+      "name": "Vienna Blood",
+      "extracted_name": "Vienna Blood Tv Series",
+      "id": "1fa8dac3-dde1-4be1-b57e-08e373b2f2fe",
+      "streamvault_episodes": 11,
+      "extracted_episodes": 11
+    },
+    {
+      "name": "Wayward Pines",
+      "extracted_name": "Wayward Tv Series",
+      "id": "b6053615-0ad9-4925-977a-7874b56a42b6",
+      "streamvault_episodes": 8,
+      "extracted_episodes": 7
+    },
+    {
+      "name": "Wynonna Earp",
+      "extracted_name": "Wynonna Earp Tv Series",
+      "id": "0c60c076-c805-4603-9948-7d6b94ffdd3c",
+      "streamvault_episodes": 49,
+      "extracted_episodes": 49
+    }
+  ],
+  "shows_with_placeholders": [
+    {
+      "name": "Dark",
+      "extracted_name": "Dark Matter 2024 Tv Series",
+      "id": "cd1adee4-a3f1-4385-8711-d7e9d5b803d3",
+      "streamvault_episodes": 14,
+      "extracted_episodes": 9,
+      "has_some_real": false,
+      "has_some_placeholders": true
+    },
+    {
+      "name": "Obsession",
+      "extracted_name": "Obsession Tv Series",
+      "id": "8a9844ce-8961-48fd-9e71-673f84e56552",
+      "streamvault_episodes": 4,
+      "extracted_episodes": 4,
+      "has_some_real": true,
+      "has_some_placeholders": true
+    },
+    {
+      "name": "Rome",
+      "extracted_name": "Rome Tv Series",
+      "id": "e73aa81b-5a7c-44c0-a448-d711f1668305",
+      "streamvault_episodes": 22,
+      "extracted_episodes": 22,
+      "has_some_real": true,
+      "has_some_placeholders": true
+    }
+  ],
+  "shows_no_episodes": [
+    {
+      "name": "Almost Human",
+      "extracted_name": "Almost Human",
+      "id": "c55da124-926a-4881-a10b-3c073580aafe"
+    },
+    {
+      "name": "Black Knight",
+      "extracted_name": "Black Knight Tv Series Online English Dubbed",
+      "id": "b25349f9-8fb9-4c45-8278-7162e6719862"
+    },
+    {
+      "name": "Black Out",
+      "extracted_name": "Black Out Tv Series Online English Dubbed",
+      "id": "91c76664-ef36-4887-82b0-8fc51a084d8f"
+    },
+    {
+      "name": "Bunheads",
+      "extracted_name": "Bunheads Tv Series",
+      "id": "5e3e58cf-bf90-483c-844b-17d4ae9d43d0"
+    },
+    {
+      "name": "Confidence Queen",
+      "extracted_name": "Confidence Queen Tv Series Online English Dubbed",
+      "id": "2688ad18-bbfc-4c4d-9b9f-524c4b0c0bae"
+    },
+    {
+      "name": "Forever",
+      "extracted_name": "Forever",
+      "id": "bc60e674-57a3-4f31-ad28-50c6034b6c08"
+    },
+    {
+      "name": "Good Behavior",
+      "extracted_name": "Good Behavior Tv Series",
+      "id": "27faef30-0c42-4ad7-b125-f5f5364e0674"
+    },
+    {
+      "name": "Lazarus",
+      "extracted_name": "Lazarus Tv Series",
+      "id": "616ab9d7-6826-4ffc-b3ae-f84f36d621ce"
+    },
+    {
+      "name": "Little Birds",
+      "extracted_name": "Little Birds Tv Series",
+      "id": "76569e23-17da-4e3f-9fb7-3ed0c36d2fd2"
+    }
+  ],
+  "summary": {
+    "with_real_links": 13,
+    "with_placeholders": 3,
+    "no_episodes": 9
+  }
+}

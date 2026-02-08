@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamVault Widget</title>
+    <style>
+        /* Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 300px;
+            height: 250px;
+            background: transparent;
+            overflow: hidden;
+        }
+
+        /* Widget container with padding for glow */
+        .widget-wrapper {
+            width: 300px;
+            height: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px;
+        }
+
+        /* Main widget */
+        .streamvault-widget {
+            width: 288px;
+            height: 238px;
+            background: #141414;
+            border-radius: 12px;
+            position: relative;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            cursor: pointer;
+            text-decoration: none;
+            display: block;
+            border: 2px solid #DC2626;
+            box-shadow: 0 0 12px rgba(220, 38, 38, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .streamvault-widget:hover {
+            border-color: #ef4444;
+            box-shadow: 0 0 20px rgba(220, 38, 38, 0.8);
+            transform: scale(1.01);
+        }
+
+        /* Inner container */
+        .widget-inner {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(145deg, #1a1a1a 0%, #141414 50%, #0d0d0d 100%);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Content */
+        .widget-content {
+            position: relative;
+            z-index: 1;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 16px 16px 10px 16px;
+        }
+
+        /* Logo */
+        .widget-logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .widget-logo h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #FAFAFA;
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+
+        .play-icon {
+            width: 28px;
+            height: 28px;
+            background: #DC2626;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .play-icon svg {
+            width: 14px;
+            height: 14px;
+            fill: white;
+            margin-left: 2px;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        /* Tagline */
+        .widget-tagline {
+            font-size: 12px;
+            color: #999;
+            margin: 0 0 10px 0;
+            text-align: center;
+        }
+
+        /* Badges */
+        .widget-features {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+            flex-wrap: nowrap;
+            justify-content: center;
+        }
+
+        .feature-badge {
+            background: rgba(220, 38, 38, 0.15);
+            border: 1px solid rgba(220, 38, 38, 0.4);
+            color: #ff6b6b;
+            font-size: 10px;
+            padding: 4px 8px;
+            border-radius: 14px;
+            white-space: nowrap;
+        }
+
+        /* CTA Button */
+        .widget-cta {
+            background: linear-gradient(135deg, #DC2626 0%, #b91c1c 100%);
+            color: white;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 10px 28px;
+            border-radius: 6px;
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+        }
+
+        .widget-cta::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: shine 2.5s infinite;
+        }
+
+        @keyframes shine {
+            0% {
+                left: -100%;
+            }
+
+            50%,
+            100% {
+                left: 100%;
+            }
+        }
+
+        .streamvault-widget:hover .widget-cta {
+            background: linear-gradient(135deg, #ef4444 0%, #DC2626 100%);
+        }
+
+        /* URL */
+        .widget-url {
+            font-size: 10px;
+            color: #555;
+            margin-top: auto;
+        }
+
+        /* Particles */
+        .particle {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: #DC2626;
+            border-radius: 50%;
+            opacity: 0.4;
+            animation: float 5s ease-in-out infinite;
+        }
+
+        .particle:nth-child(1) {
+            left: 8%;
+            top: 12%;
+            animation-delay: 0s;
+        }
+
+        .particle:nth-child(2) {
+            left: 88%;
+            top: 20%;
+            animation-delay: 1s;
+        }
+
+        .particle:nth-child(3) {
+            left: 12%;
+            top: 78%;
+            animation-delay: 2s;
+        }
+
+        .particle:nth-child(4) {
+            left: 85%;
+            top: 85%;
+            animation-delay: 3s;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+                opacity: 0.4;
+            }
+
+            50% {
+                transform: translateY(-10px);
+                opacity: 0.7;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="widget-wrapper">
+        <a href="https://streamvault.live" target="_blank" rel="noopener" class="streamvault-widget">
+            <div class="widget-inner">
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+
+                <div class="widget-content">
+                    <div class="widget-logo">
+                        <h1>StreamVault</h1>
+                        <div class="play-icon">
+                            <svg viewBox="0 0 24 24">
+                                <polygon points="5,3 19,12 5,21" />
+                            </svg>
+                        </div>
+                    </div>
+
+                    <p class="widget-tagline">Stream Movies & TV Shows Free</p>
+
+                    <div class="widget-features">
+                        <span class="feature-badge">🎬 HD Quality</span>
+                        <span class="feature-badge">📺 No Ads</span>
+                        <span class="feature-badge">✨ Free</span>
+                    </div>
+
+                    <span class="widget-cta">Watch Now →</span>
+
+                    <span class="widget-url">streamvault.live</span>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <script>
+        // Analytics tracking - dynamic API URL
+        const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:5000'
+            : 'https://streamvault.live';
+
+        // Track view (impression) on load
+        fetch(API_BASE + '/api/widget/view', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ referrer: document.referrer || window.location.href })
+        }).catch(() => { });
+
+        // Track click
+        document.querySelector('.streamvault-widget').addEventListener('click', function (e) {
+            // Don't prevent default - let link work
+            fetch(API_BASE + '/api/widget/click', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ referrer: document.referrer || window.location.href })
+            }).catch(() => { });
+        });
+    </script>
+</body>
+
+</html>
