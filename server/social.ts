@@ -194,11 +194,12 @@ export function initSocialSocket(server: HttpServer, socketio?: Server) {
             roomCode: string;
             contentType: 'show' | 'movie' | 'anime';
             contentId: string;
+            contentSlug?: string;
             contentTitle: string;
             contentPoster?: string;
             episodeTitle?: string;
         }) => {
-            const { userId, roomCode, contentType, contentId, contentTitle, contentPoster, episodeTitle } = data;
+            const { userId, roomCode, contentType, contentId, contentSlug, contentTitle, contentPoster, episodeTitle } = data;
             if (!userId) return;
 
             const activity: WatchActivity = {
@@ -217,6 +218,8 @@ export function initSocialSocket(server: HttpServer, socketio?: Server) {
             await broadcastActivityToFriends(userId, activity);
 
             // Log activity: Watch Start (Community Feed)
+            // Use slug for URLs if available, fall back to ID
+            const urlSlug = contentSlug || contentId;
             try {
                 await logAndBroadcastActivity({
                     userId,
@@ -227,7 +230,7 @@ export function initSocialSocket(server: HttpServer, socketio?: Server) {
                         title: contentTitle,
                         posterUrl: contentPoster,
                         episode: episodeTitle,
-                        link: contentType === 'movie' ? `/movie/${contentId}` : contentType === 'anime' ? `/anime/${contentId}` : `/show/${contentId}`
+                        link: contentType === 'movie' ? `/movie/${urlSlug}` : contentType === 'anime' ? `/anime/${urlSlug}` : `/show/${urlSlug}`
                     })
                 });
             } catch (e) {

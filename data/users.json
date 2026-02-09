@@ -29,7 +29,7 @@
       "updatedAt": "2026-02-08T07:46:44.151Z",
       "referralCode": "E93FBC0E",
       "coins": 121054,
-      "lastActive": "2026-02-09T08:19:56.958Z",
+      "lastActive": "2026-02-09T08:53:36.379Z",
       "settings": "{\"chatbotEnabled\":false,\"soundEnabled\":true,\"autoplayTrailers\":true,\"showAdultContent\":true,\"pushNotifications\":true,\"emailNotifications\":true,\"defaultVideoQuality\":\"auto\",\"subtitlesEnabled\":true}",
       "activityVisible": true
     },
@@ -49,7 +49,7 @@
       "createdAt": "2026-02-02T13:12:21.891Z",
       "updatedAt": "2026-02-09T08:00:31.350Z",
       "referralCode": "C7781F1B",
-      "lastActive": "2026-02-09T08:19:56.946Z",
+      "lastActive": "2026-02-09T08:54:04.909Z",
       "settings": "{\"chatbotEnabled\":false,\"soundEnabled\":true,\"autoplayTrailers\":true,\"showAdultContent\":true,\"pushNotifications\":true,\"emailNotifications\":true,\"defaultVideoQuality\":\"auto\",\"subtitlesEnabled\":true}",
       "activityVisible": true,
       "coins": 5000
@@ -73,5 +73,5 @@
       "referralCode": "15D75AFF"
     }
   ],
-  "lastUpdated": "2026-02-09T08:19:56.958Z"
+  "lastUpdated": "2026-02-09T08:54:04.909Z"
 }

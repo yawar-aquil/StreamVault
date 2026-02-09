@@ -314,11 +314,15 @@ function WatchTogetherContent() {
     // Broadcast watch activity to friends
     useEffect(() => {
         if (roomInfo && isAuthenticated && roomCode) {
+            // Get slug from show/movie if available
+            const contentSlug = show?.slug || movie?.slug || undefined;
+
             // Start activity when room is joined
             startActivity({
                 roomCode: roomInfo.roomCode,
                 contentType: roomInfo.contentType,
                 contentId: roomInfo.contentId,
+                contentSlug: contentSlug,
                 contentTitle: roomInfo.contentTitle || 'Unknown',
                 contentPoster: roomInfo.contentPoster || undefined,
                 episodeTitle: roomInfo.episodeTitle || undefined,
@@ -331,7 +335,7 @@ function WatchTogetherContent() {
                 stopActivity();
             }
         };
-    }, [roomInfo?.roomCode, roomInfo?.contentTitle, isAuthenticated, startActivity, stopActivity]);
+    }, [roomInfo?.roomCode, roomInfo?.contentTitle, isAuthenticated, startActivity, stopActivity, show?.slug, movie?.slug]);
 
     // Countdown timer for scheduled rooms
     useEffect(() => {

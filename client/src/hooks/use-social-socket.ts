@@ -248,6 +248,7 @@ export function useSocialSocket() {
         roomCode: string;
         contentType: 'show' | 'movie' | 'anime';
         contentId: string;
+        contentSlug?: string;
         contentTitle: string;
         contentPoster?: string;
         episodeTitle?: string;
