@@ -51,6 +51,8 @@ export function FeedItem({ activity }: FeedItemProps) {
                 return <Gift className="w-4 h-4 text-pink-500" />;
             case 'room_created':
                 return <Tv className="w-4 h-4 text-purple-500" />;
+            case 'user_signup':
+                return <UserPlus className="w-4 h-4 text-green-500" />;
             default:
                 return <div className="w-4 h-4 bg-gray-500 rounded-full" />;
         }
@@ -138,6 +140,12 @@ export function FeedItem({ activity }: FeedItemProps) {
                 return (
                     <span>
                         read <span className="text-primary font-medium">{meta.title || 'a blog post'}</span>
+                    </span>
+                );
+            case 'user_signup':
+                return (
+                    <span className="text-green-400 font-medium">
+                        joined StreamVault! 🎉
                     </span>
                 );
             default:

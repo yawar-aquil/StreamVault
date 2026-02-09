@@ -916,6 +916,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check for 'New Comer' achievement
       await checkAndAwardAchievements(user.id);
 
+      // Log activity: New user joined (Community Feed)
+      try {
+        await logAndBroadcastActivity({
+          userId: user.id,
+          type: 'user_signup',
+          entityId: user.id,
+          entityType: 'user',
+          metadata: JSON.stringify({
+            username: user.username
+          })
+        });
+      } catch (e) {
+        console.error("Failed to log signup activity", e);
+      }
+
       // Re-fetch user to get updated stats (XP/Coins from referral)
       const freshUser = await storage.getUserById(user.id);
 

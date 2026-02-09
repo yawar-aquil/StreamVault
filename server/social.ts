@@ -220,21 +220,39 @@ export function initSocialSocket(server: HttpServer, socketio?: Server) {
             // Log activity: Watch Start (Community Feed)
             // Use slug for URLs if available, fall back to ID
             const urlSlug = contentSlug || contentId;
-            try {
-                await logAndBroadcastActivity({
-                    userId,
-                    type: 'watch_start',
-                    entityId: contentId,
-                    entityType: contentType,
-                    metadata: JSON.stringify({
-                        title: contentTitle,
-                        posterUrl: contentPoster,
-                        episode: episodeTitle,
-                        link: contentType === 'movie' ? `/movie/${urlSlug}` : contentType === 'anime' ? `/anime/${urlSlug}` : `/show/${urlSlug}`
-                    })
-                });
-            } catch (e) {
-                console.error("Failed to log watch_start activity", e);
+
+            // Check if there's a recent room_created activity for the same content to avoid duplicates
+            // (When creating a room, both room_created and activity:start are triggered)
+            const userRecentActivities = await storage.getActivitiesForUser(userId);
+            const hasRecentRoomActivity = userRecentActivities.some(a => {
+                if (a.type !== 'room_created') return false;
+                const timeDiff = Date.now() - new Date(a.createdAt).getTime();
+                if (timeDiff > 60000) return false; // Only check last 60 seconds
+                try {
+                    const meta = typeof a.metadata === 'string' ? JSON.parse(a.metadata) : a.metadata;
+                    return meta.title === contentTitle;
+                } catch { return false; }
+            });
+
+            if (hasRecentRoomActivity) {
+                console.log(`📺 Skipping watch_start activity for ${contentTitle} (room_created already logged)`);
+            } else {
+                try {
+                    await logAndBroadcastActivity({
+                        userId,
+                        type: 'watch_start',
+                        entityId: contentId,
+                        entityType: contentType,
+                        metadata: JSON.stringify({
+                            title: contentTitle,
+                            posterUrl: contentPoster,
+                            episode: episodeTitle,
+                            link: contentType === 'movie' ? `/movie/${urlSlug}` : contentType === 'anime' ? `/anime/${urlSlug}` : `/show/${urlSlug}`
+                        })
+                    });
+                } catch (e) {
+                    console.error("Failed to log watch_start activity", e);
+                }
             }
 
             console.log(`📺 User ${userId} started watching: ${contentTitle}`);
