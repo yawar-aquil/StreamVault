@@ -255,6 +255,22 @@ router.post('/wallet/buy', async (req, res) => {
             }
         }
 
+        // 4. Log Activity: Coin Purchase (Community Feed)
+        try {
+            await logAndBroadcastActivity({
+                userId,
+                type: 'coin_purchase',
+                entityId: transaction.id,
+                entityType: 'transaction',
+                metadata: JSON.stringify({
+                    amount: coinAmount,
+                    cost: finalCost
+                })
+            });
+        } catch (e) {
+            console.error("Failed to log coin_purchase activity", e);
+        }
+
         res.json({
             success: true,
             message: `Successfully purchased ${coinAmount} StreamCoins! Receipt sent to: ${emailToSend}`,
@@ -410,6 +426,7 @@ router.post('/gift', async (req, res) => {
                     badgeName: badge.name,
                     badgeImage: badge.imageUrl,
                     giftTo: receiverUsername,
+                    targetUserId: receiver.id,
                     message: message
                 })
             });
@@ -562,6 +579,25 @@ router.post('/gift-bulk', async (req, res) => {
                     createdAt: new Date().toISOString()
                 });
                 sendInventoryUpdate(receiver.id);
+
+                // Log activity: Gift Sent (Community Feed)
+                try {
+                    await logAndBroadcastActivity({
+                        userId: senderId,
+                        type: 'item_gift',
+                        entityId: badge.id,
+                        entityType: 'badge',
+                        metadata: JSON.stringify({
+                            badgeName: badge.name,
+                            badgeImage: badge.imageUrl,
+                            giftTo: username,
+                            targetUserId: receiver.id,
+                            message: message
+                        })
+                    });
+                } catch (e) {
+                    console.error("[GIFT-BULK] Failed to log gift activity", e);
+                }
 
                 results.push({ username, status: 'success' });
             } catch (e) {

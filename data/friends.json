@@ -1329,6 +1329,97 @@
       "read": true,
       "id": "6c2e4997-8fb5-4e5b-b4da-25f66f993c56",
       "createdAt": "2026-02-08T17:01:23.769Z"
+    },
+    {
+      "userId": "2dfcb04f-0387-43c1-b499-43a24790ea86",
+      "type": "system",
+      "title": "🎁 You received a gift!",
+      "message": "admin gifted you the \"Retro Skin\" badge!",
+      "read": false,
+      "data": {
+        "badgeId": "dba78914-1162-45cc-ba87-2ff4bc832853",
+        "senderId": "0229a46c-2302-4909-93c5-c71f80db5538"
+      },
+      "id": "8018d0a1-192b-4d14-9210-b4a01d057a48",
+      "createdAt": "2026-02-08T18:55:45.837Z"
+    },
+    {
+      "userId": "2dfcb04f-0387-43c1-b499-43a24790ea86",
+      "type": "system",
+      "title": "🎁 You received a gift!",
+      "message": "admin gifted you the \"Crystal Skin\" badge!",
+      "read": false,
+      "data": {
+        "badgeId": "fc5e4f11-a005-41bf-bfe8-dccd0e26b163",
+        "senderId": "0229a46c-2302-4909-93c5-c71f80db5538"
+      },
+      "id": "915ab568-1112-4d6d-9a4d-fbda091ac234",
+      "createdAt": "2026-02-08T19:43:02.835Z"
+    },
+    {
+      "userId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
+      "type": "system",
+      "title": "🎁 You received a gift!",
+      "message": "admin gifted you the \"Golden Theme\" badge!",
+      "read": true,
+      "data": {
+        "badgeId": "16b9643c-fe49-4ade-941e-a05d47650789",
+        "senderId": "0229a46c-2302-4909-93c5-c71f80db5538"
+      },
+      "id": "f1393cd8-dbf1-4d64-a799-438acb5806b2",
+      "createdAt": "2026-02-08T19:51:32.375Z"
+    },
+    {
+      "userId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
+      "type": "system",
+      "title": "🎁 You received a gift!",
+      "message": "admin gifted you the \"Wanted Skin\" badge!",
+      "read": true,
+      "data": {
+        "badgeId": "83144399-2424-4e83-9783-9206e2e38f7b",
+        "senderId": "0229a46c-2302-4909-93c5-c71f80db5538"
+      },
+      "id": "bc6bcbca-2f5c-4bc5-a019-9beec8c0e3e9",
+      "createdAt": "2026-02-08T20:26:56.085Z"
+    },
+    {
+      "userId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
+      "type": "system",
+      "title": "🎁 You received a gift!",
+      "message": "admin gifted you the \"Neon Theme\" badge!",
+      "read": true,
+      "data": {
+        "badgeId": "9b71f4c7-36fa-4aa8-81ef-9fad445461bd",
+        "senderId": "0229a46c-2302-4909-93c5-c71f80db5538"
+      },
+      "id": "e6dd5a97-caf4-4ce0-9b1e-20c7e1b893bf",
+      "createdAt": "2026-02-09T07:36:11.162Z"
+    },
+    {
+      "userId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
+      "type": "system",
+      "title": "🎁 You received a gift!",
+      "message": "admin gifted you the \"Sweetie\" badge!",
+      "read": true,
+      "data": {
+        "badgeId": "50a0cf03-0991-4320-8172-60aaf4c4e59e",
+        "senderId": "0229a46c-2302-4909-93c5-c71f80db5538"
+      },
+      "id": "1bb07468-deb4-436d-ac3a-ad8387344ba3",
+      "createdAt": "2026-02-09T07:40:41.666Z"
+    },
+    {
+      "userId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
+      "type": "system",
+      "title": "🎁 You received a gift!",
+      "message": "admin gifted you the \"Binge Master\" badge!",
+      "read": true,
+      "data": {
+        "badgeId": "9f5b895b-368d-444c-80de-509fed0fc9ed",
+        "senderId": "0229a46c-2302-4909-93c5-c71f80db5538"
+      },
+      "id": "b8c31f6f-3229-43b3-93bb-b138bbb3b40e",
+      "createdAt": "2026-02-09T07:46:34.142Z"
     }
   ],
   "directMessages": [

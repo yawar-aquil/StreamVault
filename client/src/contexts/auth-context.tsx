@@ -63,6 +63,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const user = data?.user || null;
     const isAuthenticated = !!user;
 
+    // Sync user settings to localStorage when authenticated
+    // This ensures components like Chatbot read the correct user preferences
+    useEffect(() => {
+        const syncSettings = async () => {
+            if (isAuthenticated) {
+                try {
+                    const response = await apiRequest('GET', '/api/user/settings');
+                    const serverSettings = await response.json();
+                    localStorage.setItem('streamvault_settings', JSON.stringify(serverSettings));
+                    // Dispatch event for components already mounted (like Chatbot)
+                    window.dispatchEvent(new CustomEvent('settings-changed', {
+                        detail: { key: 'chatbotEnabled', value: serverSettings.chatbotEnabled }
+                    }));
+                } catch (e) {
+                    console.error('Failed to sync settings:', e);
+                }
+            }
+        };
+        syncSettings();
+    }, [isAuthenticated]);
+
     // Login mutation
     const loginMutation = useMutation({
         mutationFn: async ({ email, password }: { email: string; password: string }) => {

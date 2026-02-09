@@ -595,10 +595,17 @@ export class MemStorage implements IStorage {
           console.log(`✅ Loaded ${data.polls.length} polls`);
         }
 
+
         // Restore coin transactions
         if (data.coinTransactions) {
           data.coinTransactions.forEach((tx: CoinTransaction) => this.coinTransactions.set(tx.id, tx));
           console.log(`✅ Loaded ${data.coinTransactions.length} coin transactions`);
+        }
+
+        // Restore activities
+        if (data.activities) {
+          data.activities.forEach((activity: Activity) => this.activities.set(activity.id, activity));
+          console.log(`✅ Loaded ${data.activities.length} activities`);
         }
 
       } else {
@@ -647,6 +654,7 @@ export class MemStorage implements IStorage {
         badges: Array.from(this.badges.values()),
         userBadges: Array.from(this.userBadges.values()),
         coinTransactions: Array.from(this.coinTransactions.values()),
+        activities: Array.from(this.activities.values()),
         lastUpdated: new Date().toISOString(),
       };
 
@@ -3233,14 +3241,19 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
     };
     this.activities.set(id, activity);
+    this.saveData(); // Persist activities to disk
     return activity;
   }
 
   async getActivities(limit: number = 20, filter: 'all' | 'friends' | 'mentions' = 'all', userId?: string): Promise<(Activity & { user?: User })[]> {
     let allActivities = Array.from(this.activities.values());
 
-    // Sort by createdAt desc
-    allActivities.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    // Sort by createdAt desc (handle both Date objects and date strings from JSON)
+    allActivities.sort((a, b) => {
+      const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+      const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+      return dateB.getTime() - dateA.getTime();
+    });
 
     if (filter === 'friends' && userId) {
       const friends = await this.getFriends(userId);

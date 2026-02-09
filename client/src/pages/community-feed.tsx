@@ -205,7 +205,7 @@ export default function CommunityFeed() {
                             )}
                         </TabsContent>
 
-                        <TabsContent value="following" className="mt-0 space-y-4">
+                        <TabsContent value="mentions" className="mt-0 space-y-4">
                             {isLoading ? (
                                 <div className="flex flex-col items-center justify-center py-16 space-y-4 text-muted-foreground">
                                     <Loader2 className="w-8 h-8 animate-spin text-primary" />

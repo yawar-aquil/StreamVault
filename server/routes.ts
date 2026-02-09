@@ -794,6 +794,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // 4. Log Activity: Coin Purchase (Community Feed)
+      try {
+        await logAndBroadcastActivity({
+          userId: payload.userId,
+          type: 'coin_purchase',
+          entityId: transaction.id,
+          entityType: 'transaction',
+          metadata: JSON.stringify({
+            amount: amount,
+            cost: cost
+          })
+        });
+      } catch (e) {
+        console.error("Failed to log coin_purchase activity", e);
+      }
+
       res.json({
         success: true,
         message: `Payment successful! Purchased ${amount} coins.`,

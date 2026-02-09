@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import StreamCoin from "@/components/stream-coin";
 import { formatDistanceToNow } from "date-fns";
 import {
     MessageSquare,
@@ -38,6 +39,8 @@ export function FeedItem({ activity }: FeedItemProps) {
                 return <UserPlus className="w-4 h-4 text-indigo-400" />;
             case 'purchase':
                 return <ShoppingBag className="w-4 h-4 text-yellow-400" />;
+            case 'coin_purchase':
+                return <div className="w-4 h-4 flex items-center justify-center"><StreamCoin size="sm" /></div>;
             case 'review_post':
                 return <Star className="w-4 h-4 text-orange-400" />;
             case 'comment_post':
@@ -67,6 +70,20 @@ export function FeedItem({ activity }: FeedItemProps) {
         }
 
         switch (type) {
+            case 'coin_purchase':
+                return (
+                    <div className="flex items-center flex-wrap gap-1">
+                        <span>purchased</span>
+                        <span className="text-yellow-400 font-bold flex items-center gap-1">
+                            {meta.amount} Coins <StreamCoin size="sm" className="inline-block" />
+                        </span>
+                        {meta.cost && (
+                            <Badge variant="outline" className="ml-1 border-green-500/50 text-green-400 bg-green-500/10 text-[10px] px-1.5 h-5">
+                                {meta.cost}
+                            </Badge>
+                        )}
+                    </div>
+                );
             case 'watch_start':
                 return (
                     <span>
@@ -88,10 +105,15 @@ export function FeedItem({ activity }: FeedItemProps) {
                 );
             case 'purchase':
                 return (
-                    <span>
-                        purchased <span className="text-yellow-400 font-medium">{meta.badgeName || 'Item'}</span>
-                        {meta.price && <span className="text-muted-foreground ml-1">for {meta.price} coins</span>}
-                    </span>
+                    <div className="flex items-center flex-wrap gap-1">
+                        <span>purchased</span>
+                        <span className="text-yellow-400 font-medium">{meta.badgeName || 'Item'}</span>
+                        {meta.price && (
+                            <span className="text-muted-foreground flex items-center gap-1">
+                                for {meta.price} <StreamCoin size="sm" className="inline-block" />
+                            </span>
+                        )}
+                    </div>
                 );
             case 'item_gift':
                 return (
@@ -212,7 +234,7 @@ export function FeedItem({ activity }: FeedItemProps) {
                     </div>
                 </div>
                 {/* Optional: Add a subtle bottom highlight for certain high-value activities */}
-                {(type === 'purchase' || type === 'review_post' || type === 'room_created') && (
+                {(type === 'purchase' || type === 'review_post' || type === 'room_created' || type === 'coin_purchase') && (
                     <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 )}
             </Card>

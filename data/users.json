@@ -28,8 +28,8 @@
       "createdAt": "2026-01-31T09:17:02.071Z",
       "updatedAt": "2026-02-08T07:46:44.151Z",
       "referralCode": "E93FBC0E",
-      "coins": 123454,
-      "lastActive": "2026-02-08T17:32:56.942Z",
+      "coins": 121054,
+      "lastActive": "2026-02-09T08:19:56.958Z",
       "settings": "{\"chatbotEnabled\":false,\"soundEnabled\":true,\"autoplayTrailers\":true,\"showAdultContent\":true,\"pushNotifications\":true,\"emailNotifications\":true,\"defaultVideoQuality\":\"auto\",\"subtitlesEnabled\":true}",
       "activityVisible": true
     },
@@ -44,14 +44,15 @@
       "favorites": null,
       "xp": 0,
       "level": 1,
-      "badges": "[{\"id\":\"d390a107-a8f5-4ed4-80de-a04a25b7e5f1\",\"name\":\"VIP\",\"description\":\"Exclusive VIP Status\",\"icon\":\"award\",\"imageUrl\":\"/badges/vip_v2.svg\",\"earnedAt\":\"2026-02-07T19:58:39.193Z\"}]",
+      "badges": "[{\"id\":\"d390a107-a8f5-4ed4-80de-a04a25b7e5f1\",\"name\":\"VIP\",\"description\":\"Exclusive VIP Status\",\"icon\":\"award\",\"imageUrl\":\"/badges/vip_v2.svg\",\"earnedAt\":\"2026-02-07T19:58:39.193Z\"},{\"id\":\"16b9643c-fe49-4ade-941e-a05d47650789\",\"name\":\"Golden Theme\",\"description\":\"Apply the Golden theme to your StreamVault interface. Changes the entire app color palette.\",\"icon\":\"award\",\"imageUrl\":\"https://iili.io/fDhk7un.png\",\"earnedAt\":\"2026-02-08T19:51:32.199Z\"},{\"id\":\"ba7bd3b3-763e-4f72-b78b-5a969e258288\",\"name\":\"Gold Skin\",\"description\":\"Apply the Gold Skin theme to your StreamVault interface. Premium look and feel.\",\"icon\":\"award\",\"imageUrl\":\"https://iili.io/fDJEnDb.png\",\"earnedAt\":\"2026-02-08T19:54:55.247Z\"},{\"id\":\"83144399-2424-4e83-9783-9206e2e38f7b\",\"name\":\"Wanted Skin\",\"description\":\"Apply the Wanted skin to your StreamVault interface. Features unique animations and styles.\",\"icon\":\"award\",\"imageUrl\":\"https://iili.io/fDwoQbj.png\",\"earnedAt\":\"2026-02-08T20:26:55.860Z\"},{\"id\":\"ca3bd69e-ae5e-46a7-95f5-d2ab1cab2b50\",\"name\":\"Valentines Skin\",\"description\":\"Apply the Valentines Skin theme to your StreamVault interface. Premium look and feel.\",\"icon\":\"award\",\"imageUrl\":\"https://iili.io/fDJ72vj.png\",\"earnedAt\":\"2026-02-08T20:27:56.315Z\"},{\"id\":\"4cfd4f79-2161-46d0-9c09-938143807926\",\"name\":\"Forest Theme\",\"description\":\"Apply the Forest theme to your StreamVault interface. Premium look and feel.\",\"icon\":\"award\",\"imageUrl\":\"https://iili.io/fD2DkRR.png\",\"earnedAt\":\"2026-02-08T20:29:08.441Z\"},{\"id\":\"9b71f4c7-36fa-4aa8-81ef-9fad445461bd\",\"name\":\"Neon Theme\",\"description\":\"Apply the Neon theme to your StreamVault interface. Premium look and feel.\",\"icon\":\"award\",\"imageUrl\":\"https://iili.io/fD2m0ZB.png\",\"earnedAt\":\"2026-02-09T07:36:10.498Z\"},{\"id\":\"50a0cf03-0991-4320-8172-60aaf4c4e59e\",\"name\":\"Sweetie\",\"description\":\"For the one who makes my heart skip a beat. 💖\",\"icon\":\"award\",\"imageUrl\":\"/badges/sweetie.svg\",\"earnedAt\":\"2026-02-09T07:40:41.201Z\"},{\"id\":\"9f5b895b-368d-444c-80de-509fed0fc9ed\",\"name\":\"Binge Master\",\"description\":\"True dedication. Watching beyond the limits.🍿\",\"icon\":\"award\",\"imageUrl\":\"https://iili.io/fPcI4kl.webp\",\"earnedAt\":\"2026-02-09T07:46:33.335Z\"}]",
       "id": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
       "createdAt": "2026-02-02T13:12:21.891Z",
-      "updatedAt": "2026-02-08T09:07:09.351Z",
+      "updatedAt": "2026-02-09T08:00:31.350Z",
       "referralCode": "C7781F1B",
-      "lastActive": "2026-02-08T17:07:51.973Z",
-      "settings": "{\"chatbotEnabled\":false,\"soundEnabled\":true,\"autoplayTrailers\":true,\"showAdultContent\":false,\"pushNotifications\":true,\"emailNotifications\":true,\"defaultVideoQuality\":\"auto\",\"subtitlesEnabled\":true}",
-      "activityVisible": true
+      "lastActive": "2026-02-09T08:19:56.946Z",
+      "settings": "{\"chatbotEnabled\":false,\"soundEnabled\":true,\"autoplayTrailers\":true,\"showAdultContent\":true,\"pushNotifications\":true,\"emailNotifications\":true,\"defaultVideoQuality\":\"auto\",\"subtitlesEnabled\":true}",
+      "activityVisible": true,
+      "coins": 5000
     },
     {
       "email": "helloscreations5m@gmail.com",
@@ -64,7 +65,7 @@
       "favorites": null,
       "xp": 0,
       "level": 1,
-      "badges": "[]",
+      "badges": "[{\"id\":\"dba78914-1162-45cc-ba87-2ff4bc832853\",\"name\":\"Retro Skin\",\"description\":\"Apply the Retro skin to your StreamVault interface. Features unique animations and styles.\",\"icon\":\"award\",\"imageUrl\":\"https://iili.io/fDj4JQ1.png\",\"earnedAt\":\"2026-02-08T18:55:45.577Z\"},{\"id\":\"fc5e4f11-a005-41bf-bfe8-dccd0e26b163\",\"name\":\"Crystal Skin\",\"description\":\"Apply the Crystal skin to your StreamVault interface. Features unique animations and styles.\",\"icon\":\"award\",\"imageUrl\":\"https://iili.io/fDjbPql.png\",\"earnedAt\":\"2026-02-08T19:43:02.286Z\"}]",
       "id": "2dfcb04f-0387-43c1-b499-43a24790ea86",
       "createdAt": "2026-02-07T16:01:16.059Z",
       "updatedAt": "2026-02-07T16:02:15.405Z",
@@ -72,5 +73,5 @@
       "referralCode": "15D75AFF"
     }
   ],
-  "lastUpdated": "2026-02-08T17:32:56.942Z"
+  "lastUpdated": "2026-02-09T08:19:56.958Z"
 }
