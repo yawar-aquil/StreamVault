@@ -155,9 +155,10 @@ print(response.json())`}
                 <h2 className="text-2xl font-bold">API Reference</h2>
 
                 <Tabs defaultValue="movies" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+                    <TabsList className="grid w-full grid-cols-4 lg:w-[500px]">
                         <TabsTrigger value="movies">Movies</TabsTrigger>
                         <TabsTrigger value="shows">Shows</TabsTrigger>
+                        <TabsTrigger value="anime">Anime</TabsTrigger>
                         <TabsTrigger value="other">Other</TabsTrigger>
                     </TabsList>
 
@@ -221,8 +222,52 @@ print(response.json())`}
                                     />
                                     <EndpointItem
                                         method="GET"
+                                        path="/api/shows/{slug}"
+                                        desc="Get show details by URL slug."
+                                    />
+                                    <EndpointItem
+                                        method="GET"
                                         path="/api/episodes/{showId}"
                                         desc="Get all episodes for a specific show."
+                                    />
+                                </Accordion>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* Anime Content */}
+                    <TabsContent value="anime" className="space-y-4">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Anime Endpoints</CardTitle>
+                                <CardDescription>Access anime series, episodes, and search</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Accordion type="single" collapsible className="w-full">
+                                    <EndpointItem
+                                        method="GET"
+                                        path="/api/anime"
+                                        desc="Get all anime series. (Max 1 item for external keys)"
+                                    />
+                                    <EndpointItem
+                                        method="GET"
+                                        path="/api/anime/search?q={query}"
+                                        desc="Search anime by title. (Max 1 item for external keys)"
+                                    />
+                                    <EndpointItem
+                                        method="GET"
+                                        path="/api/content/anime/{id}"
+                                        desc="Get specific anime details by ID."
+                                    />
+                                    <EndpointItem
+                                        method="GET"
+                                        path="/api/anime/{slug}"
+                                        desc="Get anime details by URL slug."
+                                    />
+                                    <EndpointItem
+                                        method="GET"
+                                        path="/api/anime-episodes/{animeId}"
+                                        desc="Get all episodes for a specific anime."
                                     />
                                 </Accordion>
                             </CardContent>
@@ -252,6 +297,31 @@ print(response.json())`}
                                         method="GET"
                                         path="/api/categories"
                                         desc="List all available content categories."
+                                    />
+                                    <EndpointItem
+                                        method="GET"
+                                        path="/api/blog"
+                                        desc="Get all blog posts. Includes news and updates."
+                                    />
+                                    <EndpointItem
+                                        method="GET"
+                                        path="/api/comments/episode/{episodeId}"
+                                        desc="Get comments for a specific episode."
+                                    />
+                                    <EndpointItem
+                                        method="GET"
+                                        path="/api/comments/movie/{movieId}"
+                                        desc="Get comments for a specific movie."
+                                    />
+                                    <EndpointItem
+                                        method="GET"
+                                        path="/api/comments/blog/{blogPostId}"
+                                        desc="Get comments for a specific blog post."
+                                    />
+                                    <EndpointItem
+                                        method="GET"
+                                        path="/api/reviews/{contentType}/{contentId}"
+                                        desc="Get reviews for a specific content item (show/movie/anime)."
                                     />
                                 </Accordion>
                             </CardContent>
