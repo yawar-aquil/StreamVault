@@ -24,16 +24,30 @@
   <script>
     (function () {
       var iconPref = localStorage.getItem('streamvault_app_icon');
-      var targetManifest = (iconPref === 'alt') ? '/manifest-alt.json' : '/manifest.webmanifest';
+      var useAlt = iconPref === 'alt';
 
-      var link = document.querySelector("link[rel='manifest']");
-      if (link) {
-        link.href = targetManifest;
+      // Update Manifest
+      var targetManifest = useAlt ? '/manifest-alt.json' : '/manifest.webmanifest';
+      var manifestLink = document.querySelector("link[rel='manifest']");
+      if (manifestLink) {
+        manifestLink.href = targetManifest;
       } else {
-        link = document.createElement('link');
-        link.rel = 'manifest';
-        link.href = targetManifest;
-        document.head.appendChild(link);
+        manifestLink = document.createElement('link');
+        manifestLink.rel = 'manifest';
+        manifestLink.href = targetManifest;
+        document.head.appendChild(manifestLink);
+      }
+
+      // Update Favicons
+      if (useAlt) {
+        var iconLink = document.querySelector("link[rel='icon']");
+        if (iconLink) iconLink.href = '/icons/icon-alt-512.png';
+
+        var altIconLink = document.querySelector("link[rel='alternate icon']");
+        if (altIconLink) altIconLink.href = '/icons/icon-alt-512.png';
+
+        var appleLink = document.querySelector("link[rel='apple-touch-icon']");
+        if (appleLink) appleLink.href = '/icons/icon-alt-512.png';
       }
     })();
   </script>
