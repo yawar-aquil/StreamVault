@@ -10,6 +10,7 @@ import { readFileSync, existsSync, writeFileSync, mkdirSync, unlinkSync } from "
 import path from "path";
 import { fileURLToPath } from "url";
 import { setupSitemaps } from "./sitemap";
+import { searchShow, getShowDetails } from "./utils/tmdb";
 import { sendContentRequestEmail, sendIssueReportEmail, sendPasswordResetEmail, sendCoinPurchaseReceiptEmail, sendEmailVerificationEmail } from "./email-service";
 import { createRazorpayOrder, verifyRazorpaySignature } from "./payment";
 import { convertCurrency } from "./currency";
@@ -7101,6 +7102,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("URL health check failed:", error);
       res.status(500).json({ error: error.message || "Failed to check URLs" });
+    }
+  });
+
+  // Check for pending/incomplete content (Admin)
+  app.get("/api/admin/pending-content", requireAdmin, async (req, res) => {
+    try {
+      const shows = await storage.getAllShows();
+      const animeList = await storage.getAllAnime();
+
+      const pendingShows = [];
+      const pendingAnime = [];
+
+      // Check Shows
+      for (const show of shows) {
+        const episodes = await storage.getEpisodesByShowId(show.id);
+
+        // 1. Check if ANY episodes exist
+        if (episodes.length === 0) {
+          pendingShows.push({
+            id: show.id,
+            title: show.title,
+            posterUrl: show.posterUrl,
+            localEpisodes: 0,
+            tmdbEpisodes: null,
+            status: "No Episodes",
+            missing: "All Episodes"
+          });
+          continue;
+        }
+
+        // 2. Check against TMDB
+        const tmdbId = await searchShow(show.title);
+        if (tmdbId) {
+          const tmdbDetails = await getShowDetails(tmdbId);
+          if (tmdbDetails && tmdbDetails.number_of_episodes > episodes.length) {
+            // Calculate missing episodes
+            const missing = [];
+            const localMap = new Set(episodes.map(e => `S${e.season}E${e.episodeNumber}`));
+
+            // Check each season from TMDB
+            for (const season of tmdbDetails.seasons) {
+              if (season.season_number === 0) continue; // Skip specials usually
+
+              const seasonEpisodes = episodes.filter(e => e.season === season.season_number);
+              if (seasonEpisodes.length < season.episode_count) {
+                // Identify specific missing episodes if reasonable count
+                if (season.episode_count - seasonEpisodes.length <= 5) {
+                  for (let i = 1; i <= season.episode_count; i++) {
+                    if (!localMap.has(`S${season.season_number}E${i}`)) {
+                      missing.push(`S${season.season_number}E${i}`);
+                    }
+                  }
+                } else {
+                  missing.push(`Season ${season.season_number} (incomplete)`);
+                }
+              }
+            }
+
+            if (missing.length > 0) {
+              pendingShows.push({
+                id: show.id,
+                title: show.title,
+                posterUrl: show.posterUrl,
+                localEpisodes: episodes.length,
+                tmdbEpisodes: tmdbDetails.number_of_episodes,
+                status: "Incomplete",
+                missing: missing.slice(0, 5).join(", ") + (missing.length > 5 ? "..." : "")
+              });
+            }
+          }
+        }
+      }
+
+      // Check Anime (similar logic)
+      for (const item of animeList) {
+        const episodes = await storage.getAnimeEpisodesByAnimeId(item.id);
+
+        if (episodes.length === 0) {
+          pendingAnime.push({
+            id: item.id,
+            title: item.title,
+            posterUrl: item.posterUrl,
+            localEpisodes: 0,
+            tmdbEpisodes: item.totalEpisodes || null,
+            status: "No Episodes",
+            missing: "All Episodes"
+          });
+          continue;
+        }
+
+        // Use local totalEpisodes if available, otherwise try TMDB (or skip if strictly relying on local)
+        // User requested TMDB check, so we do it.
+        let targetCount = item.totalEpisodes;
+        let source = "Local Metadata";
+
+        if (!targetCount) {
+          const tmdbId = await searchShow(item.title); // using searchShow for anime as discussed
+          if (tmdbId) {
+            const tmdbDetails = await getShowDetails(tmdbId);
+            if (tmdbDetails) {
+              targetCount = tmdbDetails.number_of_episodes;
+              source = "TMDB";
+            }
+          }
+        }
+
+        if (targetCount && episodes.length < targetCount) {
+          pendingAnime.push({
+            id: item.id,
+            title: item.title,
+            posterUrl: item.posterUrl,
+            localEpisodes: episodes.length,
+            tmdbEpisodes: targetCount,
+            status: "Incomplete",
+            missing: `${targetCount - episodes.length} episodes missing (Source: ${source})`
+          });
+        }
+      }
+
+      res.json({ shows: pendingShows, anime: pendingAnime });
+    } catch (error) {
+      console.error("Pending content check error:", error);
+      res.status(500).json({ error: "Failed to check pending content" });
     }
   });
 

@@ -183,6 +183,10 @@ export default function AdminPage() {
               <Activity className="w-4 h-4" />
               Store Analytics
             </TabsTrigger>
+            <TabsTrigger value="pending-content" className="gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              Pending Content
+            </TabsTrigger>
             <TabsTrigger value="url-health" className="gap-2">
               <Activity className="w-4 h-4" />
               URL Health
@@ -288,6 +292,11 @@ export default function AdminPage() {
           {/* Store Analytics Tab */}
           <TabsContent value="store-analytics">
             <StoreAnalytics />
+          </TabsContent>
+
+          {/* Pending Content Tab */}
+          <TabsContent value="pending-content">
+            <PendingContentTab />
           </TabsContent>
 
           {/* URL Health Tab */}
@@ -6032,6 +6041,186 @@ function AllTransactionsTable() {
         ))}
       </TableBody>
     </Table>
+  );
+}
+
+// Pending Content Tab Component
+function PendingContentTab() {
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
+
+  const { data, isLoading, isError, refetch } = useQuery<{
+    shows: {
+      id: string;
+      title: string;
+      posterUrl: string;
+      localEpisodes: number;
+      tmdbEpisodes: number | null;
+      status: string;
+      missing: string;
+    }[];
+    anime: {
+      id: string;
+      title: string;
+      posterUrl: string;
+      localEpisodes: number;
+      tmdbEpisodes: number | null;
+      status: string;
+      missing: string;
+    }[];
+  }>({
+    queryKey: ["/api/admin/pending-content"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/pending-content", {
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to fetch pending content");
+      return res.json();
+    },
+  });
+
+  const handleManageEpisodes = (type: 'show' | 'anime', id: string) => {
+    navigator.clipboard.writeText(id);
+    toast({
+      title: "ID Copied",
+      description: `Copied ${type} ID to clipboard. Go to 'Manage Episodes' to add content.`,
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <RefreshCw className="w-8 h-8 animate-spin mb-4 text-primary" />
+        <p className="text-muted-foreground">Scanning library and fetching TMDB data... This may take a moment.</p>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-8 text-center">
+        <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-destructive opacity-50" />
+        <h3 className="text-lg font-semibold text-destructive">Failed to load pending content</h3>
+        <Button onClick={() => refetch()} variant="outline" className="mt-4">
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
+  const hasPendingShows = data?.shows && data.shows.length > 0;
+  const hasPendingAnime = data?.anime && data.anime.length > 0;
+
+  return (
+    <div className="space-y-8">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-orange-500" />
+            Pending Content (Incomplete Episodes)
+          </CardTitle>
+          <CardDescription>
+            Content that has fewer episodes uploaded than listed on TMDB.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="shows" className="w-full">
+            <TabsList>
+              <TabsTrigger value="shows">TV Shows ({data?.shows.length || 0})</TabsTrigger>
+              <TabsTrigger value="anime">Anime ({data?.anime.length || 0})</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="shows" className="mt-4">
+              {!hasPendingShows ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <CheckCircle className="w-12 h-12 mx-auto mb-4 text-green-500 opacity-50" />
+                  <p>All TV Shows are up to date! Great job.</p>
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {data?.shows.map((show) => (
+                    <div key={show.id} className="flex items-start gap-4 p-4 border rounded-lg hover:bg-muted/30">
+                      <img src={show.posterUrl} alt={show.title} className="w-16 h-24 object-cover rounded shadow" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-bold text-lg truncate">{show.title}</h4>
+                            <div className="flex gap-2 mt-1 mb-2">
+                              <Badge variant="outline" className="text-xs">
+                                Local: {show.localEpisodes} eps
+                              </Badge>
+                              {show.tmdbEpisodes !== null && (
+                                <Badge variant="secondary" className="text-xs">
+                                  TMDB: {show.tmdbEpisodes} eps
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <Badge variant="destructive">{show.status}</Badge>
+                        </div>
+
+                        <div className="bg-destructive/10 text-destructive p-2 rounded text-sm mb-3">
+                          <strong>Missing:</strong> {show.missing}
+                        </div>
+
+                        <Button size="sm" onClick={() => handleManageEpisodes('show', show.id)}>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Copy ID & Manage
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="anime" className="mt-4">
+              {!hasPendingAnime ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <CheckCircle className="w-12 h-12 mx-auto mb-4 text-green-500 opacity-50" />
+                  <p>All Anime are up to date! Great job.</p>
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {data?.anime.map((anime) => (
+                    <div key={anime.id} className="flex items-start gap-4 p-4 border rounded-lg hover:bg-muted/30">
+                      <img src={anime.posterUrl} alt={anime.title} className="w-16 h-24 object-cover rounded shadow" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-bold text-lg truncate">{anime.title}</h4>
+                            <div className="flex gap-2 mt-1 mb-2">
+                              <Badge variant="outline" className="text-xs">
+                                Local: {anime.localEpisodes} eps
+                              </Badge>
+                              {anime.tmdbEpisodes !== null && (
+                                <Badge variant="secondary" className="text-xs">
+                                  TMDB: {anime.tmdbEpisodes} eps
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <Badge variant="destructive">{anime.status}</Badge>
+                        </div>
+
+                        <div className="bg-destructive/10 text-destructive p-2 rounded text-sm mb-3">
+                          <strong>Missing:</strong> {anime.missing}
+                        </div>
+
+                        <Button size="sm" onClick={() => handleManageEpisodes('anime', anime.id)}>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Copy ID & Manage
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 

@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Settings, Bot, Bell, Volume2, Palette, Shield, Trash2, Key, Copy, Plus, Lock, Check, BarChart3 } from 'lucide-react';
+import { Loader2, Settings, Bot, Bell, Volume2, Palette, Shield, Trash2, Key, Copy, Plus, Lock, Check, BarChart3, Smartphone } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from '@/components/theme-provider';
 import { apiRequest } from '@/lib/queryClient';
@@ -89,6 +89,43 @@ export default function SettingsPage() {
     const [deletePassword, setDeletePassword] = useState('');
     const [deleteConfirmText, setDeleteConfirmText] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
+
+    // PWA App Icon state
+    const [isPWA, setIsPWA] = useState(false);
+    const [selectedIcon, setSelectedIcon] = useState<string>(() => {
+        return localStorage.getItem('streamvault_app_icon') || 'default';
+    });
+
+    // Detect if running as installed PWA
+    useEffect(() => {
+        const checkPWA = () => {
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                || (window.navigator as any).standalone === true;
+            setIsPWA(isStandalone);
+        };
+        checkPWA();
+        const mql = window.matchMedia('(display-mode: standalone)');
+        mql.addEventListener('change', checkPWA);
+        return () => mql.removeEventListener('change', checkPWA);
+    }, []);
+
+    const handleIconChange = (iconId: string) => {
+        setSelectedIcon(iconId);
+        localStorage.setItem('streamvault_app_icon', iconId);
+
+        // Swap the manifest link tag
+        const existingLink = document.querySelector('link[rel="manifest"]');
+        if (existingLink) {
+            (existingLink as HTMLLinkElement).href = iconId === 'alt'
+                ? '/manifest-alt.json'
+                : '/manifest.webmanifest';
+        }
+
+        toast({
+            title: 'App Icon Updated',
+            description: 'The icon will update next time you relaunch the app.',
+        });
+    };
 
     // Load settings from server (with localStorage fallback)
     useEffect(() => {
@@ -370,6 +407,63 @@ export default function SettingsPage() {
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* App Icon - Only visible in installed PWA */}
+                {isPWA && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Smartphone className="h-5 w-5" />
+                                App Icon
+                            </CardTitle>
+                            <CardDescription>Change your app icon on the home screen</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                {/* Default Icon */}
+                                <button
+                                    onClick={() => handleIconChange('default')}
+                                    className={`relative flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all duration-200 ${selectedIcon === 'default'
+                                            ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20'
+                                            : 'border-muted hover:border-muted-foreground/30 hover:bg-muted/50'
+                                        }`}
+                                >
+                                    <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-md">
+                                        <img src="/icons/icon.svg" alt="Default" className="w-full h-full object-cover bg-[#0a0a0a]" />
+                                    </div>
+                                    <span className="text-sm font-medium">Default</span>
+                                    {selectedIcon === 'default' && (
+                                        <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                                            <Check className="w-3 h-3 text-primary-foreground" />
+                                        </div>
+                                    )}
+                                </button>
+
+                                {/* Alternate Icon - Red S */}
+                                <button
+                                    onClick={() => handleIconChange('alt')}
+                                    className={`relative flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all duration-200 ${selectedIcon === 'alt'
+                                            ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20'
+                                            : 'border-muted hover:border-muted-foreground/30 hover:bg-muted/50'
+                                        }`}
+                                >
+                                    <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-md">
+                                        <img src="/icons/icon-alt.png" alt="Red S" className="w-full h-full object-cover" />
+                                    </div>
+                                    <span className="text-sm font-medium">Red S</span>
+                                    {selectedIcon === 'alt' && (
+                                        <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                                            <Check className="w-3 h-3 text-primary-foreground" />
+                                        </div>
+                                    )}
+                                </button>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-4">
+                                After changing the icon, relaunch the app for the change to take effect on your home screen.
+                            </p>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Features */}
                 <Card>

@@ -20,7 +20,20 @@
   <link rel="alternate icon" type="image/png" href="/favicon.png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-  <!-- PWA Manifest -->
+  <!-- PWA Manifest - dynamically set based on user icon preference -->
+  <script>
+    (function () {
+      var iconPref = localStorage.getItem('streamvault_app_icon');
+      var link = document.createElement('link');
+      link.rel = 'manifest';
+      if (iconPref === 'alt') {
+        link.href = '/manifest-alt.json';
+      } else {
+        link.href = '/manifest.webmanifest';
+      }
+      document.head.appendChild(link);
+    })();
+  </script>
 
   <meta name="theme-color" content="#e50914" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
