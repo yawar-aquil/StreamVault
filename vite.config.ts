@@ -19,6 +19,14 @@ export default defineConfig({
       injectManifest: {
         maximumFileSizeToCacheInBytes: 5000000
       },
+      includeAssets: [
+        'favicon.svg',
+        'favicon.ico',
+        'robots.txt',
+        'apple-touch-icon.png',
+        'icons/*.png',
+        'manifest-alt.json'
+      ],
       manifest: {
         name: 'StreamVault',
         short_name: 'StreamVault',
