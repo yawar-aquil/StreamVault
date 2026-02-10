@@ -299,8 +299,9 @@ export interface IStorage {
   // Reviews
   createReview(review: Omit<Review, 'id' | 'createdAt' | 'updatedAt' | 'helpfulCount'>): Promise<Review>;
   getReviews(contentType: string, contentId: string): Promise<(Review & { username: string; avatarUrl: string | null })[]>;
+  getAllReviews(): Promise<(Review & { username: string; avatarUrl: string | null; contentTitle?: string })[]>;
   getUserReview(userId: string, contentType: string, contentId: string): Promise<Review | undefined>;
-  deleteReview(id: string, userId: string): Promise<void>;
+  deleteReview(id: string, userId?: string): Promise<void>; // Make userId optional for admin delete
   markReviewHelpful(reviewId: string, userId: string): Promise<void>;
   getAverageRating(contentType: string, contentId: string): Promise<{ average: number; count: number }>;
 
@@ -2572,18 +2573,55 @@ export class MemStorage implements IStorage {
     });
   }
 
+  async getAllReviews(): Promise<(Review & { username: string; avatarUrl: string | null; contentTitle?: string })[]> {
+    const allReviews = Array.from(this.reviews.values());
+
+    // Sort by newest first
+    allReviews.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    // Enrich with user data and content title
+    return allReviews.map(review => {
+      const user = this.users.get(review.userId);
+      let contentTitle = "Unknown Content";
+
+      if (review.contentType === 'movie') {
+        const movie = this.movies.get(review.contentId);
+        if (movie) contentTitle = movie.title;
+      } else if (review.contentType === 'show') {
+        const show = this.shows.get(review.contentId);
+        if (show) contentTitle = show.title;
+      } else if (review.contentType === 'anime') {
+        const anime = this.anime.get(review.contentId);
+        if (anime) contentTitle = anime.title;
+      }
+
+      return {
+        ...review,
+        username: user?.username || "Unknown User",
+        avatarUrl: user?.avatarUrl || null,
+        contentTitle
+      };
+    });
+  }
+
   async getUserReview(userId: string, contentType: string, contentId: string): Promise<Review | undefined> {
     return Array.from(this.reviews.values()).find(
       r => r.userId === userId && r.contentType === contentType && r.contentId === contentId
     );
   }
 
-  async deleteReview(id: string, userId: string): Promise<void> {
+  async deleteReview(id: string, userId?: string): Promise<void> {
     const review = this.reviews.get(id);
-    if (review && review.userId === userId) {
-      this.reviews.delete(id);
-      this.saveData();
+    if (!review) return;
+
+    // If userId is provided, verify ownership (user deleting own review)
+    // If not provided, assume admin override (routes should enforce admin check)
+    if (userId && review.userId !== userId) {
+      throw new Error("Unauthorized to delete this review");
     }
+
+    this.reviews.delete(id);
+    this.saveData();
   }
 
   async markReviewHelpful(reviewId: string, userId: string): Promise<void> {

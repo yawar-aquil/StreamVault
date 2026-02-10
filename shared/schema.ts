@@ -68,7 +68,12 @@ export const reviews = pgTable("reviews", {
   helpfulCount: integer("helpful_count").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const insertReviewSchema = createInsertSchema(reviews);
+export type Review = typeof reviews.$inferSelect;
+export type InsertReview = z.infer<typeof insertReviewSchema>;
 
 // Review helpful votes
 export const reviewHelpful = pgTable("review_helpful", {

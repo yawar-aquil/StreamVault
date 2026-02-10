@@ -38,11 +38,12 @@ import {
   XCircle,
   AlertTriangle,
   RefreshCw,
-  Eye // Added Eye icon
+  Eye, // Added Eye icon
+  MessageSquare // Added MessageSquare icon
 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import StreamCoin from "@/components/stream-coin";
-import type { Show, Episode, Movie, BlogPost, Anime, AnimeEpisode } from "@shared/schema";
+import type { Show, Episode, Movie, BlogPost, Anime, AnimeEpisode, Review } from "@shared/schema";
 import { getAuthHeaders, logout as authLogout } from "@/lib/auth";
 
 export default function AdminPage() {
@@ -155,6 +156,10 @@ export default function AdminPage() {
             <TabsTrigger value="anime">Anime</TabsTrigger>
             <TabsTrigger value="blog">Blog</TabsTrigger>
             <TabsTrigger value="comments">Comments</TabsTrigger>
+            <TabsTrigger value="reviews" className="gap-2">
+              <MessageSquare className="w-4 h-4" />
+              Reviews
+            </TabsTrigger>
             <TabsTrigger value="requests">Requests</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
             <TabsTrigger value="newsletter">Newsletter</TabsTrigger>
@@ -222,6 +227,11 @@ export default function AdminPage() {
           {/* Comments Moderation Tab */}
           <TabsContent value="comments">
             <CommentsModeration />
+          </TabsContent>
+
+          {/* Reviews Moderation Tab */}
+          <TabsContent value="reviews">
+            <ReviewsModeration />
           </TabsContent>
 
           {/* Content Requests Tab */}
@@ -3089,6 +3099,139 @@ function IssueReports() {
                       </Button>
                     )}
                   </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Reviews Moderation Component
+function ReviewsModeration() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: reviews = [], isLoading } = useQuery<(Review & { username: string; avatarUrl: string | null; contentTitle: string })[]>({
+    queryKey: ["/api/admin/reviews"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/reviews", {
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to fetch reviews");
+      return res.json();
+    },
+  });
+
+  const deleteReviewMutation = useMutation({
+    mutationFn: async (reviewId: string) => {
+      const res = await fetch(`/api/admin/reviews/${reviewId}`, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to delete review");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/reviews"] });
+      toast({
+        title: "Success",
+        description: "Review deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete review",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDelete = (reviewId: string, userName: string) => {
+    if (confirm(`Are you sure you want to delete the review by "${userName}"?`)) {
+      deleteReviewMutation.mutate(reviewId);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="text-center py-8">Loading reviews...</div>;
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Reviews Moderation</CardTitle>
+        <CardDescription>
+          Manage user reviews ({reviews.length} total)
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {reviews.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No reviews yet
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {reviews.map((review) => (
+              <Card key={review.id} className="border-l-4 border-l-primary">
+                <CardHeader className="py-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-muted overflow-hidden flex items-center justify-center">
+                        {review.avatarUrl ? (
+                          <img src={review.avatarUrl} alt={review.username} className="w-full h-full object-cover" />
+                        ) : (
+                          <UserIcon className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">{review.username}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(review.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDelete(review.id, review.username)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="py-3 pt-0">
+                  <div className="mb-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge variant="outline" className="text-xs">
+                        {review.contentType.toUpperCase()}
+                      </Badge>
+                      <span className="text-sm font-semibold text-primary">
+                        {review.contentTitle}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 text-yellow-500 mb-2">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <div key={i} className={i < review.rating ? "fill-current" : "text-muted/30"}>
+                          ★
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="text-sm border-l-2 border-muted pl-3 py-1 bg-muted/20 rounded-r-md">
+                    {review.reviewText || <em className="text-muted-foreground">No text content</em>}
+                  </div>
+
+                  {review.spoilerWarning && (
+                    <Badge variant="destructive" className="mt-2 text-[10px] h-5">
+                      Spoiler Alert
+                    </Badge>
+                  )}
                 </CardContent>
               </Card>
             ))}

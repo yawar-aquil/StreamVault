@@ -623,6 +623,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============================================
+  // ADMIN REVIEWS ROUTES
+  // ============================================
+
+  // Get all reviews for moderation
+  app.get("/api/admin/reviews", requireAdmin, async (req, res) => {
+    try {
+      const reviews = await storage.getAllReviews();
+      res.json(reviews);
+    } catch (error) {
+      console.error("Get all reviews error:", error);
+      res.status(500).json({ error: "Failed to get reviews" });
+    }
+  });
+
+  // Delete a review (Admin)
+  app.delete("/api/admin/reviews/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteReview(id); // No userId needed for admin
+      res.json({ success: true, message: "Review deleted" });
+    } catch (error) {
+      console.error("Delete review error:", error);
+      res.status(500).json({ error: "Failed to delete review" });
+    }
+  });
+
+  // ============================================
   // STORE ROUTES
   // ============================================
   // Products can be browsed without auth, but purchase/gift requires auth (checked in routes)
@@ -5638,12 +5665,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           s.updatedAt ? new Date(s.updatedAt).getTime() : 0
         )).toISOString();
         return latestDate >= oneWeekAgo;
-      }).slice(0, 6);
+      }).slice(0, 5);
       if (newShows.length < 5) {
-        newShows = allShows.filter((s: any) => s.trending || s.featured).slice(0, 6);
+        const existingIds = new Set(newShows.map((s: any) => s.id));
+        const trendingShows = allShows.filter((s: any) => (s.trending || s.featured) && !existingIds.has(s.id));
+        newShows = [...newShows, ...trendingShows].slice(0, 5);
       }
       if (newShows.length === 0) {
-        newShows = allShows.slice(0, 6);
+        newShows = allShows.slice(0, 5);
       }
 
       // Sort movies by most recent date (newest first)
@@ -5657,12 +5686,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           m.updatedAt ? new Date(m.updatedAt).getTime() : 0
         )).toISOString();
         return latestDate >= oneWeekAgo;
-      }).slice(0, 6);
+      }).slice(0, 5);
       if (newMovies.length < 5) {
-        newMovies = allMovies.filter((m: any) => m.trending || m.featured).slice(0, 6);
+        const existingIds = new Set(newMovies.map((m: any) => m.id));
+        const trendingMovies = allMovies.filter((m: any) => (m.trending || m.featured) && !existingIds.has(m.id));
+        newMovies = [...newMovies, ...trendingMovies].slice(0, 5);
       }
       if (newMovies.length === 0) {
-        newMovies = allMovies.slice(0, 6);
+        newMovies = allMovies.slice(0, 5);
       }
 
       // Sort anime by most recent date (newest first)
@@ -5676,12 +5707,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           a.updatedAt ? new Date(a.updatedAt).getTime() : 0
         )).toISOString();
         return latestDate >= oneWeekAgo;
-      }).slice(0, 6);
+      }).slice(0, 5);
       if (newAnime.length < 5) {
-        newAnime = allAnime.filter((a: any) => a.trending || a.featured).slice(0, 6);
+        const existingIds = new Set(newAnime.map((a: any) => a.id));
+        const trendingAnime = allAnime.filter((a: any) => (a.trending || a.featured) && !existingIds.has(a.id));
+        newAnime = [...newAnime, ...trendingAnime].slice(0, 5);
       }
       if (newAnime.length === 0) {
-        newAnime = allAnime.slice(0, 6);
+        newAnime = allAnime.slice(0, 5);
       }
 
       // Get blog posts
@@ -5998,7 +6031,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // If not enough new content, add trending/featured content
       if (newShows.length < 5) {
-        const trendingShows = allShows.filter((s: any) => s.trending || s.featured && !newShows.find((ns: any) => ns.id === s.id));
+        const existingIds = new Set(newShows.map((s: any) => s.id));
+        const trendingShows = allShows.filter((s: any) => (s.trending || s.featured) && !existingIds.has(s.id));
         newShows = [...newShows, ...trendingShows].slice(0, 5);
       }
       if (newShows.length === 0) {
@@ -6006,7 +6040,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (newMovies.length < 5) {
-        const trendingMovies = allMovies.filter((m: any) => m.trending || m.featured && !newMovies.find((nm: any) => nm.id === m.id));
+        const existingIds = new Set(newMovies.map((m: any) => m.id));
+        const trendingMovies = allMovies.filter((m: any) => (m.trending || m.featured) && !existingIds.has(m.id));
         newMovies = [...newMovies, ...trendingMovies].slice(0, 5);
       }
       if (newMovies.length === 0) {
@@ -6023,7 +6058,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }).slice(0, 5);
 
       if (newAnime.length < 5) {
-        const trendingAnime = allAnime.filter((a: any) => a.trending || a.featured && !newAnime.find((na: any) => na.id === a.id));
+        const existingIds = new Set(newAnime.map((a: any) => a.id));
+        const trendingAnime = allAnime.filter((a: any) => (a.trending || a.featured) && !existingIds.has(a.id));
         newAnime = [...newAnime, ...trendingAnime].slice(0, 5);
       }
       if (newAnime.length === 0) {
