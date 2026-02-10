@@ -24,14 +24,17 @@
   <script>
     (function () {
       var iconPref = localStorage.getItem('streamvault_app_icon');
-      var link = document.createElement('link');
-      link.rel = 'manifest';
-      if (iconPref === 'alt') {
-        link.href = '/manifest-alt.json';
+      var targetManifest = (iconPref === 'alt') ? '/manifest-alt.json' : '/manifest.webmanifest';
+
+      var link = document.querySelector("link[rel='manifest']");
+      if (link) {
+        link.href = targetManifest;
       } else {
-        link.href = '/manifest.webmanifest';
+        link = document.createElement('link');
+        link.rel = 'manifest';
+        link.href = targetManifest;
+        document.head.appendChild(link);
       }
-      document.head.appendChild(link);
     })();
   </script>
 
