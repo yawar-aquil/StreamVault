@@ -30,13 +30,27 @@
             "name": "Browse Movies",
             "short_name": "Movies",
             "description": "Browse all movies",
-            "url": "/movies"
+            "url": "/movies",
+            "icons": [
+                {
+                    "src": "/icons/icon-alt-512.png",
+                    "sizes": "512x512",
+                    "type": "image/png"
+                }
+            ]
         },
         {
             "name": "Browse Shows",
             "short_name": "Shows",
             "description": "Browse all TV shows",
-            "url": "/browse/shows"
+            "url": "/browse/shows",
+            "icons": [
+                {
+                    "src": "/icons/icon-alt-512.png",
+                    "sizes": "512x512",
+                    "type": "image/png"
+                }
+            ]
         }
     ]
 }
