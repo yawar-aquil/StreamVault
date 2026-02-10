@@ -1420,6 +1420,34 @@
       },
       "id": "b8c31f6f-3229-43b3-93bb-b138bbb3b40e",
       "createdAt": "2026-02-09T07:46:34.142Z"
+    },
+    {
+      "userId": "0229a46c-2302-4909-93c5-c71f80db5538",
+      "type": "system",
+      "title": "New Reply",
+      "message": "elton galeech replied to your comment on John Wick",
+      "data": {
+        "link": "/movie/john-wick",
+        "commentId": "638019a9-43af-434f-971e-3be1ecb526b9",
+        "fromUserId": "c47aa877-d49b-40d2-9afd-467ab293a6a1"
+      },
+      "read": true,
+      "id": "abfeac23-92b1-4bbe-b4a9-b4b27a2cc073",
+      "createdAt": "2026-02-10T19:56:55.527Z"
+    },
+    {
+      "userId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
+      "type": "system",
+      "title": "New Reply",
+      "message": "admin replied to your comment on John Wick",
+      "data": {
+        "link": "/movie/john-wick",
+        "commentId": "851bcd0d-cb38-4fa2-a139-15818b16b46a",
+        "fromUserId": "0229a46c-2302-4909-93c5-c71f80db5538"
+      },
+      "read": true,
+      "id": "48627a14-8183-46a9-847f-23d8d872e583",
+      "createdAt": "2026-02-10T19:59:33.106Z"
     }
   ],
   "directMessages": [

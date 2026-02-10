@@ -165,7 +165,7 @@ function Router() {
           <AdBanner />
         </div>
       )}
-      {!isWatchTogether && <Footer />}
+      {location === '/' && <Footer />}
       {!isWatchTogether && <Chatbot />}
       <InstallPrompt />
       <NotificationPrompt />

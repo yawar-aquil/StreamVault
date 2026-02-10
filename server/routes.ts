@@ -5236,20 +5236,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           if (title) {
-            await logAndBroadcastActivity({
-              userId,
-              type: 'comment_post',
-              entityId: newComment.id,
-              entityType: 'comment',
-              metadata: JSON.stringify({
-                contentId: entityId,
-                targetType: entityType,
-                title: title,
-                posterUrl: posterUrl,
-                link: link,
-                commentExcerpt: comment.substring(0, 50) + (comment.length > 50 ? '...' : '')
-              })
-            });
+            // Check if this is a reply to another comment
+            if (parentId) {
+              // Look up parent comment to get its author
+              try {
+                const allComments = await storage.getAllComments();
+                const parentComment = allComments.find((c: any) => c.id === parentId);
+                if (parentComment && parentComment.userId && parentComment.userId !== userId) {
+                  // Get the parent comment author's info
+                  const parentAuthor = await storage.getUserById(parentComment.userId);
+                  const currentUser = await storage.getUserById(userId);
+
+                  // Send notification to the parent comment author
+                  await storage.createNotification({
+                    userId: parentComment.userId,
+                    type: 'system',
+                    title: 'New Reply',
+                    message: `${currentUser?.username || userName} replied to your comment on ${title}`,
+                    data: { link, commentId: newComment.id, fromUserId: userId },
+                    read: false,
+                  });
+
+                  // Log activity as comment_reply (shows in mentions tab via targetUserId)
+                  await logAndBroadcastActivity({
+                    userId,
+                    type: 'comment_reply',
+                    entityId: newComment.id,
+                    entityType: 'comment',
+                    metadata: JSON.stringify({
+                      contentId: entityId,
+                      targetType: entityType,
+                      title: title,
+                      posterUrl: posterUrl,
+                      link: link,
+                      commentExcerpt: comment.substring(0, 50) + (comment.length > 50 ? '...' : ''),
+                      parentAuthor: parentAuthor?.username || parentComment.userName || 'someone',
+                      targetUserId: parentComment.userId,
+                    })
+                  });
+                } else {
+                  // Reply to own comment or anonymous comment - just log as comment_post
+                  await logAndBroadcastActivity({
+                    userId,
+                    type: 'comment_post',
+                    entityId: newComment.id,
+                    entityType: 'comment',
+                    metadata: JSON.stringify({
+                      contentId: entityId,
+                      targetType: entityType,
+                      title: title,
+                      posterUrl: posterUrl,
+                      link: link,
+                      commentExcerpt: comment.substring(0, 50) + (comment.length > 50 ? '...' : '')
+                    })
+                  });
+                }
+              } catch (replyErr) {
+                console.error("Failed to handle reply notification", replyErr);
+              }
+            } else {
+              // Top-level comment
+              await logAndBroadcastActivity({
+                userId,
+                type: 'comment_post',
+                entityId: newComment.id,
+                entityType: 'comment',
+                metadata: JSON.stringify({
+                  contentId: entityId,
+                  targetType: entityType,
+                  title: title,
+                  posterUrl: posterUrl,
+                  link: link,
+                  commentExcerpt: comment.substring(0, 50) + (comment.length > 50 ? '...' : '')
+                })
+              });
+            }
           }
         }
       } catch (e) {

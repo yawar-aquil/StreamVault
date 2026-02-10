@@ -85,6 +85,7 @@ function CommentItem({
   comment,
   episodeId,
   movieId,
+  blogPostId,
   userName,
   setUserName,
   isNameSaved,
@@ -233,18 +234,20 @@ function CommentItem({
             {/* Badges Display */}
             {comment.authorBadges && comment.authorBadges.length > 0 && (
               <div className="flex items-center gap-1">
-                {comment.authorBadges.map((badge) => (
-                  <div key={badge.id} className="relative group/badge">
-                    <img
-                      src={badge.imageUrl}
-                      alt={badge.name}
-                      className="w-4 h-4 object-contain"
-                    />
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover/badge:block bg-popover text-popover-foreground text-[10px] px-1.5 py-0.5 rounded border whitespace-nowrap z-50">
-                      {badge.name}
+                {comment.authorBadges
+                  .filter((badge) => badge.category !== 'skin' && !badge.name.includes('Skin') && badge.category !== 'theme' && badge.category !== 'feature')
+                  .map((badge) => (
+                    <div key={badge.id} className="relative group/badge">
+                      <img
+                        src={badge.imageUrl}
+                        alt={badge.name}
+                        className="w-4 h-4 object-contain"
+                      />
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover/badge:block bg-popover text-popover-foreground text-[10px] px-1.5 py-0.5 rounded border whitespace-nowrap z-50">
+                        {badge.name}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             )}
             <span className="text-xs text-muted-foreground">

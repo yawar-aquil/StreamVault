@@ -13,7 +13,8 @@ import {
     Tv,
     Film,
     Clapperboard,
-    Gift
+    Gift,
+    Reply
 } from "lucide-react";
 import { Link } from "wouter";
 import type { Activity, User } from "@shared/schema";
@@ -45,6 +46,8 @@ export function FeedItem({ activity }: FeedItemProps) {
                 return <Star className="w-4 h-4 text-orange-400" />;
             case 'comment_post':
                 return <MessageSquare className="w-4 h-4 text-cyan-400" />;
+            case 'comment_reply':
+                return <Reply className="w-4 h-4 text-purple-400" />;
             case 'blog_read':
                 return <BookOpen className="w-4 h-4 text-emerald-400" />;
             case 'item_gift':
@@ -126,14 +129,32 @@ export function FeedItem({ activity }: FeedItemProps) {
             case 'review_post':
                 return (
                     <span>
-                        reviewed <span className="text-primary font-medium">{meta.contentId ? `Content #${meta.contentId}` : 'something'}</span>
-                        {meta.rating && <span className="text-orange-400 ml-2">★ {meta.rating}/10</span>}
+                        reviewed {meta.link ? (
+                            <Link href={meta.link}><span className="text-primary font-medium hover:underline cursor-pointer">{meta.title || 'something'}</span></Link>
+                        ) : (
+                            <span className="text-primary font-medium">{meta.title || 'something'}</span>
+                        )}
+                        {meta.rating && <span className="text-orange-400 ml-2">★ {meta.rating}/5</span>}
                     </span>
                 );
             case 'comment_post':
                 return (
                     <span>
-                        commented on <span className="text-primary font-medium">{meta.blogTitle || 'a post'}</span>
+                        commented on {meta.link ? (
+                            <Link href={meta.link}><span className="text-primary font-medium hover:underline cursor-pointer">{meta.title || 'a post'}</span></Link>
+                        ) : (
+                            <span className="text-primary font-medium">{meta.title || 'a post'}</span>
+                        )}
+                    </span>
+                );
+            case 'comment_reply':
+                return (
+                    <span>
+                        replied to <span className="text-purple-400 font-medium">{meta.parentAuthor || 'someone'}'s</span> comment on {meta.link ? (
+                            <Link href={meta.link}><span className="text-primary font-medium hover:underline cursor-pointer">{meta.title || 'a post'}</span></Link>
+                        ) : (
+                            <span className="text-primary font-medium">{meta.title || 'a post'}</span>
+                        )}
                     </span>
                 );
             case 'blog_read':
@@ -181,9 +202,9 @@ export function FeedItem({ activity }: FeedItemProps) {
                                     {user.username}
                                 </span>
                             </Link>
-                            {user.equippedBadges && user.equippedBadges.length > 0 && (
+                            {user.equippedBadges && user.equippedBadges.filter((badge: any) => badge.category !== 'skin' && !badge.name?.includes('Skin') && badge.category !== 'theme' && badge.category !== 'feature').length > 0 && (
                                 <div className="flex items-center gap-1">
-                                    {user.equippedBadges.map((badge: any) => (
+                                    {user.equippedBadges.filter((badge: any) => badge.category !== 'skin' && !badge.name?.includes('Skin') && badge.category !== 'theme' && badge.category !== 'feature').map((badge: any) => (
                                         <div key={badge.id} title={badge.name} className="flex-shrink-0">
                                             {badge.imageUrl ? (
                                                 <img src={badge.imageUrl} alt={badge.name} className="w-5 h-5 object-contain drop-shadow-sm" />
