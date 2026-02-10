@@ -25,6 +25,7 @@ export default defineConfig({
         'robots.txt',
         'apple-touch-icon.png',
         'icons/*.png',
+        'icons/icon-alt-512.png',
         'manifest-alt.json'
       ],
       manifest: {
