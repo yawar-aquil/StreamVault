@@ -1345,7 +1345,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: ub.badge.id,
           name: ub.badge.name,
           imageUrl: ub.badge.imageUrl,
-          equipped: true
+          equipped: true,
+          equippedAt: ub.equippedAt
         }));
 
         return {
@@ -1386,7 +1387,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         equipped: ub.equipped,
         category: ub.badge.category,
         description: ub.badge.description,
-        icon: ub.badge.icon
+        icon: ub.badge.icon,
+        equippedAt: ub.equippedAt
       }));
 
       // Parse JSON fields
@@ -1472,7 +1474,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         equipped: ub.equipped,
         category: ub.badge.category,
         description: ub.badge.description,
-        icon: ub.badge.icon
+        icon: ub.badge.icon,
+        equippedAt: ub.equippedAt
       }));
 
       // Parse JSON fields
@@ -1516,6 +1519,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         bio: user.bio,
         level: user.level,
         xp: user.xp,
+        currentStreak: user.currentStreak || 0,
+        longestStreak: user.longestStreak || 0,
         socialLinks,
         favorites,
         badges: allBadges,
@@ -1639,7 +1644,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             imageUrl: ub.badge.imageUrl,
             equipped: true,
             description: ub.badge.description,
-            icon: ub.badge.icon
+            icon: ub.badge.icon,
+            equippedAt: ub.equippedAt
           }));
         }
 
@@ -1840,7 +1846,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             imageUrl: ub.badge.imageUrl,
             equipped: true,
             description: ub.badge.description,
-            icon: ub.badge.icon
+            icon: ub.badge.icon,
+            equippedAt: ub.equippedAt
           }));
         }
 
@@ -1981,7 +1988,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         equipped: ub.equipped,
         category: ub.badge.category,
         description: ub.badge.description,
-        icon: ub.badge.icon
+        icon: ub.badge.icon,
+        equippedAt: ub.equippedAt
       }));
 
       // Return public profile data
@@ -2244,6 +2252,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get streak error:", error);
       res.status(500).json({ error: "Failed to get streak" });
+    }
+  });
+
+  // Claim streak milestone reward
+  app.post("/api/user/claim-streak-reward", async (req, res) => {
+    try {
+      const token = req.cookies.authToken;
+      if (!token) return res.status(401).json({ error: "Not authenticated" });
+      const payload = verifyToken(token);
+      if (!payload) return res.status(401).json({ error: "Invalid token" });
+
+      const { milestone } = req.body;
+      const validMilestones: Record<number, { xp: number; coins: number }> = {
+        7: { xp: 100, coins: 50 },
+        30: { xp: 250, coins: 150 },
+        100: { xp: 500, coins: 300 },
+        365: { xp: 1000, coins: 500 },
+      };
+
+      if (!validMilestones[milestone]) {
+        return res.status(400).json({ error: "Invalid milestone" });
+      }
+
+      const user = await storage.getUserById(payload.userId);
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      // Check if streak has reached this milestone (current or longest)
+      const currentStreak = user.currentStreak || 0;
+      const longestStreak = user.longestStreak || 0;
+      if (currentStreak < milestone && longestStreak < milestone) {
+        return res.status(400).json({ error: "You haven't reached this milestone yet" });
+      }
+
+      // Check if already claimed
+      const claimed: number[] = (user as any).claimedStreakMilestones || [];
+      if (claimed.includes(milestone)) {
+        return res.status(400).json({ error: "You already claimed this milestone reward" });
+      }
+
+      // Award XP
+      const { xp, coins } = validMilestones[milestone];
+      await storage.updateUserXP(payload.userId, xp);
+      await storage.addXpHistory(payload.userId, xp, 'streak_milestone');
+
+      // Award Coins
+      await storage.updateUserCoins(payload.userId, coins);
+      await storage.createCoinTransaction({
+        userId: payload.userId,
+        amount: coins,
+        type: 'reward',
+        description: `Streak milestone reward: ${milestone}-day streak`,
+        metadata: JSON.stringify({ milestone }),
+      });
+
+      // Mark as claimed
+      claimed.push(milestone);
+      await storage.claimStreakMilestone(payload.userId, claimed);
+
+      // Create notification
+      await storage.createNotification({
+        userId: payload.userId,
+        type: 'system',
+        title: `🎉 ${milestone}-Day Streak Reward Claimed!`,
+        message: `You received ${xp} XP and ${coins} StreamCoins for your ${milestone}-day streak!`,
+        data: { milestone, xp, coins },
+        read: false,
+      });
+
+      res.json({ success: true, milestone, xpAwarded: xp, coinsAwarded: coins });
+    } catch (error) {
+      console.error("Claim streak reward error:", error);
+      res.status(500).json({ error: "Failed to claim reward" });
     }
   });
 
@@ -3602,7 +3682,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: ub.badge.id,
           name: ub.badge.name,
           imageUrl: ub.badge.imageUrl,
-          equipped: true
+          equipped: true,
+          equippedAt: ub.equippedAt
         }));
 
         return {

@@ -283,7 +283,8 @@ export function setupWatchTogether(httpServer: HttpServer): Server {
                         id: ub.badge.id,
                         name: ub.badge.name,
                         imageUrl: ub.badge.imageUrl,
-                        equipped: true
+                        equipped: true,
+                        equippedAt: ub.equippedAt
                     }));
 
                     if (equipped.length > 0) {
@@ -406,7 +407,8 @@ export function setupWatchTogether(httpServer: HttpServer): Server {
                         id: ub.badge.id,
                         name: ub.badge.name,
                         imageUrl: ub.badge.imageUrl,
-                        equipped: true
+                        equipped: true,
+                        equippedAt: ub.equippedAt
                     }));
 
                     if (equipped.length > 0) {

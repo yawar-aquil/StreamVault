@@ -190,7 +190,7 @@ export interface IStorage {
   getCommentsByMovieId(movieId: string): Promise<CommentWithBadges[]>;
   getCommentsByBlogPostId(blogPostId: string): Promise<CommentWithBadges[]>;
   createComment(comment: InsertComment): Promise<Comment>;
-  getAllComments(): Promise<Comment[]>;
+  getAllComments(): Promise<any[]>;
   deleteComment(commentId: string): Promise<void>;
 
   // Blog Posts
@@ -294,12 +294,13 @@ export interface IStorage {
 
   // Streak tracking
   updateUserStreak(userId: string): Promise<{ user: User; streakIncreased: boolean; milestone?: number }>;
-  getUserStreak(userId: string): Promise<{ currentStreak: number; longestStreak: number; lastWatchDate: string | null }>;
+  getUserStreak(userId: string): Promise<{ currentStreak: number; longestStreak: number; lastWatchDate: string | null; claimedMilestones: number[] }>;
+  claimStreakMilestone(userId: string, claimedMilestones: number[]): Promise<void>;
 
   // Reviews
   createReview(review: Omit<Review, 'id' | 'createdAt' | 'updatedAt' | 'helpfulCount'>): Promise<Review>;
   getReviews(contentType: string, contentId: string): Promise<(Review & { username: string; avatarUrl: string | null })[]>;
-  getAllReviews(): Promise<(Review & { username: string; avatarUrl: string | null; contentTitle?: string })[]>;
+  getAllReviews(): Promise<(Review & { username: string; avatarUrl: string | null; badges?: any[]; contentTitle?: string })[]>;
   getUserReview(userId: string, contentType: string, contentId: string): Promise<Review | undefined>;
   deleteReview(id: string, userId?: string): Promise<void>; // Make userId optional for admin delete
   markReviewHelpful(reviewId: string, userId: string): Promise<void>;
@@ -1425,8 +1426,11 @@ export class MemStorage implements IStorage {
 
         // Get badge details
         authorBadges = userBadges
-          .map(ub => this.badges.get(ub.badgeId))
-          .filter((b): b is Badge => !!b)
+          .map(ub => {
+            const badge = this.badges.get(ub.badgeId);
+            return badge ? { ...badge, equippedAt: ub.equippedAt } : null;
+          })
+          .filter((b): b is Badge & { equippedAt: any } => !!b)
           // Sort by display priority (descending)
           .sort((a, b) => (b.displayPriority || 0) - (a.displayPriority || 0));
       }
@@ -1474,9 +1478,25 @@ export class MemStorage implements IStorage {
     return newComment;
   }
 
-  async getAllComments(): Promise<Comment[]> {
-    return Array.from(this.comments.values())
+  async getAllComments(): Promise<any[]> {
+    const allComments = Array.from(this.comments.values())
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    // Enrich with user badges
+    return allComments.map(comment => {
+      if (comment.userId) {
+        const user = this.users.get(comment.userId);
+        const userBadges = user?.badges ?
+          (typeof user.badges === 'string' ? JSON.parse(user.badges) : user.badges)
+            .filter((b: any) => b.equipped) : [];
+        return {
+          ...comment,
+          badges: userBadges,
+          avatarUrl: user?.avatarUrl || comment.avatarUrl,
+        };
+      }
+      return { ...comment, badges: [] };
+    });
   }
 
   async deleteComment(commentId: string): Promise<void> {
@@ -1631,6 +1651,7 @@ export class MemStorage implements IStorage {
         imageUrl: badgeDefinition.imageUrl,
         category: badgeDefinition.category,
         equipped: ub.equipped,
+        equippedAt: ub.equippedAt,
         earnedAt: ub.earnedAt,
         icon: badgeDefinition.icon || 'star'
       };
@@ -2498,7 +2519,7 @@ export class MemStorage implements IStorage {
     return { user, streakIncreased, milestone };
   }
 
-  async getUserStreak(userId: string): Promise<{ currentStreak: number; longestStreak: number; lastWatchDate: string | null }> {
+  async getUserStreak(userId: string): Promise<{ currentStreak: number; longestStreak: number; lastWatchDate: string | null; claimedMilestones: number[] }> {
     const user = this.users.get(userId);
     if (!user) throw new Error("User not found");
 
@@ -2506,7 +2527,17 @@ export class MemStorage implements IStorage {
       currentStreak: user.currentStreak || 0,
       longestStreak: user.longestStreak || 0,
       lastWatchDate: user.lastWatchDate || null,
+      claimedMilestones: (user as any).claimedStreakMilestones || [],
     };
+  }
+
+  async claimStreakMilestone(userId: string, claimedMilestones: number[]): Promise<void> {
+    const user = this.users.get(userId);
+    if (!user) throw new Error("User not found");
+    (user as any).claimedStreakMilestones = claimedMilestones;
+    user.updatedAt = new Date();
+    this.users.set(userId, user);
+    this.saveUsers();
   }
 
   // ============================================
@@ -2559,8 +2590,11 @@ export class MemStorage implements IStorage {
           .filter(ub => ub.userId === user.id && ub.equipped);
 
         authorBadges = userBadges
-          .map(ub => this.badges.get(ub.badgeId))
-          .filter((b): b is Badge => !!b)
+          .map(ub => {
+            const badge = this.badges.get(ub.badgeId);
+            return badge ? { ...badge, equippedAt: ub.equippedAt } : null;
+          })
+          .filter((b): b is Badge & { equippedAt: any } => !!b)
           .sort((a, b) => (b.displayPriority || 0) - (a.displayPriority || 0));
       }
 
@@ -2573,7 +2607,7 @@ export class MemStorage implements IStorage {
     });
   }
 
-  async getAllReviews(): Promise<(Review & { username: string; avatarUrl: string | null; contentTitle?: string })[]> {
+  async getAllReviews(): Promise<(Review & { username: string; avatarUrl: string | null; badges?: any[]; contentTitle?: string })[]> {
     const allReviews = Array.from(this.reviews.values());
 
     // Sort by newest first
@@ -2595,10 +2629,16 @@ export class MemStorage implements IStorage {
         if (anime) contentTitle = anime.title;
       }
 
+      // Get equipped badges for this user
+      const userBadges = user?.badges ?
+        (typeof user.badges === 'string' ? JSON.parse(user.badges) : user.badges)
+          .filter((b: any) => b.equipped) : [];
+
       return {
         ...review,
         username: user?.username || "Unknown User",
         avatarUrl: user?.avatarUrl || null,
+        badges: userBadges,
         contentTitle
       };
     });
@@ -3129,6 +3169,7 @@ export class MemStorage implements IStorage {
 
     if (userBadge) {
       userBadge.equipped = equipped;
+      userBadge.equippedAt = equipped ? new Date() : null;
       this.userBadges.set(userBadge.id, userBadge);
       this.saveData();
 
@@ -3139,6 +3180,7 @@ export class MemStorage implements IStorage {
         const badgesJson = allUserBadges.map(ub => ({
           ...ub.badge,
           equipped: ub.equipped,
+          equippedAt: ub.equippedAt,
           earnedAt: ub.earnedAt
         }));
 
@@ -3332,7 +3374,7 @@ export class MemStorage implements IStorage {
             !ub.badge.name.includes('Skin') &&
             ub.badge.category !== 'feature'
           )
-          .map(ub => ub.badge);
+          .map(ub => ({ ...ub.badge, equippedAt: ub.equippedAt }));
       }
       // Return user with the extra property
       return {

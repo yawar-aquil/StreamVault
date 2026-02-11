@@ -460,7 +460,8 @@ router.get('/users/search', async (req, res) => {
                 id: ub.badge.id,
                 name: ub.badge.name,
                 imageUrl: ub.badge.imageUrl,
-                equipped: true
+                equipped: true,
+                equippedAt: ub.equippedAt
             }));
 
             return {

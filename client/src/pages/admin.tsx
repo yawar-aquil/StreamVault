@@ -3188,7 +3188,25 @@ function ReviewsModeration() {
                         )}
                       </div>
                       <div>
-                        <div className="font-medium text-sm">{review.username}</div>
+                        <div className="flex items-center gap-1">
+                          <div className="font-medium text-sm">{review.username}</div>
+                          {(review as any).badges && (review as any).badges.length > 0 && (
+                            <div className="flex items-center gap-0.5">
+                              {(review as any).badges
+                                .filter((b: any) => b.category !== 'skin' && !b.name?.includes('Skin') && b.category !== 'theme')
+                                .sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime())
+                                .map((badge: any) => (
+                                  <img
+                                    key={badge.id}
+                                    src={badge.imageUrl}
+                                    alt={badge.name}
+                                    title={badge.name}
+                                    className="w-4 h-4 object-contain"
+                                  />
+                                ))}
+                            </div>
+                          )}
+                        </div>
                         <div className="text-xs text-muted-foreground">
                           {new Date(review.createdAt).toLocaleDateString()}
                         </div>
@@ -3361,6 +3379,22 @@ function CommentsModeration() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
                           <CardTitle className="text-lg">{comment.userName}</CardTitle>
+                          {comment.badges && comment.badges.length > 0 && (
+                            <div className="flex items-center gap-0.5">
+                              {comment.badges
+                                .filter((b: any) => b.category !== 'skin' && !b.name?.includes('Skin') && b.category !== 'theme')
+                                .sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime())
+                                .map((badge: any) => (
+                                  <img
+                                    key={badge.id}
+                                    src={badge.imageUrl}
+                                    alt={badge.name}
+                                    title={badge.name}
+                                    className="w-4 h-4 object-contain"
+                                  />
+                                ))}
+                            </div>
+                          )}
                           <Badge variant="outline">
                             {new Date(comment.createdAt).toLocaleDateString()}
                           </Badge>
@@ -5307,7 +5341,7 @@ function AwardBadgeForm({ badges }: { badges: any[] }) {
                     <p className="font-medium text-sm truncate">{user.username}</p>
                     {user.badges && user.badges.length > 0 && (
                       <div className="flex items-center gap-0.5 ml-1">
-                        {user.badges.filter((b: any) => b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'theme').map((badge: any) => (
+                        {user.badges.filter((b: any) => b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'theme').sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime()).map((badge: any) => (
                           <img
                             key={badge.id}
                             src={badge.imageUrl}
@@ -5497,7 +5531,7 @@ function ManageUserBadges() {
                     <p className="font-medium text-sm truncate">{user.username}</p>
                     {user.badges && user.badges.length > 0 && (
                       <div className="flex items-center gap-0.5 ml-1">
-                        {user.badges.filter((b: any) => b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'theme').map((badge: any) => (
+                        {user.badges.filter((b: any) => b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'theme').sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime()).map((badge: any) => (
                           <img
                             key={badge.id}
                             src={badge.imageUrl}

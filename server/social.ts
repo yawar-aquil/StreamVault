@@ -378,6 +378,28 @@ export function initSocialSocket(server: HttpServer, socketio?: Server) {
                 // Notify both users about the new call log message
                 io.of('/social').to(`user:${data.toUserId}`).emit('dm:received', missedCallMsg);
                 io.of('/social').to(`user:${data.fromUserId}`).emit('dm:received', missedCallMsg);
+
+                // Create notification for the recipient (they missed the call)
+                const callerUser = await storage.getUserById(data.toUserId);
+                await storage.createNotification({
+                    userId: data.fromUserId,
+                    type: 'dm',
+                    title: 'Missed Call',
+                    message: `You missed a voice call from ${callerUser?.username || 'someone'}`,
+                    data: { fromUserId: data.toUserId },
+                    read: false,
+                });
+
+                // Push real-time notification to the recipient
+                io.of('/social').to(`user:${data.fromUserId}`).emit('notification:new', {
+                    type: 'missed_call',
+                    fromUser: callerUser ? {
+                        id: callerUser.id,
+                        username: callerUser.username,
+                        avatarUrl: callerUser.avatarUrl,
+                    } : null,
+                    message: `You missed a voice call from ${callerUser?.username || 'someone'}`,
+                });
             } catch (error) {
                 console.error('Failed to save missed call message:', error);
             }
@@ -499,7 +521,7 @@ export async function logAndBroadcastActivity(activityData: InsertActivity) {
                     !ub.badge.name.includes('Skin') &&
                     ub.badge.category !== 'feature'
                 )
-                .map(ub => ub.badge);
+                .map(ub => ({ ...ub.badge, equippedAt: ub.equippedAt }));
         }
 
         const feedItem = { ...activity, user: user ? { ...user, equippedBadges } : undefined };
