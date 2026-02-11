@@ -21,6 +21,20 @@ A professional Netflix-inspired streaming platform for both TV shows and movies,
 - Episode selection with season navigation
 - Season-level trailers from TMDB
 
+### 💰 **Store & Economy (NEW!)**
+- **StreamCoins** - Earn virtual currency through activity, referrals, or purchases
+- **Digital Store** - Buy premium badges, animated stickers, and profile frames
+- **Gifting System** - Send badges and gifts to friends directly or in chat
+- **Wallet** - Track transaction history and coin balance
+- **Bulk Gifting** - Send gifts to multiple users at once
+
+### 🛠️ **Admin Dashboard (NEW!)**
+- **Analytics** - Visualize user growth, revenue, and content popularity
+- **Moderation** - Review and act on user reports for comments/reviews
+- **Badge Management** - View user badges directly in moderation panels
+- **Content Management** - Add/Edit/Delete shows, movies, and anime
+- **System Health** - Monitor server status and database metrics
+
 ### 📝 **SEO Blog System**
 - Auto-generated blog articles for every show, movie, **and anime**
 - Rich content: plot summaries, cast info, trivia, awards
@@ -63,7 +77,7 @@ A professional Netflix-inspired streaming platform for both TV shows and movies,
 - Session-based data storage
 - Fully mobile responsive
 
-### 🎬 **Watch Together (NEW!)**
+### 🎬 **Watch Together**
 - **Real-time co-watching** - Watch shows/movies with friends
 - **Video Sync** - Host controls sync play, pause, seek for all viewers
 - **Change Episode** - Host can switch episodes without leaving room
@@ -76,7 +90,7 @@ A professional Netflix-inspired streaming platform for both TV shows and movies,
 - **Speaking indicators** - See who's talking in voice chat
 - **Room sharing** - Easy room code sharing via link
 
-### 👥 **Social Features (NEW!)**
+### 👥 **Social Features**
 - **Friend System** - Add friends, view online status, and track what they're watching
 - **Direct Messaging** - Real-time private chat with friends
 - **Rich Chat** - Send GIFs, emojis, and file attachments
@@ -85,7 +99,7 @@ A professional Netflix-inspired streaming platform for both TV shows and movies,
 - **Profile Favorites** - Showcase your favorite shows, movies, and anime on your profile
 - **Notifications** - Real-time alerts for friend requests and messages
 
-### ⚙️ **Settings & Preferences (NEW!)**
+### ⚙️ **Settings & Preferences**
 - **Dedicated Settings Page** - `/settings` for all app preferences
 - **Chatbot Toggle** - Enable/disable AI assistant
 - **Theme Selection** - Light/Dark/System themes
@@ -93,14 +107,14 @@ A professional Netflix-inspired streaming platform for both TV shows and movies,
 - **Privacy Settings** - Control friend activity visibility
 - **Playback Preferences** - Default video quality and autoplay settings
 
-### 🏆 **Gamification & Community (NEW!)**
+### 🏆 **Gamification & Community**
+- **Badge System V2** - Sort by equip date, auto-healing logic, "Stream King" animated badge
 - **Leaderboard** - Track top viewers by XP, levels, and watch streaks
 - **Daily Challenges** - Earn XP by completing daily and weekly watch tasks
 - **Achievements** - Unlock badges for milestones (e.g., "Binge Elite", "Night Owl")
 - **Community Polls** - Vote on trending topics and future content additions
 - **Reviews & Ratings** - Rate and review content with spoiler tags
 - **Release Calendar** - Track upcoming episodes and movie releases
-
 
 ### 🛠️ **Tech Stack**
 - **Frontend:** React 18 + TypeScript
@@ -317,6 +331,12 @@ Edit `server/storage.ts` - add shows to the `shows` array
 - `POST /api/polls/:id/vote` - Vote on a poll
 - `GET /api/achievements` - Get all achievements
 
+### Store (NEW!)
+- `GET /api/store/products` - Get all store items
+- `POST /api/store/purchase` - Purchase item with coins
+- `POST /api/store/gift` - Gift item to friend
+- `GET /api/store/my-badges` - Get owned badges
+
 ---
 
 ## 🎬 Sample Content
@@ -450,6 +470,13 @@ MIT License - feel free to use for personal or commercial projects
 ---
 
 ## 🎉 What's New
+
+### Latest Updates (v5.3) - February 2026
+- ✅ **Badge Sorting Fixes** - Badges now sort correctly by equipped date everywhere
+- ✅ **Store & Economy** - Full purchasing and gifting system with StreamCoins live
+- ✅ **Admin Dashboard Enhancements** - Badge management in moderation panels
+- ✅ **Performance** - Optimized badge rendering across frontend
+- ✅ **Bug Fixes** - Fixed badge timestamps in API endpoints
 
 ### Latest Updates (v5.2) - January 26, 2026
 - ✅ **Forgot Password Flow** - Secure email recovery with Resend integration
@@ -612,4 +639,3 @@ Real-time co-watching with friends featuring voice chat, live messaging with GIF
 ---
 
 **Ready to stream? Run `npm run dev` and visit http://localhost:5000** 🎬
-
