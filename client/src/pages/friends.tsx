@@ -342,7 +342,7 @@ export default function Friends() {
                                             {/* Equipped Badges */}
                                             {friend.badges && friend.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).length > 0 && (
                                                 <div className="flex items-center gap-0.5">
-                                                    {friend.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).map((badge: any) => (
+                                                    {friend.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime()).map((badge: any) => (
                                                         <div key={badge.id} title={badge.name} className="relative group/tooltip">
                                                             <img
                                                                 src={badge.imageUrl}
@@ -506,7 +506,7 @@ export default function Friends() {
                                             {/* Equipped Badges for Requests - assuming backend sends them */}
                                             {request.fromUser?.badges && request.fromUser.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).length > 0 && (
                                                 <div className="flex items-center gap-0.5">
-                                                    {request.fromUser.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).map((badge: any) => (
+                                                    {request.fromUser.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime()).map((badge: any) => (
                                                         <div key={badge.id} title={badge.name} className="relative group/tooltip">
                                                             <img
                                                                 src={badge.imageUrl}
@@ -598,6 +598,7 @@ export default function Friends() {
                                                         : (typeof resultUser.badges === 'string' ? JSON.parse(resultUser.badges) : [])
                                                     )
                                                         .filter((b: any) => b.equipped && b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'theme')
+                                                        .sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime())
                                                         .map((badge: any) => (
                                                             <div key={badge.id} title={badge.name} className="relative group/tooltip">
                                                                 <img

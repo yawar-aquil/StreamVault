@@ -744,7 +744,7 @@ export default function StorePage() {
                                                                     <span>{user.username}</span>
                                                                     {user.badges && user.badges.length > 0 && (
                                                                         <div className="flex items-center gap-0.5 ml-1">
-                                                                            {user.badges.filter((b: any) => b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'theme').map((badge: any) => (
+                                                                            {user.badges.filter((b: any) => b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'theme').sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime()).map((badge: any) => (
                                                                                 <img
                                                                                     key={badge.id}
                                                                                     src={badge.imageUrl}

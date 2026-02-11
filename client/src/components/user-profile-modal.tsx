@@ -198,6 +198,7 @@ export function UserProfileModal({ isOpen, onClose, user, isFriend }: UserProfil
                                         <div className="flex items-center justify-center gap-1 mt-1">
                                             {user.badges
                                                 .filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'feature')
+                                                .sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime())
                                                 .map((badge: any) => (
                                                     <div key={badge.id} title={badge.name}>
                                                         <img

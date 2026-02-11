@@ -161,6 +161,7 @@ export const userBadges = pgTable("user_badges", {
   giftedFrom: varchar("gifted_from"), // userId who gifted this badge
   giftMessage: text("gift_message"),
   equipped: boolean("equipped").default(true), // Show in profile
+  equippedAt: timestamp("equipped_at"), // When this badge was equipped (for ordering)
   earnedAt: timestamp("earned_at").defaultNow().notNull(),
 });
 

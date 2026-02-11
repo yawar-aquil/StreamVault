@@ -1448,6 +1448,30 @@
       "read": true,
       "id": "48627a14-8183-46a9-847f-23d8d872e583",
       "createdAt": "2026-02-10T19:59:33.106Z"
+    },
+    {
+      "userId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
+      "type": "dm",
+      "title": "New Message",
+      "message": "admin: hiii",
+      "data": {
+        "fromUserId": "0229a46c-2302-4909-93c5-c71f80db5538"
+      },
+      "read": true,
+      "id": "4563e5c1-10d9-48a0-b1e6-fe5e34b30c76",
+      "createdAt": "2026-02-11T08:35:46.962Z"
+    },
+    {
+      "userId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
+      "type": "dm",
+      "title": "Missed Call",
+      "message": "You missed a voice call from admin",
+      "data": {
+        "fromUserId": "0229a46c-2302-4909-93c5-c71f80db5538"
+      },
+      "read": true,
+      "id": "51face24-131d-4c71-9804-390b0f051f8f",
+      "createdAt": "2026-02-11T09:13:11.600Z"
     }
   ],
   "directMessages": [
@@ -1732,6 +1756,32 @@
       "message": "hiii",
       "read": true,
       "createdAt": "2026-02-08T17:01:23.766Z"
+    },
+    {
+      "id": "72b51d65-d366-485f-847b-9776f51a6e55",
+      "fromUserId": "0229a46c-2302-4909-93c5-c71f80db5538",
+      "toUserId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
+      "message": "Missed voice call",
+      "attachmentType": "call",
+      "read": true,
+      "createdAt": "2026-02-11T08:35:06.053Z"
+    },
+    {
+      "id": "286aceba-f233-49f5-a7a0-929c1a845364",
+      "fromUserId": "0229a46c-2302-4909-93c5-c71f80db5538",
+      "toUserId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
+      "message": "hiii",
+      "read": true,
+      "createdAt": "2026-02-11T08:35:46.960Z"
+    },
+    {
+      "id": "c39def95-c38c-42ac-b50d-def0d4aa8dfb",
+      "fromUserId": "0229a46c-2302-4909-93c5-c71f80db5538",
+      "toUserId": "c47aa877-d49b-40d2-9afd-467ab293a6a1",
+      "message": "Missed voice call",
+      "attachmentType": "call",
+      "read": true,
+      "createdAt": "2026-02-11T09:13:11.592Z"
     }
   ]
 }

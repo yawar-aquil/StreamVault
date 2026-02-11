@@ -410,6 +410,7 @@ export function Header() {
                   {user?.username}
                   {user?.badges && (typeof user.badges === 'string' ? JSON.parse(user.badges) : user.badges)
                     .filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'feature')
+                    .sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime())
                     .map((badge: any) => (
                       <img
                         key={badge.id}

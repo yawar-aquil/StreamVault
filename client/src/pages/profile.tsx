@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from "@/components/ui/badge";
 import { Progress } from '@/components/ui/progress';
 import { StreakDisplay } from '@/components/streak-display';
-import { Loader2, Camera, User, Save, LogOut, FileVideo, Eye, Twitter, Instagram, Youtube, Heart, Trophy, Medal, Star, BarChart2, Target, X, Settings, icons, Crown, Rocket } from 'lucide-react';
+import { Loader2, Camera, User, Save, LogOut, FileVideo, Eye, Twitter, Instagram, Youtube, Heart, Trophy, Medal, Star, BarChart2, Target, X, Settings, icons, Crown, Rocket, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { SiTiktok, SiDiscord } from 'react-icons/si';
 import { FavoritesPicker } from '@/components/favorites-picker';
@@ -293,6 +293,7 @@ export default function ProfilePage() {
                                         <div className="flex items-center gap-1.5">
                                             {user?.badges && (typeof user.badges === 'string' ? JSON.parse(user.badges) : user.badges)
                                                 .filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'feature' && b.category !== 'skin' && !b.name.includes('Skin'))
+                                                .sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime())
                                                 .map((badge: any) => (
                                                     <div key={badge.id} className="relative group/tooltip" title={badge.name}>
                                                         <img
@@ -325,173 +326,230 @@ export default function ProfilePage() {
                                     <Progress value={(((user as any)?.xp || 0) % 1000) / 10} className="h-2.5 bg-secondary" />
                                 </div>
 
-                                {/* Streak Display - PLACED HERE AS REQUESTED */}
-                                <div className="py-2">
-                                    <StreakDisplay />
-                                </div>
-
-                                {/* Badges Section - Integrated */}
-                                {/* Badges Section - Integrated */}
-                                {(() => {
-                                    const badges = user?.badges ? (typeof user.badges === 'string' ? JSON.parse(user.badges) : user.badges) : [];
-                                    const themes = badges.filter((b: any) => b.category === 'theme');
-                                    const skins = badges.filter((b: any) => b.category === 'skin' || b.name.includes('Skin'));
-                                    const regularBadges = badges.filter((b: any) => b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'feature');
-                                    const equippedCount = badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'feature' && b.category !== 'skin' && !b.name.includes('Skin')).length;
-
-                                    if (badges.length === 0) return null;
-
-                                    return (
-                                        <div className="space-y-6 pt-2">
-                                            {/* Premium Items (Themes) */}
-                                            {themes.length > 0 && (
-                                                <div className="space-y-3">
-                                                    <Label className="uppercase text-xs tracking-wider text-muted-foreground font-semibold flex items-center gap-2">
-                                                        <Crown className="w-3 h-3 text-purple-500" /> Premium Items
-                                                    </Label>
-                                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 pb-4 pt-1 px-1">
-                                                        {themes.map((theme: any) => {
-                                                            const themeId = THEME_MAPPING[theme.name];
-                                                            const previewUrl = theme.imageUrl || THEME_PREVIEWS[themeId];
-
-                                                            return (
-                                                                <div key={theme.id} className="relative group w-full rounded-lg overflow-hidden border border-white/10 bg-black/40 shadow-xl transition-all hover:scale-105 hover:border-primary/50" title={theme.description}>
-                                                                    <div className="aspect-video w-full overflow-hidden">
-                                                                        <img
-                                                                            src={previewUrl}
-                                                                            alt={theme.name}
-                                                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                                                        />
-                                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
-                                                                    </div>
-                                                                    <div className="p-2 text-center absolute bottom-0 left-0 right-0">
-                                                                        <h4 className="text-[10px] font-bold text-white drop-shadow-md truncate">{theme.name}</h4>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Skins */}
-                                            {skins.length > 0 && (
-                                                <div className="space-y-3">
-                                                    <Label className="uppercase text-xs tracking-wider text-muted-foreground font-semibold flex items-center gap-2">
-                                                        <Crown className="w-3 h-3 text-pink-500" /> Skins
-                                                    </Label>
-                                                    <div className="flex gap-3 overflow-x-auto p-2 pb-4 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent md:flex-wrap">
-                                                        {skins.map((skin: any) => {
-                                                            const isMaxEquipped = !skin.equipped && equippedCount >= 3;
-                                                            return (
-                                                                <div key={skin.id} className="group relative flex flex-col items-center justify-center p-2 bg-gradient-to-b from-muted/50 to-muted/20 border border-white/5 hover:border-primary/20 rounded-xl transition-all hover:-translate-y-1 hover:shadow-lg min-w-[90px] w-[90px] h-[140px]" title={skin.description}>
-                                                                    <img
-                                                                        src={skin.imageUrl}
-                                                                        alt={skin.name}
-                                                                        className="w-full h-24 object-cover rounded-md mb-2 drop-shadow-sm transition-transform group-hover:scale-110"
-                                                                        onError={(e) => {
-                                                                            e.currentTarget.style.display = 'none';
-                                                                        }}
-                                                                    />
-                                                                    <span className="text-[10px] text-center font-medium leading-tight w-full px-1 text-muted-foreground group-hover:text-foreground transition-colors line-clamp-2 h-8">
-                                                                        {skin.name}
-                                                                    </span>
-                                                                    {/* Equip Button */}
-                                                                    <Button
-                                                                        variant={skin.equipped ? "secondary" : "ghost"}
-                                                                        size="sm"
-                                                                        disabled={isMaxEquipped}
-                                                                        className={`mt-1 h-6 text-[10px] px-2 w-full relative overflow-hidden ${skin.equipped
-                                                                            ? 'bg-primary/20 text-primary hover:bg-destructive/20 hover:text-destructive'
-                                                                            : 'hover:bg-white/10'}`}
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleEquipToggle(skin.badgeId || skin.id, skin.name, skin.equipped);
-                                                                        }}
-                                                                    >
-                                                                        {skin.equipped ? 'Unequip' : 'Equip'}
-                                                                    </Button>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Regular Badges */}
-                                            {regularBadges.length > 0 && (
-                                                <div className="space-y-3">
-                                                    <Label className="uppercase text-xs tracking-wider text-muted-foreground font-semibold flex items-center gap-2">
-                                                        <Trophy className="w-3 h-3" /> Badges Collection <span className="text-[10px] font-normal opacity-70">({equippedCount}/3 Equipped)</span>
-                                                    </Label>
-                                                    <div className="flex gap-3 overflow-x-auto p-2 pb-4 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent md:flex-wrap">
-                                                        {regularBadges.map((badge: any) => {
-                                                            const iconName = badge.icon || 'Star';
-                                                            const PascalName = iconName.split('-').map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join('');
-                                                            const IconComponent = (icons as any)[PascalName] || (icons as any)[iconName] || Star;
-                                                            const isMaxEquipped = !badge.equipped && equippedCount >= 3;
-
-                                                            return (
-                                                                <div key={badge.id} className="group relative flex flex-col items-center justify-center p-3 bg-gradient-to-b from-muted/50 to-muted/20 border border-white/5 hover:border-primary/20 rounded-xl transition-all hover:-translate-y-1 hover:shadow-lg min-w-[100px] w-[110px] h-[140px]" title={badge.description}>
-                                                                    {badge.imageUrl ? (
-                                                                        <img
-                                                                            src={badge.imageUrl}
-                                                                            alt={badge.name}
-                                                                            className="w-10 h-10 object-contain mb-2 drop-shadow-sm transition-transform group-hover:scale-110"
-                                                                            onError={(e) => {
-                                                                                e.currentTarget.style.display = 'none';
-                                                                                e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                                                                            }}
-                                                                        />
-                                                                    ) : null}
-
-                                                                    <div className={`w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500 mb-2 group-hover:bg-yellow-500/20 transition-colors ${badge.imageUrl ? 'hidden' : ''}`}>
-                                                                        <IconComponent className="w-5 h-5" />
-                                                                    </div>
-
-                                                                    <span className="text-[10px] text-center font-medium leading-tight w-full px-1 text-muted-foreground group-hover:text-foreground transition-colors line-clamp-2 h-8">
-                                                                        {badge.name}
-                                                                    </span>
-
-                                                                    {/* Equip Button */}
-                                                                    <Button
-                                                                        variant={badge.equipped ? "secondary" : "ghost"}
-                                                                        size="sm"
-                                                                        disabled={isMaxEquipped}
-                                                                        className={`mt-2 h-6 text-[10px] px-2 w-full relative overflow-hidden ${badge.equipped
-                                                                            ? 'bg-primary/20 text-primary hover:bg-destructive/20 hover:text-destructive'
-                                                                            : 'hover:bg-white/10'}`}
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleEquipToggle(badge.badgeId || badge.id, badge.name, badge.equipped);
-                                                                        }}
-                                                                    >
-                                                                        {badge.equipped ? 'Unequip' : 'Equip'}
-                                                                    </Button>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })()}
                             </div>
                         </div>
                     </CardContent>
                 </Card>
 
+                {/* Streak Display - Separate Section */}
+                <StreakDisplay />
 
+                {/* Inventory Sections */}
+                {(() => {
+                    const badges = user?.badges ? (typeof user.badges === 'string' ? JSON.parse(user.badges) : user.badges) : [];
+                    const themes = badges.filter((b: any) => b.category === 'theme');
+                    const skins = badges.filter((b: any) => b.category === 'skin' || b.name.includes('Skin'));
+                    const regularBadges = badges.filter((b: any) => b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'feature');
+                    const equippedCount = badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'feature' && b.category !== 'skin' && !b.name.includes('Skin')).length;
+
+                    if (badges.length === 0) return null;
+
+                    return (
+                        <>
+                            {/* Premium Items (Themes) */}
+                            {themes.length > 0 && (
+                                <Card className="border-purple-500/10 bg-card/60 backdrop-blur-sm overflow-hidden">
+                                    <CardHeader className="pb-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/20">
+                                                <Crown className="w-5 h-5 text-purple-400" />
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-lg">Premium Themes</CardTitle>
+                                                <CardDescription>{themes.length} theme{themes.length !== 1 ? 's' : ''} unlocked</CardDescription>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                            {themes.map((theme: any) => {
+                                                const themeId = THEME_MAPPING[theme.name];
+                                                const previewUrl = theme.imageUrl || THEME_PREVIEWS[themeId];
+
+                                                return (
+                                                    <div key={theme.id} className="relative group w-full rounded-xl overflow-hidden border border-white/10 bg-black/40 shadow-lg transition-all hover:scale-[1.03] hover:border-purple-500/40 hover:shadow-purple-500/10" title={theme.description}>
+                                                        <div className="aspect-video w-full overflow-hidden">
+                                                            <img
+                                                                src={previewUrl}
+                                                                alt={theme.name}
+                                                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                                            />
+                                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-30 transition-opacity" />
+                                                        </div>
+                                                        <div className="p-2 text-center absolute bottom-0 left-0 right-0">
+                                                            <h4 className="text-[11px] font-bold text-white drop-shadow-md truncate">{theme.name}</h4>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* Skins */}
+                            {skins.length > 0 && (
+                                <Card className="border-pink-500/10 bg-card/60 backdrop-blur-sm overflow-hidden">
+                                    <CardHeader className="pb-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-pink-500/15 border border-pink-500/20">
+                                                <Crown className="w-5 h-5 text-pink-400" />
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-lg">Profile Skins</CardTitle>
+                                                <CardDescription>{skins.length} skin{skins.length !== 1 ? 's' : ''} available</CardDescription>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                                            {skins.map((skin: any) => {
+                                                const isMaxEquipped = !skin.equipped && equippedCount >= 3;
+                                                return (
+                                                    <div key={skin.id} className={cn(
+                                                        "group relative flex flex-col items-center p-2.5 rounded-xl transition-all hover:-translate-y-1 hover:shadow-lg",
+                                                        "bg-gradient-to-b from-muted/50 to-muted/20 border",
+                                                        skin.equipped ? "border-primary/40 shadow-primary/10 shadow-md" : "border-white/5 hover:border-pink-500/30"
+                                                    )} title={skin.description}>
+                                                        {skin.equipped && (
+                                                            <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-primary rounded-full flex items-center justify-center z-10">
+                                                                <Check className="w-3 h-3 text-primary-foreground" />
+                                                            </div>
+                                                        )}
+                                                        <img
+                                                            src={skin.imageUrl}
+                                                            alt={skin.name}
+                                                            className="w-full aspect-[3/4] object-cover rounded-lg mb-2 drop-shadow-sm transition-transform group-hover:scale-105"
+                                                            onError={(e) => {
+                                                                e.currentTarget.style.display = 'none';
+                                                            }}
+                                                        />
+                                                        <span className="text-[10px] text-center font-medium leading-tight w-full px-0.5 text-muted-foreground group-hover:text-foreground transition-colors line-clamp-1">
+                                                            {skin.name}
+                                                        </span>
+                                                        <Button
+                                                            variant={skin.equipped ? "secondary" : "ghost"}
+                                                            size="sm"
+                                                            disabled={isMaxEquipped}
+                                                            className={cn(
+                                                                "mt-1.5 h-6 text-[10px] px-2 w-full",
+                                                                skin.equipped
+                                                                    ? 'bg-primary/20 text-primary hover:bg-destructive/20 hover:text-destructive'
+                                                                    : 'hover:bg-white/10'
+                                                            )}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleEquipToggle(skin.badgeId || skin.id, skin.name, skin.equipped);
+                                                            }}
+                                                        >
+                                                            {skin.equipped ? 'Unequip' : 'Equip'}
+                                                        </Button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* Regular Badges */}
+                            {regularBadges.length > 0 && (
+                                <Card className="border-yellow-500/10 bg-card/60 backdrop-blur-sm overflow-hidden">
+                                    <CardHeader className="pb-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-yellow-500/15 border border-yellow-500/20">
+                                                    <Trophy className="w-5 h-5 text-yellow-400" />
+                                                </div>
+                                                <div>
+                                                    <CardTitle className="text-lg">Badge Collection</CardTitle>
+                                                    <CardDescription>{regularBadges.length} badge{regularBadges.length !== 1 ? 's' : ''} earned</CardDescription>
+                                                </div>
+                                            </div>
+                                            <Badge variant="outline" className="text-[10px] border-yellow-500/20 text-yellow-400 bg-yellow-500/10">
+                                                {equippedCount}/3 Equipped
+                                            </Badge>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                                            {regularBadges.map((badge: any) => {
+                                                const iconName = badge.icon || 'Star';
+                                                const PascalName = iconName.split('-').map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join('');
+                                                const IconComponent = (icons as any)[PascalName] || (icons as any)[iconName] || Star;
+                                                const isMaxEquipped = !badge.equipped && equippedCount >= 3;
+
+                                                return (
+                                                    <div key={badge.id} className={cn(
+                                                        "group relative flex flex-col items-center p-3 rounded-xl transition-all hover:-translate-y-1 hover:shadow-lg",
+                                                        "bg-gradient-to-b from-muted/50 to-muted/20 border",
+                                                        badge.equipped ? "border-yellow-500/30 shadow-yellow-500/10 shadow-md" : "border-white/5 hover:border-yellow-500/20"
+                                                    )} title={badge.description}>
+                                                        {badge.equipped && (
+                                                            <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center z-10">
+                                                                <Check className="w-3 h-3 text-black" />
+                                                            </div>
+                                                        )}
+                                                        {badge.imageUrl ? (
+                                                            <img
+                                                                src={badge.imageUrl}
+                                                                alt={badge.name}
+                                                                className="w-12 h-12 object-contain mb-2 drop-shadow-sm transition-transform group-hover:scale-110"
+                                                                onError={(e) => {
+                                                                    e.currentTarget.style.display = 'none';
+                                                                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                                                }}
+                                                            />
+                                                        ) : null}
+
+                                                        <div className={`w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500 mb-2 group-hover:bg-yellow-500/20 transition-colors ${badge.imageUrl ? 'hidden' : ''}`}>
+                                                            <IconComponent className="w-6 h-6" />
+                                                        </div>
+
+                                                        <span className="text-[10px] text-center font-medium leading-tight w-full px-0.5 text-muted-foreground group-hover:text-foreground transition-colors line-clamp-2 min-h-[28px]">
+                                                            {badge.name}
+                                                        </span>
+
+                                                        <Button
+                                                            variant={badge.equipped ? "secondary" : "ghost"}
+                                                            size="sm"
+                                                            disabled={isMaxEquipped}
+                                                            className={cn(
+                                                                "mt-2 h-6 text-[10px] px-2 w-full",
+                                                                badge.equipped
+                                                                    ? 'bg-primary/20 text-primary hover:bg-destructive/20 hover:text-destructive'
+                                                                    : 'hover:bg-white/10'
+                                                            )}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleEquipToggle(badge.badgeId || badge.id, badge.name, badge.equipped);
+                                                            }}
+                                                        >
+                                                            {badge.equipped ? 'Unequip' : 'Equip'}
+                                                        </Button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </>
+                    );
+                })()}
 
                 {/* Profile Settings Section */}
-                <Card>
+                <Card className="border-blue-500/10 bg-card/60 backdrop-blur-sm overflow-hidden">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Settings className="w-5 h-5" />
-                            Profile Settings
-                        </CardTitle>
-                        <CardDescription>Update your personal information and preferences</CardDescription>
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/20">
+                                <Settings className="w-5 h-5 text-blue-400" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-lg">Profile Settings</CardTitle>
+                                <CardDescription>Update your personal information and preferences</CardDescription>
+                            </div>
+                        </div>
                     </CardHeader>
                     <CardContent className="space-y-8">
                         {/* Hidden File Input */}
@@ -503,109 +561,135 @@ export default function ProfilePage() {
                             onChange={handleAvatarChange}
                         />
 
-                        {/* Basic Info */}
-                        <div className="grid gap-6 md:grid-cols-2">
-                            <div className="space-y-2">
-                                <Label htmlFor="username">Username</Label>
-                                <Input
-                                    id="username"
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                    placeholder="Your username"
-                                    minLength={3}
+                        {/* Personal Info Section */}
+                        <div className="space-y-5">
+                            <div className="flex items-center gap-2 pb-1">
+                                <User className="w-4 h-4 text-muted-foreground" />
+                                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Personal Info</h3>
+                            </div>
+                            <div className="rounded-xl border border-white/5 bg-muted/20 p-5 space-y-5">
+                                <div className="space-y-2">
+                                    <Label htmlFor="username" className="text-sm font-medium">Username</Label>
+                                    <Input
+                                        id="username"
+                                        value={username}
+                                        onChange={(e) => setUsername(e.target.value)}
+                                        placeholder="Your username"
+                                        minLength={3}
+                                        className="bg-background/60 border-white/10 focus:border-blue-500/50 transition-colors"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="bio" className="text-sm font-medium">Bio</Label>
+                                    <Textarea
+                                        id="bio"
+                                        value={bio}
+                                        onChange={(e) => setBio(e.target.value)}
+                                        placeholder="Tell the community about yourself..."
+                                        rows={3}
+                                        maxLength={500}
+                                        className="resize-none bg-background/60 border-white/10 focus:border-blue-500/50 transition-colors"
+                                    />
+                                    <div className="flex justify-end">
+                                        <span className={cn(
+                                            "text-[10px] font-medium",
+                                            bio.length > 450 ? "text-orange-400" : "text-muted-foreground"
+                                        )}>
+                                            {bio.length}/500
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Social Links Section */}
+                        <div className="space-y-5">
+                            <div className="flex items-center gap-2 pb-1">
+                                <Heart className="w-4 h-4 text-muted-foreground" />
+                                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Social Connections</h3>
+                            </div>
+                            <div className="rounded-xl border border-white/5 bg-muted/20 p-5">
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    <div className="flex items-center gap-3 group">
+                                        <div className="w-10 h-10 rounded-xl bg-[#1DA1F2]/10 flex items-center justify-center flex-shrink-0 border border-[#1DA1F2]/20 group-focus-within:border-[#1DA1F2]/50 transition-colors">
+                                            <Twitter className="h-5 w-5 text-[#1DA1F2]" />
+                                        </div>
+                                        <Input
+                                            value={socialLinks.twitter}
+                                            onChange={(e) => setSocialLinks(prev => ({ ...prev, twitter: e.target.value }))}
+                                            placeholder="Twitter/X username"
+                                            className="bg-background/60 border-white/10 focus:border-[#1DA1F2]/50 transition-colors"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-3 group">
+                                        <div className="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center flex-shrink-0 border border-pink-500/20 group-focus-within:border-pink-500/50 transition-colors">
+                                            <Instagram className="h-5 w-5 text-pink-500" />
+                                        </div>
+                                        <Input
+                                            value={socialLinks.instagram}
+                                            onChange={(e) => setSocialLinks(prev => ({ ...prev, instagram: e.target.value }))}
+                                            placeholder="Instagram username"
+                                            className="bg-background/60 border-white/10 focus:border-pink-500/50 transition-colors"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-3 group">
+                                        <div className="w-10 h-10 rounded-xl bg-red-600/10 flex items-center justify-center flex-shrink-0 border border-red-600/20 group-focus-within:border-red-600/50 transition-colors">
+                                            <Youtube className="h-5 w-5 text-red-600" />
+                                        </div>
+                                        <Input
+                                            value={socialLinks.youtube}
+                                            onChange={(e) => setSocialLinks(prev => ({ ...prev, youtube: e.target.value }))}
+                                            placeholder="YouTube channel"
+                                            className="bg-background/60 border-white/10 focus:border-red-600/50 transition-colors"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-3 group">
+                                        <div className="w-10 h-10 rounded-xl bg-foreground/5 flex items-center justify-center flex-shrink-0 border border-foreground/10 group-focus-within:border-foreground/30 transition-colors">
+                                            <SiTiktok className="h-5 w-5" />
+                                        </div>
+                                        <Input
+                                            value={socialLinks.tiktok}
+                                            onChange={(e) => setSocialLinks(prev => ({ ...prev, tiktok: e.target.value }))}
+                                            placeholder="TikTok username"
+                                            className="bg-background/60 border-white/10 focus:border-foreground/30 transition-colors"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-3 group md:col-span-2 md:max-w-[calc(50%-0.5rem)]">
+                                        <div className="w-10 h-10 rounded-xl bg-[#5865F2]/10 flex items-center justify-center flex-shrink-0 border border-[#5865F2]/20 group-focus-within:border-[#5865F2]/50 transition-colors">
+                                            <SiDiscord className="h-5 w-5 text-[#5865F2]" />
+                                        </div>
+                                        <Input
+                                            value={socialLinks.discord}
+                                            onChange={(e) => setSocialLinks(prev => ({ ...prev, discord: e.target.value }))}
+                                            placeholder="Discord username"
+                                            className="bg-background/60 border-white/10 focus:border-[#5865F2]/50 transition-colors"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Favorites Section */}
+                        <div className="space-y-5">
+                            <div className="flex items-center gap-2 pb-1">
+                                <Heart className="w-4 h-4 text-red-500 fill-red-500" />
+                                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Favorite Content</h3>
+                            </div>
+                            <div className="rounded-xl border border-white/5 bg-muted/20 p-5">
+                                <FavoritesPicker
+                                    favorites={favorites}
+                                    onFavoritesChange={setFavorites}
                                 />
                             </div>
-                            <div className="space-y-2 md:col-span-2">
-                                <Label htmlFor="bio">Bio</Label>
-                                <Textarea
-                                    id="bio"
-                                    value={bio}
-                                    onChange={(e) => setBio(e.target.value)}
-                                    placeholder="Tell the community about yourself..."
-                                    rows={3}
-                                    maxLength={500}
-                                    className="resize-none"
-                                />
-                                <div className="flex justify-end">
-                                    <span className="text-[10px] text-muted-foreground">{bio.length}/500</span>
-                                </div>
-                            </div>
                         </div>
 
-                        {/* Social Links */}
-                        <div className="space-y-4">
-                            <Label className="text-base">Social Connections</Label>
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg bg-[#1DA1F2]/10 flex items-center justify-center flex-shrink-0">
-                                        <Twitter className="h-5 w-5 text-[#1DA1F2]" />
-                                    </div>
-                                    <Input
-                                        value={socialLinks.twitter}
-                                        onChange={(e) => setSocialLinks(prev => ({ ...prev, twitter: e.target.value }))}
-                                        placeholder="Twitter/X username"
-                                    />
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg bg-pink-500/10 flex items-center justify-center flex-shrink-0">
-                                        <Instagram className="h-5 w-5 text-pink-500" />
-                                    </div>
-                                    <Input
-                                        value={socialLinks.instagram}
-                                        onChange={(e) => setSocialLinks(prev => ({ ...prev, instagram: e.target.value }))}
-                                        placeholder="Instagram username"
-                                    />
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg bg-red-600/10 flex items-center justify-center flex-shrink-0">
-                                        <Youtube className="h-5 w-5 text-red-600" />
-                                    </div>
-                                    <Input
-                                        value={socialLinks.youtube}
-                                        onChange={(e) => setSocialLinks(prev => ({ ...prev, youtube: e.target.value }))}
-                                        placeholder="YouTube channel"
-                                    />
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg bg-black/10 dark:bg-white/10 flex items-center justify-center flex-shrink-0">
-                                        <SiTiktok className="h-5 w-5" />
-                                    </div>
-                                    <Input
-                                        value={socialLinks.tiktok}
-                                        onChange={(e) => setSocialLinks(prev => ({ ...prev, tiktok: e.target.value }))}
-                                        placeholder="TikTok username"
-                                    />
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg bg-[#5865F2]/10 flex items-center justify-center flex-shrink-0">
-                                        <SiDiscord className="h-5 w-5 text-[#5865F2]" />
-                                    </div>
-                                    <Input
-                                        value={socialLinks.discord}
-                                        onChange={(e) => setSocialLinks(prev => ({ ...prev, discord: e.target.value }))}
-                                        placeholder="Discord username"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Favorites */}
-                        <div className="space-y-4 pt-2">
-                            <div className="flex items-center justify-between">
-                                <Label className="text-base flex items-center gap-2">
-                                    <Heart className="h-4 w-4 text-red-500 fill-red-500" />
-                                    Favorite Content
-                                </Label>
-                            </div>
-                            <FavoritesPicker
-                                favorites={favorites}
-                                onFavoritesChange={setFavorites}
-                            />
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex flex-col gap-3 pt-4 border-t">
-                            <Button onClick={handleSave} disabled={isUpdating} className="w-full md:w-auto md:self-end min-w-[150px]">
+                        {/* Save Button */}
+                        <div className="flex justify-end pt-2">
+                            <Button
+                                onClick={handleSave}
+                                disabled={isUpdating}
+                                className="min-w-[160px] bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white border-0 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all"
+                            >
                                 {isUpdating ? (
                                     <>
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -618,13 +702,20 @@ export default function ProfilePage() {
                                     </>
                                 )}
                             </Button>
+                        </div>
 
-                            <div className="mt-8 pt-8 border-t border-destructive/10">
-                                <h3 className="text-sm font-semibold text-destructive mb-2">Danger Zone</h3>
+                        {/* Danger Zone */}
+                        <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-5 mt-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h3 className="text-sm font-semibold text-destructive">Danger Zone</h3>
+                                    <p className="text-xs text-muted-foreground mt-0.5">Sign out of your account</p>
+                                </div>
                                 <Button
                                     variant="destructive"
                                     onClick={handleLogout}
-                                    className="w-full md:w-auto hover:bg-destructive/90 border-destructive/30"
+                                    size="sm"
+                                    className="hover:bg-destructive/90"
                                 >
                                     <LogOut className="mr-2 h-4 w-4" />
                                     Sign Out
@@ -648,14 +739,6 @@ export default function ProfilePage() {
                             className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl scale-100 hover:scale-[1.02] transition-transform duration-300"
                             onClick={(e) => e.stopPropagation()}
                         />
-                        <Button
-                            variant="ghost"
-                            className="absolute top-4 right-4 text-white hover:bg-white/20"
-                            onClick={() => setShowFullAvatar(false)}
-                        >
-                            <X className="h-6 w-6" />
-                            <span className="sr-only">Close</span>
-                        </Button>
                     </div>
                 )
             }

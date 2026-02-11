@@ -204,7 +204,7 @@ export function FeedItem({ activity }: FeedItemProps) {
                             </Link>
                             {user.equippedBadges && user.equippedBadges.filter((badge: any) => badge.category !== 'skin' && !badge.name?.includes('Skin') && badge.category !== 'theme' && badge.category !== 'feature').length > 0 && (
                                 <div className="flex items-center gap-1">
-                                    {user.equippedBadges.filter((badge: any) => badge.category !== 'skin' && !badge.name?.includes('Skin') && badge.category !== 'theme' && badge.category !== 'feature').map((badge: any) => (
+                                    {user.equippedBadges.filter((badge: any) => badge.category !== 'skin' && !badge.name?.includes('Skin') && badge.category !== 'theme' && badge.category !== 'feature').sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime()).map((badge: any) => (
                                         <div key={badge.id} title={badge.name} className="flex-shrink-0">
                                             {badge.imageUrl ? (
                                                 <img src={badge.imageUrl} alt={badge.name} className="w-5 h-5 object-contain drop-shadow-sm" />

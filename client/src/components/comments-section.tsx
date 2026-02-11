@@ -236,6 +236,7 @@ function CommentItem({
               <div className="flex items-center gap-1">
                 {comment.authorBadges
                   .filter((badge) => badge.category !== 'skin' && !badge.name.includes('Skin') && badge.category !== 'theme' && badge.category !== 'feature')
+                  .sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime())
                   .map((badge) => (
                     <div key={badge.id} className="relative group/badge">
                       <img

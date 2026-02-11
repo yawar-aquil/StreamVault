@@ -538,6 +538,7 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
                                 <div className="flex items-center gap-1">
                                     {friend.badges
                                         .filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'feature')
+                                        .sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime())
                                         .map((badge: any) => (
                                             <TooltipProvider key={badge.id}>
                                                 <Tooltip>

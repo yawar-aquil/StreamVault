@@ -1388,7 +1388,7 @@ function WatchTogetherContent() {
                                                                 {/* Badges */}
                                                                 {roomUser.badges && (
                                                                     <div className="flex items-center gap-0.5 ml-1">
-                                                                        {roomUser.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).map((badge: any) => (
+                                                                        {roomUser.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime()).map((badge: any) => (
                                                                             <div key={badge.id} title={badge.name}>
                                                                                 <img
                                                                                     src={badge.imageUrl}
@@ -1883,7 +1883,7 @@ function WatchTogetherContent() {
                                                                     {/* Badges */}
                                                                     {msg.badges && (
                                                                         <div className="flex items-center gap-0.5">
-                                                                            {msg.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).map((badge: any) => (
+                                                                            {msg.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime()).map((badge: any) => (
                                                                                 <div key={badge.id} title={badge.name}>
                                                                                     <img
                                                                                         src={badge.imageUrl}

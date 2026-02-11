@@ -227,6 +227,7 @@ export function ReviewsSection({ contentType, contentId }: ReviewsSectionProps) 
                                                     <div className="flex gap-[2px]">
                                                         {review.authorBadges
                                                             .filter((b: any) => !b.name.includes('Skin') && !b.name.includes('Theme'))
+                                                            .sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime())
                                                             .map((badge: any, i: number) => (
                                                                 <div key={i} className="relative group/badge z-10" style={{ zIndex: 10 - i }}>
                                                                     <img

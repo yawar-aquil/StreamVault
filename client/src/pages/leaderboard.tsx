@@ -17,6 +17,15 @@ interface LeaderboardUser {
     xp: number;
     level: number;
     badges: Badge[];
+    currentStreak?: number;
+}
+
+function getStreakTier(days: number) {
+    if (days >= 365) return { name: 'Legendary!', color: 'text-yellow-400', bg: 'bg-yellow-500/20', border: 'border-yellow-500/30' };
+    if (days >= 100) return { name: 'Inferno!', color: 'text-purple-400', bg: 'bg-purple-500/20', border: 'border-purple-500/30' };
+    if (days >= 30) return { name: 'Blazing!', color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500/30' };
+    if (days >= 7) return { name: 'On Fire!', color: 'text-orange-400', bg: 'bg-orange-500/20', border: 'border-orange-500/30' };
+    return { name: 'Starting Out', color: 'text-gray-400', bg: 'bg-muted', border: 'border-border' };
 }
 
 export default function Leaderboard() {
@@ -175,7 +184,7 @@ export default function Leaderboard() {
                                 </div>
                                 {user.badges && user.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).length > 0 && (
                                     <div className="flex items-center justify-center gap-1 mt-1">
-                                        {user.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).slice(0, 5).map(badge => (
+                                        {user.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime()).slice(0, 5).map(badge => (
                                             <div key={badge.id} title={badge.name}>
                                                 {renderBadge(badge)}
                                             </div>
@@ -232,7 +241,7 @@ export default function Leaderboard() {
                                     </span>
                                     {user.badges && user.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).length > 0 && (
                                         <div className="hidden sm:flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
-                                            {user.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).slice(0, 5).map(badge => (
+                                            {user.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime()).slice(0, 5).map(badge => (
                                                 <div key={badge.id} className="text-muted-foreground" title={badge.name}>
                                                     {renderBadge(badge)}
                                                 </div>
@@ -339,33 +348,50 @@ export default function Leaderboard() {
 
                     {streakLeaders.length > 0 ? (
                         <div className="space-y-3">
-                            {streakLeaders.map((user: any, index: number) => (
-                                <div
-                                    key={user.id}
-                                    className="flex items-center gap-3 p-3 rounded-xl bg-card/40 border border-white/5"
-                                >
-                                    <span className={cn(
-                                        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold",
-                                        index === 0 ? "bg-yellow-500 text-black" :
-                                            index === 1 ? "bg-slate-400 text-black" :
-                                                index === 2 ? "bg-orange-500 text-black" :
-                                                    "bg-muted text-muted-foreground"
-                                    )}>
-                                        {index + 1}
-                                    </span>
-                                    <AvatarPreview
-                                        avatarUrl={user.avatarUrl}
-                                        username={user.username}
-                                        className="w-8 h-8"
-                                    />
-                                    <span className="flex-1 font-medium truncate">{user.username}</span>
-                                    <div className="flex items-center gap-1 text-orange-400">
-                                        <Flame className="w-4 h-4" />
-                                        <span className="font-bold">{user.currentStreak}</span>
-                                        <span className="text-xs text-muted-foreground">days</span>
-                                    </div>
-                                </div>
-                            ))}
+                            {streakLeaders.map((user: any, index: number) => {
+                                const tier = getStreakTier(user.currentStreak || 0);
+                                return (
+                                    <motion.div
+                                        key={user.id}
+                                        initial={{ opacity: 0, x: 10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: index * 0.05 }}
+                                        className={cn(
+                                            "flex items-center gap-3 p-3 rounded-xl bg-card/40 border transition-all hover:bg-card/60",
+                                            index === 0 ? 'border-orange-500/30' : 'border-white/5'
+                                        )}
+                                    >
+                                        <span className={cn(
+                                            "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold",
+                                            index === 0 ? "bg-yellow-500 text-black" :
+                                                index === 1 ? "bg-slate-400 text-black" :
+                                                    index === 2 ? "bg-orange-500 text-black" :
+                                                        "bg-muted text-muted-foreground"
+                                        )}>
+                                            {index + 1}
+                                        </span>
+                                        <AvatarPreview
+                                            avatarUrl={user.avatarUrl}
+                                            username={user.username}
+                                            className="w-8 h-8"
+                                        />
+                                        <span className="flex-1 font-medium truncate">{user.username}</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className={cn(
+                                                "text-[10px] px-1.5 py-0.5 rounded-full font-bold",
+                                                tier.bg, tier.color, tier.border, 'border'
+                                            )}>
+                                                {tier.name}
+                                            </span>
+                                            <div className={cn("flex items-center gap-1", tier.color)}>
+                                                <Flame className="w-4 h-4" />
+                                                <span className="font-bold">{user.currentStreak}</span>
+                                                <span className="text-xs text-muted-foreground">d</span>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                );
+                            })}
                         </div>
                     ) : (
                         <div className="flex flex-col items-center justify-center py-12 text-center space-y-3 opacity-60">

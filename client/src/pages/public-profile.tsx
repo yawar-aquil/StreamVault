@@ -1,12 +1,14 @@
+import { useState } from 'react';
 import { Link, useRoute } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, User, Trophy, Crown, Star, Twitter, Instagram, Youtube, Heart, Calendar, UserPlus, UserMinus, X, Check } from 'lucide-react';
+import { Loader2, User, Trophy, Crown, Star, Twitter, Instagram, Youtube, Heart, Calendar, UserPlus, UserMinus, X, Check, Flame } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { SiTiktok, SiDiscord } from 'react-icons/si';
 import { THEME_MAPPING, THEME_PREVIEWS } from '@/lib/theme-data';
 import { cn } from '@/lib/utils';
@@ -26,6 +28,8 @@ interface UserProfile {
     bio?: string;
     level: number;
     xp: number;
+    currentStreak: number;
+    longestStreak: number;
     socialLinks?: {
         twitter?: string;
         instagram?: string;
@@ -47,6 +51,7 @@ interface UserProfile {
 }
 
 export default function PublicProfile() {
+    const [showFullAvatar, setShowFullAvatar] = useState(false);
     const [match, params] = useRoute("/profile/:username");
     const username = params?.username;
     const { user: currentUser } = useAuth();
@@ -175,8 +180,8 @@ export default function PublicProfile() {
                         <div className="flex flex-col md:flex-row gap-8 items-start">
                             {/* Avatar Section */}
                             <div className="flex-shrink-0 mx-auto md:mx-0">
-                                <div className="relative group">
-                                    <Avatar className="h-32 w-32 border-4 border-background shadow-xl ring-2 ring-primary/20">
+                                <div className="relative group cursor-pointer" onClick={() => user.avatarUrl && setShowFullAvatar(true)}>
+                                    <Avatar className="h-32 w-32 border-4 border-background shadow-xl ring-2 ring-primary/20 transition-transform hover:scale-105">
                                         <AvatarImage src={user.avatarUrl || undefined} className={user.avatarUrl?.endsWith('.gif') ? '' : 'object-cover'} />
                                         <AvatarFallback className="text-4xl bg-primary/10">
                                             {user.username ? getInitials(user.username) : <User className="h-12 w-12" />}
@@ -195,6 +200,7 @@ export default function PublicProfile() {
                                         <div className="flex items-center gap-1.5">
                                             {user.badges
                                                 .filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'feature' && b.category !== 'skin' && !b.name.includes('Skin'))
+                                                .sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime())
                                                 .map((badge: any) => (
                                                     <div key={badge.id} className="relative group/tooltip" title={badge.name}>
                                                         <img
@@ -268,43 +274,140 @@ export default function PublicProfile() {
                                     <Progress value={((user.xp || 0) % 1000) / 10} className="h-2.5 bg-secondary" />
                                 </div>
 
-                                {/* Social Links - Read Only */}
-                                {user.socialLinks && Object.keys(user.socialLinks).length > 0 ? (
-                                    <div className="flex gap-3 justify-center md:justify-start pt-2">
-                                        {user.socialLinks.twitter && (
-                                            <a href={`https://twitter.com/${user.socialLinks.twitter}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-[#1DA1F2] transition-colors"><Twitter className="w-5 h-5" /></a>
-                                        )}
-                                        {user.socialLinks.instagram && (
-                                            <a href={`https://instagram.com/${user.socialLinks.instagram}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-pink-500 transition-colors"><Instagram className="w-5 h-5" /></a>
-                                        )}
-                                        {user.socialLinks.youtube && (
-                                            <a href={`https://youtube.com/@${user.socialLinks.youtube}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-red-600 transition-colors"><Youtube className="w-5 h-5" /></a>
-                                        )}
-                                        {user.socialLinks.tiktok && (
-                                            <a href={`https://tiktok.com/@${user.socialLinks.tiktok}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors"><SiTiktok className="w-5 h-5" /></a>
-                                        )}
-                                        {user.socialLinks.discord && (
-                                            <div className="text-muted-foreground hover:text-[#5865F2] transition-colors cursor-help" title={user.socialLinks.discord}><SiDiscord className="w-5 h-5" /></div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    user.id !== (useAuth()?.user?.id) && (
-                                        <p className="text-xs text-muted-foreground italic pt-2">Social links are visible to friends only.</p>
-                                    )
-                                )}
                             </div>
                         </div>
                     </CardContent>
                 </Card>
 
+                {/* Streak Display - Separate Card */}
+                {user.currentStreak > 0 && (
+                    <Card className="border-orange-500/10 bg-card/60 backdrop-blur-sm overflow-hidden">
+                        <CardContent className="pt-6">
+                            <div className={`flex items-center gap-4 p-4 rounded-xl border ${user.currentStreak >= 100 ? 'bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/20' :
+                                user.currentStreak >= 30 ? 'bg-gradient-to-r from-red-500/10 to-orange-500/10 border-red-500/20' :
+                                    user.currentStreak >= 7 ? 'bg-gradient-to-r from-orange-500/10 to-yellow-500/10 border-orange-500/20' :
+                                        'bg-muted/30 border-border/30'
+                                }`}>
+                                <motion.div
+                                    className={`p-3 rounded-full ${user.currentStreak >= 100 ? 'bg-gradient-to-br from-purple-500 to-pink-500' :
+                                        user.currentStreak >= 30 ? 'bg-gradient-to-br from-red-500 to-orange-500' :
+                                            user.currentStreak >= 7 ? 'bg-gradient-to-br from-orange-500 to-red-500' :
+                                                'bg-muted'
+                                        }`}
+                                    animate={{ scale: [1, 1.1, 1] }}
+                                    transition={{ repeat: Infinity, duration: 2 }}
+                                >
+                                    <Flame className="w-6 h-6 text-white" />
+                                </motion.div>
+                                <div className="flex-1">
+                                    <div className="flex items-baseline gap-2">
+                                        <span className={`text-2xl font-black ${user.currentStreak >= 100 ? 'text-purple-400' :
+                                            user.currentStreak >= 30 ? 'text-red-400' :
+                                                user.currentStreak >= 7 ? 'text-orange-400' :
+                                                    'text-muted-foreground'
+                                            }`}>{user.currentStreak}</span>
+                                        <span className="text-sm text-muted-foreground">day streak</span>
+                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${user.currentStreak >= 365 ? 'bg-yellow-500/20 text-yellow-400' :
+                                            user.currentStreak >= 100 ? 'bg-purple-500/20 text-purple-400' :
+                                                user.currentStreak >= 30 ? 'bg-red-500/20 text-red-400' :
+                                                    user.currentStreak >= 7 ? 'bg-orange-500/20 text-orange-400' :
+                                                        'bg-muted text-muted-foreground'
+                                            }`}>
+                                            {user.currentStreak >= 365 ? 'Legendary!' :
+                                                user.currentStreak >= 100 ? 'Inferno!' :
+                                                    user.currentStreak >= 30 ? 'Blazing!' :
+                                                        user.currentStreak >= 7 ? 'On Fire!' : 'Starting Out'}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                        Best: <span className="font-bold text-foreground">{user.longestStreak}</span> days
+                                    </p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Social Links - Separate Card */}
+                {user.socialLinks && Object.values(user.socialLinks).some(v => v) && (
+                    <Card className="border-blue-500/10 bg-card/60 backdrop-blur-sm overflow-hidden">
+                        <CardHeader className="pb-4">
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/20">
+                                    <Heart className="w-5 h-5 text-blue-400" />
+                                </div>
+                                <div>
+                                    <CardTitle className="text-lg">Social Connections</CardTitle>
+                                    <CardDescription>Connect with {user.username} on social media</CardDescription>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex flex-wrap gap-3">
+                                {user.socialLinks.twitter && (
+                                    <a href={`https://twitter.com/${user.socialLinks.twitter}`} target="_blank" rel="noopener noreferrer"
+                                        className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-[#1DA1F2]/10 border border-[#1DA1F2]/20 hover:border-[#1DA1F2]/50 hover:bg-[#1DA1F2]/15 transition-all group">
+                                        <div className="w-8 h-8 rounded-lg bg-[#1DA1F2]/15 flex items-center justify-center group-hover:bg-[#1DA1F2]/25 transition-colors">
+                                            <Twitter className="w-4 h-4 text-[#1DA1F2]" />
+                                        </div>
+                                        <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">@{user.socialLinks.twitter}</span>
+                                    </a>
+                                )}
+                                {user.socialLinks.instagram && (
+                                    <a href={`https://instagram.com/${user.socialLinks.instagram}`} target="_blank" rel="noopener noreferrer"
+                                        className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-pink-500/10 border border-pink-500/20 hover:border-pink-500/50 hover:bg-pink-500/15 transition-all group">
+                                        <div className="w-8 h-8 rounded-lg bg-pink-500/15 flex items-center justify-center group-hover:bg-pink-500/25 transition-colors">
+                                            <Instagram className="w-4 h-4 text-pink-500" />
+                                        </div>
+                                        <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">@{user.socialLinks.instagram}</span>
+                                    </a>
+                                )}
+                                {user.socialLinks.youtube && (
+                                    <a href={`https://youtube.com/@${user.socialLinks.youtube}`} target="_blank" rel="noopener noreferrer"
+                                        className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-red-600/10 border border-red-600/20 hover:border-red-600/50 hover:bg-red-600/15 transition-all group">
+                                        <div className="w-8 h-8 rounded-lg bg-red-600/15 flex items-center justify-center group-hover:bg-red-600/25 transition-colors">
+                                            <Youtube className="w-4 h-4 text-red-600" />
+                                        </div>
+                                        <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">{user.socialLinks.youtube}</span>
+                                    </a>
+                                )}
+                                {user.socialLinks.tiktok && (
+                                    <a href={`https://tiktok.com/@${user.socialLinks.tiktok}`} target="_blank" rel="noopener noreferrer"
+                                        className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-foreground/5 border border-foreground/10 hover:border-foreground/30 hover:bg-foreground/10 transition-all group">
+                                        <div className="w-8 h-8 rounded-lg bg-foreground/10 flex items-center justify-center group-hover:bg-foreground/15 transition-colors">
+                                            <SiTiktok className="w-4 h-4" />
+                                        </div>
+                                        <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">@{user.socialLinks.tiktok}</span>
+                                    </a>
+                                )}
+                                {user.socialLinks.discord && (
+                                    <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-[#5865F2]/10 border border-[#5865F2]/20 cursor-default" title={user.socialLinks.discord}>
+                                        <div className="w-8 h-8 rounded-lg bg-[#5865F2]/15 flex items-center justify-center">
+                                            <SiDiscord className="w-4 h-4 text-[#5865F2]" />
+                                        </div>
+                                        <span className="text-sm text-muted-foreground">{user.socialLinks.discord}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
                 {/* Favorites Section */}
                 {user.favorites && (user.favorites.shows?.length > 0 || user.favorites.movies?.length > 0 || user.favorites.anime?.length > 0) && (
-                    <Card>
-                        <CardContent className="pt-6">
-                            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                                <Heart className="w-5 h-5 text-red-500" />
-                                Favorites
-                            </h3>
+                    <Card className="border-red-500/10 bg-card/60 backdrop-blur-sm overflow-hidden">
+                        <CardHeader className="pb-4">
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-red-500/15 border border-red-500/20">
+                                    <Heart className="w-5 h-5 text-red-400 fill-red-400" />
+                                </div>
+                                <div>
+                                    <CardTitle className="text-lg">Favorites</CardTitle>
+                                    <CardDescription>{user.username}'s favorite content</CardDescription>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
                             <Tabs defaultValue={user.favorites.movies?.length > 0 ? "movies" : user.favorites.shows?.length > 0 ? "shows" : "anime"}>
                                 <TabsList className="bg-muted/50 border border-white/5 mb-4">
                                     {(user.favorites.movies?.length > 0) && <TabsTrigger value="movies">Movies</TabsTrigger>}
@@ -317,10 +420,10 @@ export default function PublicProfile() {
                                         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
                                             {user.favorites.movies.map((item: any) => (
                                                 <Link key={item.id} href={`/movie/${item.slug}`}>
-                                                    <div className="group relative aspect-[2/3] rounded-lg overflow-hidden cursor-pointer">
+                                                    <div className="group relative aspect-[2/3] rounded-xl overflow-hidden cursor-pointer border border-white/5 hover:border-red-500/30 transition-all hover:scale-[1.03]">
                                                         <img src={item.posterUrl} alt={item.title} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
-                                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2 text-center">
-                                                            <span className="text-xs font-medium text-white">{item.title}</span>
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center p-2 text-center">
+                                                            <span className="text-xs font-medium text-white w-full">{item.title}</span>
                                                         </div>
                                                     </div>
                                                 </Link>
@@ -334,10 +437,10 @@ export default function PublicProfile() {
                                         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
                                             {user.favorites.shows.map((item: any) => (
                                                 <Link key={item.id} href={`/show/${item.slug}`}>
-                                                    <div className="group relative aspect-[2/3] rounded-lg overflow-hidden cursor-pointer">
+                                                    <div className="group relative aspect-[2/3] rounded-xl overflow-hidden cursor-pointer border border-white/5 hover:border-red-500/30 transition-all hover:scale-[1.03]">
                                                         <img src={item.posterUrl} alt={item.title} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
-                                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2 text-center">
-                                                            <span className="text-xs font-medium text-white">{item.title}</span>
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center p-2 text-center">
+                                                            <span className="text-xs font-medium text-white w-full">{item.title}</span>
                                                         </div>
                                                     </div>
                                                 </Link>
@@ -351,10 +454,10 @@ export default function PublicProfile() {
                                         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
                                             {user.favorites.anime.map((item: any) => (
                                                 <Link key={item.id} href={`/anime/${item.slug}`}>
-                                                    <div className="group relative aspect-[2/3] rounded-lg overflow-hidden cursor-pointer">
+                                                    <div className="group relative aspect-[2/3] rounded-xl overflow-hidden cursor-pointer border border-white/5 hover:border-red-500/30 transition-all hover:scale-[1.03]">
                                                         <img src={item.posterUrl} alt={item.title} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
-                                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2 text-center">
-                                                            <span className="text-xs font-medium text-white">{item.title}</span>
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center p-2 text-center">
+                                                            <span className="text-xs font-medium text-white w-full">{item.title}</span>
                                                         </div>
                                                     </div>
                                                 </Link>
@@ -367,91 +470,151 @@ export default function PublicProfile() {
                     </Card>
                 )}
 
-                {/* Badge Collection Section (Read Only) */}
-                <Card>
-                    <CardContent className="pt-6">
-                        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                            <Trophy className="w-5 h-5 text-yellow-500" />
-                            Badge Collection
-                        </h3>
+                {/* Inventory Sections */}
+                {(() => {
+                    const badges = user.badges || [];
+                    const themes = badges.filter((b: any) => b.category === 'theme');
+                    const skins = badges.filter((b: any) => b.category === 'skin' || b.name.includes('Skin'));
+                    const regularBadges = badges.filter((b: any) => b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'feature');
 
-                        {(() => {
-                            const badges = user.badges || [];
-                            const themes = badges.filter((b: any) => b.category === 'theme');
-                            const skins = badges.filter((b: any) => b.category === 'skin' || b.name.includes('Skin'));
-                            const regularBadges = badges.filter((b: any) => b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'feature');
+                    if (badges.length === 0) return null;
 
-                            if (badges.length === 0) return <p className="text-muted-foreground italic">No badges earned yet.</p>;
-
-                            return (
-                                <div className="space-y-6">
-                                    {/* Themes/Premium */}
-                                    {themes.length > 0 && (
-                                        <div>
-                                            <h4 className="text-xs uppercase font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-                                                <Crown className="w-3 h-3 text-purple-500" /> Premium Items
-                                            </h4>
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4">
-                                                {themes.map((theme: any) => (
-                                                    <div key={theme.id} className="relative aspect-video rounded-lg overflow-hidden border border-white/10" title={theme.name}>
-                                                        <img src={theme.imageUrl || THEME_PREVIEWS[THEME_MAPPING[theme.name]]} alt={theme.name} className="w-full h-full object-cover" />
-                                                    </div>
-                                                ))}
+                    return (
+                        <>
+                            {/* Premium Items (Themes) */}
+                            {themes.length > 0 && (
+                                <Card className="border-purple-500/10 bg-card/60 backdrop-blur-sm overflow-hidden">
+                                    <CardHeader className="pb-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/20">
+                                                <Crown className="w-5 h-5 text-purple-400" />
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-lg">Premium Themes</CardTitle>
+                                                <CardDescription>{themes.length} theme{themes.length !== 1 ? 's' : ''} unlocked</CardDescription>
                                             </div>
                                         </div>
-                                    )}
-
-                                    {/* Skins */}
-                                    {skins.length > 0 && (
-                                        <div>
-                                            <h4 className="text-xs uppercase font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-                                                <Crown className="w-3 h-3 text-pink-500" /> Skins
-                                            </h4>
-                                            <div className="flex flex-wrap gap-3">
-                                                {skins.map((skin: any) => (
-                                                    <div key={skin.id} className="flex flex-col items-center p-2 bg-muted/30 rounded-lg w-[80px]" title={skin.name}>
-                                                        <img src={skin.imageUrl} alt={skin.name} className="w-full h-20 object-cover rounded mb-1" />
-                                                        <span className="text-[10px] text-center truncate w-full">{skin.name}</span>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                            {themes.map((theme: any) => (
+                                                <div key={theme.id} className="relative group w-full rounded-xl overflow-hidden border border-white/10 bg-black/40 shadow-lg transition-all hover:scale-[1.03] hover:border-purple-500/40 hover:shadow-purple-500/10" title={theme.name}>
+                                                    <div className="aspect-video w-full overflow-hidden">
+                                                        <img src={theme.imageUrl || THEME_PREVIEWS[THEME_MAPPING[theme.name]]} alt={theme.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-30 transition-opacity" />
                                                     </div>
-                                                ))}
+                                                    <div className="p-2 text-center absolute bottom-0 left-0 right-0">
+                                                        <h4 className="text-[11px] font-bold text-white drop-shadow-md truncate">{theme.name}</h4>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* Skins */}
+                            {skins.length > 0 && (
+                                <Card className="border-pink-500/10 bg-card/60 backdrop-blur-sm overflow-hidden">
+                                    <CardHeader className="pb-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-pink-500/15 border border-pink-500/20">
+                                                <Crown className="w-5 h-5 text-pink-400" />
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-lg">Profile Skins</CardTitle>
+                                                <CardDescription>{skins.length} skin{skins.length !== 1 ? 's' : ''} collected</CardDescription>
                                             </div>
                                         </div>
-                                    )}
-
-                                    {/* Regular Badges */}
-                                    {regularBadges.length > 0 && (
-                                        <div>
-                                            <h4 className="text-xs uppercase font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-                                                <Star className="w-3 h-3" /> Achievements
-                                            </h4>
-                                            <div className="flex flex-wrap gap-3">
-                                                {regularBadges.map((badge: any) => {
-                                                    const iconName = badge.icon || 'Star';
-                                                    const PascalName = iconName.split('-').map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join('');
-                                                    const IconComponent = (icons as any)[PascalName] || (icons as any)[iconName] || Star;
-
-                                                    return (
-                                                        <div key={badge.id} className="flex flex-col items-center p-3 bg-muted/30 rounded-lg w-[100px] h-[100px] justify-center text-center" title={badge.description}>
-                                                            {badge.imageUrl ? (
-                                                                <img src={badge.imageUrl} alt={badge.name} className="w-10 h-10 object-contain mb-2" />
-                                                            ) : (
-                                                                <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500 mb-2">
-                                                                    <IconComponent className="w-5 h-5" />
-                                                                </div>
-                                                            )}
-                                                            <span className="text-[10px] font-medium leading-tight line-clamp-2">{badge.name}</span>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                                            {skins.map((skin: any) => (
+                                                <div key={skin.id} className={cn(
+                                                    "group relative flex flex-col items-center p-2.5 rounded-xl transition-all hover:-translate-y-1 hover:shadow-lg",
+                                                    "bg-gradient-to-b from-muted/50 to-muted/20 border",
+                                                    skin.equipped ? "border-primary/40 shadow-primary/10 shadow-md" : "border-white/5 hover:border-pink-500/30"
+                                                )} title={skin.name}>
+                                                    {skin.equipped && (
+                                                        <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-primary rounded-full flex items-center justify-center z-10">
+                                                            <Check className="w-3 h-3 text-primary-foreground" />
                                                         </div>
-                                                    );
-                                                })}
+                                                    )}
+                                                    <img src={skin.imageUrl} alt={skin.name} className="w-full aspect-[3/4] object-cover rounded-lg mb-2 drop-shadow-sm transition-transform group-hover:scale-105" />
+                                                    <span className="text-[10px] text-center font-medium leading-tight w-full px-0.5 text-muted-foreground group-hover:text-foreground transition-colors line-clamp-1">{skin.name}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* Regular Badges */}
+                            {regularBadges.length > 0 && (
+                                <Card className="border-yellow-500/10 bg-card/60 backdrop-blur-sm overflow-hidden">
+                                    <CardHeader className="pb-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-yellow-500/15 border border-yellow-500/20">
+                                                <Trophy className="w-5 h-5 text-yellow-400" />
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-lg">Badge Collection</CardTitle>
+                                                <CardDescription>{regularBadges.length} badge{regularBadges.length !== 1 ? 's' : ''} earned</CardDescription>
                                             </div>
                                         </div>
-                                    )}
-                                </div>
-                            );
-                        })()}
-                    </CardContent>
-                </Card>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                                            {regularBadges.map((badge: any) => {
+                                                const iconName = badge.icon || 'Star';
+                                                const PascalName = iconName.split('-').map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join('');
+                                                const IconComponent = (icons as any)[PascalName] || (icons as any)[iconName] || Star;
+
+                                                return (
+                                                    <div key={badge.id} className={cn(
+                                                        "group relative flex flex-col items-center p-3 rounded-xl transition-all hover:-translate-y-1 hover:shadow-lg",
+                                                        "bg-gradient-to-b from-muted/50 to-muted/20 border",
+                                                        badge.equipped ? "border-yellow-500/30 shadow-yellow-500/10 shadow-md" : "border-white/5 hover:border-yellow-500/20"
+                                                    )} title={badge.description}>
+                                                        {badge.equipped && (
+                                                            <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center z-10">
+                                                                <Check className="w-3 h-3 text-black" />
+                                                            </div>
+                                                        )}
+                                                        {badge.imageUrl ? (
+                                                            <img src={badge.imageUrl} alt={badge.name} className="w-12 h-12 object-contain mb-2 drop-shadow-sm transition-transform group-hover:scale-110" />
+                                                        ) : (
+                                                            <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500 mb-2 group-hover:bg-yellow-500/20 transition-colors">
+                                                                <IconComponent className="w-6 h-6" />
+                                                            </div>
+                                                        )}
+                                                        <span className="text-[10px] text-center font-medium leading-tight w-full px-0.5 text-muted-foreground group-hover:text-foreground transition-colors line-clamp-2 min-h-[28px]">{badge.name}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </>
+                    );
+                })()}
             </div>
-        </div>
+
+            {/* Full Avatar Preview */}
+            {showFullAvatar && user?.avatarUrl && (
+                <div
+                    className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center cursor-pointer backdrop-blur-sm animate-in fade-in duration-200"
+                    onClick={() => setShowFullAvatar(false)}
+                >
+                    <img
+                        src={user.avatarUrl}
+                        alt={user.username}
+                        className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl scale-100 hover:scale-[1.02] transition-transform duration-300"
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </div>
+            )}
+        </div >
     );
 }
