@@ -699,3 +699,190 @@ This code will expire in 30 minutes.
     text,
   });
 }
+
+
+export async function sendContentRequestCompletedEmail(request: ContentRequest): Promise<void> {
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Request Fulfilled</title>
+</head>
+<body style="margin:0; padding:0; background-color:#141414; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#141414;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color:#1f1f1f; border-radius:8px; overflow:hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+          <!-- Logo Header -->
+          <tr>
+            <td align="center" style="padding: 30px; background-color:#000000;">
+              <h1 style="margin:0; color:#E50914; font-size:36px; font-weight:900; letter-spacing:2px; text-transform:uppercase;">STREAMVAULT</h1>
+            </td>
+          </tr>
+          
+          <!-- Hero Section -->
+          <tr>
+            <td style="padding: 40px 40px 20px 40px;">
+              <h2 style="margin:0 0 10px 0; color:#ffffff; font-size:24px; font-weight:bold;">Good News! 🎉</h2>
+              <p style="margin:0; color:#b3b3b3; font-size:16px;">The content you requested has been added to StreamVault.</p>
+            </td>
+          </tr>
+
+          <!-- Main Content -->
+          <tr>
+            <td style="padding: 0 40px 40px 40px;">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#2a2a2a; border-radius:6px; border:1px solid #333;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <h3 style="margin:0 0 5px 0; color:#E50914; font-size:20px; font-weight:bold;">${request.title}</h3>
+                    <p style="margin:0 0 20px 0; color:#ffffff; font-size:14px;">${request.year ? request.year + ' • ' : ''}${request.contentType.toUpperCase()}</p>
+                    
+                    <p style="margin:0; color:#ddd; font-size:14px; line-height: 1.6;">
+                      You can now watch <strong>${request.title}</strong> on StreamVault. Thank you for your request!
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA Button -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 30px;">
+                <tr>
+                  <td align="center">
+                    <a href="https://streamvault.live" style="display: inline-block; background-color: #E50914; color: #ffffff; padding: 16px 32px; font-size: 16px; font-weight: bold; text-decoration: none; border-radius: 4px; text-transform: uppercase;">Watch Now</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding: 30px; background-color:#181818; border-top:1px solid #2a2a2a;">
+              <p style="margin:0; color:#666; font-size:12px;">© ${new Date().getFullYear()} StreamVault. All rights reserved.</p>
+              <p style="margin:5px 0 0; color:#444; font-size:12px;">You received this email because you requested content on StreamVault.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  const text = `GOOD NEWS!
+  
+The content you requested has been added to StreamVault.
+
+Title: ${request.title}
+Type: ${request.contentType}
+
+Watch Now: https://streamvault.live
+
+Thank you for your request!
+`;
+
+  if (request.email) {
+    await sendEmail({
+      to: request.email,
+      subject: `✅ Available Now: ${request.title}`,
+      html,
+      text,
+    });
+  }
+}
+
+export async function sendIssueReportResolvedEmail(report: IssueReport): Promise<void> {
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Issue Resolved</title>
+</head>
+<body style="margin:0; padding:0; background-color:#141414; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#141414;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color:#1f1f1f; border-radius:8px; overflow:hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+          <!-- Logo Header -->
+          <tr>
+            <td align="center" style="padding: 30px; background-color:#000000;">
+              <h1 style="margin:0; color:#E50914; font-size:36px; font-weight:900; letter-spacing:2px; text-transform:uppercase;">STREAMVAULT</h1>
+            </td>
+          </tr>
+          
+          <!-- Hero Section -->
+          <tr>
+            <td style="padding: 40px 40px 20px 40px;">
+              <h2 style="margin:0 0 10px 0; color:#ffffff; font-size:24px; font-weight:bold;">Issue Resolved ✅</h2>
+              <p style="margin:0; color:#b3b3b3; font-size:16px;">We've fixed the issue you reported.</p>
+            </td>
+          </tr>
+
+          <!-- Main Content -->
+          <tr>
+            <td style="padding: 0 40px 40px 40px;">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#2a2a2a; border-radius:6px; border:1px solid #333;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <h3 style="margin:0 0 5px 0; color:#E50914; font-size:20px; font-weight:bold;">${report.title}</h3>
+                    <p style="margin:0 0 20px 0; color:#e5e5e5; font-size:14px; font-weight:bold; letter-spacing: 0.5px;">STATUS: <span style="color:#22c55e;">RESOLVED</span></p>
+                    
+                    <p style="margin:0; color:#ddd; font-size:14px; line-height: 1.6;">
+                      Thank you for reporting this issue. Our team has investigated and resolved it.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA Button -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 30px;">
+                <tr>
+                  <td align="center">
+                    <a href="https://streamvault.live" style="display: inline-block; background-color: #E50914; color: #ffffff; padding: 16px 32px; font-size: 16px; font-weight: bold; text-decoration: none; border-radius: 4px; text-transform: uppercase;">Back to StreamVault</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding: 30px; background-color:#181818; border-top:1px solid #2a2a2a;">
+              <p style="margin:0; color:#666; font-size:12px;">© ${new Date().getFullYear()} StreamVault. All rights reserved.</p>
+              <p style="margin:5px 0 0; color:#444; font-size:12px;">Thank you for helping us improve StreamVault.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  const text = `ISSUE RESOLVED
+  
+We've fixed the issue you reported.
+
+Title: ${report.title}
+Status: RESOLVED
+
+Back to StreamVault: https://streamvault.live
+
+Thank you for helping us improve StreamVault.
+`;
+
+  if (report.email) {
+    await sendEmail({
+      to: report.email,
+      subject: `✅ Issue Resolved: ${report.title}`,
+      html,
+      text,
+    });
+  }
+}

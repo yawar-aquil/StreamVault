@@ -11,7 +11,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { setupSitemaps } from "./sitemap";
 import { searchShow, getShowDetails } from "./utils/tmdb";
-import { sendContentRequestEmail, sendIssueReportEmail, sendPasswordResetEmail, sendCoinPurchaseReceiptEmail, sendEmailVerificationEmail } from "./email-service";
+import { sendContentRequestEmail, sendIssueReportEmail, sendPasswordResetEmail, sendCoinPurchaseReceiptEmail, sendEmailVerificationEmail, sendContentRequestCompletedEmail, sendIssueReportResolvedEmail } from "./email-service";
 import { createRazorpayOrder, verifyRazorpaySignature } from "./payment";
 import { convertCurrency } from "./currency";
 import { searchSubtitles, downloadSubtitle, getCachedSubtitle } from "./subtitle-service";
@@ -42,8 +42,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Admin credentials (in production, use environment variables and hashed passwords)
-const ADMIN_USERNAME = "admin";
-const ADMIN_PASSWORD = "streamvault2024";
+// Admin credentials (in production, use environment variables and hashed passwords)
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "streamvault2024";
 
 // Simple session storage for admin auth
 const adminSessions = new Set<string>();
@@ -5158,6 +5159,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const updates = req.body;
       const updated = await storage.updateContentRequest(id, updates);
+
+      // Send email if request is filled
+      if (updates.status === 'filled') {
+        try {
+          await sendContentRequestCompletedEmail(updated);
+        } catch (emailError) {
+          console.error("Failed to send content request completion email:", emailError);
+        }
+      }
       res.json(updated);
     } catch (error) {
       console.error('Error updating content request:', error);
@@ -5174,6 +5184,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const updates = req.body;
       const updated = await storage.updateIssueReport(id, updates);
+
+      // Send email if report is resolved
+      if (updates.status === 'resolved') {
+        try {
+          await sendIssueReportResolvedEmail(updated);
+        } catch (emailError) {
+          console.error("Failed to send issue resolution email:", emailError);
+        }
+      }
       res.json(updated);
     } catch (error) {
       console.error('Error updating issue report:', error);
