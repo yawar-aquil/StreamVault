@@ -13,6 +13,7 @@ import path from "path";
 import { startCleanupSchedule } from "./cleanup";
 
 const app = express();
+app.set('trust proxy', 1); // Trust first proxy (Nginx)
 
 declare module 'http' {
   interface IncomingMessage {

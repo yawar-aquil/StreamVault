@@ -40,7 +40,7 @@ echo "🌐 Configuring Nginx..."
 cat > /etc/nginx/sites-available/streamvault <<EOF
 server {
     listen 80;
-    server_name _; # Accept all for now, change to your domain later
+    server_name streamvault.live; # Updated domain
 
     location / {
         proxy_pass http://localhost:5000;
@@ -48,6 +48,9 @@ server {
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_cache_bypass \$http_upgrade;
     }
 }
