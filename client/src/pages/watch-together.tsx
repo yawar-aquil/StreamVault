@@ -41,7 +41,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { InviteFriendsModal } from "@/components/invite-friends-modal";
 import { VoiceMessage } from '@/components/ui/voice-message';
+import { AbstractInt } from 'node:v8';
 import { AudioVisualizer } from '@/components/ui/audio-visualizer';
+import { LinkPreview } from '@/components/link-preview';
 import { useWatchTogether, WatchTogetherProvider } from '@/contexts/watch-together-context';
 import { UserProfileModal } from '@/components/user-profile-modal';
 import { useAuth } from '@/contexts/auth-context';
@@ -2011,6 +2013,10 @@ function WatchTogetherContent() {
                                                                     </span>
                                                                 </div>
                                                                 <p className="mt-0.5 break-words">{formatMessageWithMedia(msg.message)}</p>
+                                                                {(() => {
+                                                                    const urlMatch = msg.message.match(/(https?:\/\/[^\s]+)/);
+                                                                    return urlMatch ? <LinkPreview url={urlMatch[0]} /> : null;
+                                                                })()}
                                                             </div>
                                                         </>
                                                     )}

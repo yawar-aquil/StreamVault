@@ -83,13 +83,24 @@ export function initSocialSocket(server: HttpServer, socketio?: Server) {
         });
 
         // Send DM in real-time
-        socket.on('dm:send', async (data: { fromUserId: string; toUserId: string; message: string }) => {
-            const { fromUserId, toUserId, message } = data;
+        socket.on('dm:send', async (data: { fromUserId: string; toUserId: string; message: string; replyToId?: string }) => {
+            const { fromUserId, toUserId, message, replyToId } = data;
             if (!fromUserId || !toUserId || !message) return;
 
             try {
                 // Save message to storage
-                const dm = await storage.sendMessage(fromUserId, toUserId, message);
+                const dm = await storage.sendMessage(
+                    fromUserId,
+                    toUserId,
+                    message,
+                    undefined, // attachmentType
+                    undefined, // attachmentUrl
+                    undefined, // attachmentFilename
+                    undefined, // attachmentSize
+                    undefined, // attachmentMimeType
+                    undefined, // audioDuration
+                    replyToId  // Pass replyToId
+                );
 
                 // Send to recipient if online
                 socialNamespace.to(`user:${toUserId}`).emit('dm:received', {
@@ -124,6 +135,28 @@ export function initSocialSocket(server: HttpServer, socketio?: Server) {
                 });
             } catch (error) {
                 console.error('Error sending DM:', error);
+            }
+        });
+
+        // Handle DM reactions
+        socket.on('dm:reaction', async (data: { messageId: string; toUserId: string; emoji: string }) => {
+            const { messageId, toUserId, emoji } = data;
+            const fromUserId = socketToUser.get(socket.id);
+
+            if (!fromUserId || !messageId || !toUserId || !emoji) return;
+
+            try {
+                // Add reaction to storage
+                const updatedMessage = await storage.addReaction(messageId, fromUserId, emoji);
+
+                // Notify recipient
+                socialNamespace.to(`user:${toUserId}`).emit('dm:reaction', updatedMessage);
+
+                // Notify sender (for sync across devices)
+                socialNamespace.to(`user:${fromUserId}`).emit('dm:reaction', updatedMessage);
+
+            } catch (error) {
+                console.error('Error adding reaction:', error);
             }
         });
 

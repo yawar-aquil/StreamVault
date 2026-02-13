@@ -51,6 +51,7 @@ export function useSocialSocket() {
     const friendRequestCallbackRef = useRef<(() => void) | null>(null);
     const inventoryUpdateCallbackRef = useRef<(() => void) | null>(null);
     const friendStatusChangeCallbackRef = useRef<((friendId: string, isOnline: boolean) => void) | null>(null);
+    const dmReactionCallbackRef = useRef<((dm: any) => void) | null>(null);
 
     useEffect(() => {
         if (!isAuthenticated || !user?.id) {
@@ -115,6 +116,13 @@ export function useSocialSocket() {
         socket.on('dm:received', (dm: DMReceivedEvent) => {
             if (dmReceivedCallbackRef.current) {
                 dmReceivedCallbackRef.current(dm);
+            }
+        });
+
+        // Real-time DM reaction
+        socket.on('dm:reaction', (dm: any) => {
+            if (dmReactionCallbackRef.current) {
+                dmReactionCallbackRef.current(dm);
             }
         });
 
@@ -183,12 +191,13 @@ export function useSocialSocket() {
         };
     }, [isAuthenticated, user?.id]);
 
-    const sendDM = useCallback((toUserId: string, message: string) => {
+    const sendDM = useCallback((toUserId: string, message: string, replyToId?: string) => {
         if (socketRef.current && user?.id) {
             socketRef.current.emit('dm:send', {
                 fromUserId: user.id,
                 toUserId,
                 message,
+                replyToId,
             });
         }
     }, [user?.id]);
@@ -237,6 +246,10 @@ export function useSocialSocket() {
 
     const onFriendStatusChange = useCallback((callback: (friendId: string, isOnline: boolean) => void) => {
         friendStatusChangeCallbackRef.current = callback;
+    }, []);
+
+    const onDMReaction = useCallback((callback: (dm: any) => void) => {
+        dmReactionCallbackRef.current = callback;
     }, []);
 
     const isFriendOnline = useCallback((friendId: string) => {
@@ -318,6 +331,7 @@ export function useSocialSocket() {
         stopActivity,
         requestFriendActivities,
         onInventoryUpdate,
-        onFriendStatusChange
+        onFriendStatusChange,
+        onDMReaction
     };
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, Square, Mic, MicOff, Paperclip, Smile, MessageCircle, Loader2, Send, X, FileText, Image as ImageIcon, Film, Star, Phone, PhoneOff, PhoneCall, PhoneIncoming } from 'lucide-react';
+import { Play, Pause, Square, Mic, MicOff, Paperclip, Smile, MessageCircle, Loader2, Send, X, FileText, Image as ImageIcon, Film, Star, Phone, PhoneOff, PhoneCall, PhoneIncoming, Reply } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/auth-context';
@@ -16,6 +16,12 @@ import {
 } from '@/components/ui/tooltip';
 import { VoiceMessage } from '@/components/ui/voice-message';
 import { AudioVisualizer } from '@/components/ui/audio-visualizer';
+import { LinkPreview } from '@/components/link-preview';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface DirectMessage {
     id: string;
@@ -29,6 +35,8 @@ interface DirectMessage {
     attachmentMimeType?: string;
     audioDuration?: number;
     read: boolean;
+    replyToId?: string;
+    reactions?: { userId: string, emoji: string }[];
     createdAt: string;
 }
 
@@ -71,6 +79,7 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
     const [gifSearch, setGifSearch] = useState('');
     const [gifs, setGifs] = useState<TenorGif[]>([]);
     const [isSearchingGifs, setIsSearchingGifs] = useState(false);
+    const [replyingTo, setReplyingTo] = useState<DirectMessage | null>(null);
 
     // Voice recording states
     const [isRecording, setIsRecording] = useState(false);
@@ -92,7 +101,7 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
     const inputRef = useRef<HTMLInputElement>(null);
 
     // Friends system hooks
-    const { startTyping, stopTyping, typingFriends, isFriendOnline, socket } = useSocialSocket();
+    const { startTyping, stopTyping, typingFriends, isFriendOnline, socket, onDMReaction } = useSocialSocket();
 
     // Handle missed call callback - now just triggers fetchMessages since calls are persisted to DB
     const handleMissedCall = useCallback(() => {
@@ -105,6 +114,11 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    const handleReply = (message: DirectMessage) => {
+        setReplyingTo(message);
+        inputRef.current?.focus();
     };
 
     // Handle typing status
@@ -174,6 +188,16 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
         scrollToBottom();
     }, [messages, typingFriends]);
 
+    // Listen for reactions
+    useEffect(() => {
+        const removeListener = onDMReaction((updatedMsg) => {
+            setMessages(prev => prev.map(msg =>
+                msg.id === updatedMsg.id ? { ...msg, reactions: updatedMsg.reactions } : msg
+            ));
+        });
+        return () => removeListener();
+    }, [onDMReaction]);
+
     // Search GIFs with Tenor API
     const searchGifs = useCallback(async (query: string) => {
         if (!query.trim()) {
@@ -214,6 +238,40 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
     }, [showGifPicker, gifSearch, searchGifs]);
 
     // Voice recording functions
+    // Voice recording functions
+    const handleReaction = async (messageId: string, emoji: string) => {
+        try {
+            // Optimistic update
+            setMessages(prev => prev.map(msg => {
+                if (msg.id === messageId) {
+                    const currentReactions = msg.reactions || [];
+                    const existingIndex = currentReactions.findIndex(r => r.userId === user?.id);
+                    let newReactions = [...currentReactions];
+
+                    if (existingIndex !== -1) {
+                        if (currentReactions[existingIndex].emoji === emoji) {
+                            newReactions.splice(existingIndex, 1); // Remove
+                        } else {
+                            newReactions[existingIndex] = { ...newReactions[existingIndex], emoji }; // Update
+                        }
+                    } else if (user?.id) {
+                        newReactions.push({ userId: user.id, emoji }); // Add
+                    }
+                    return { ...msg, reactions: newReactions };
+                }
+                return msg;
+            }));
+
+            await fetch(`/api/messages/${messageId}/reactions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ emoji }),
+            });
+        } catch (error) {
+            console.error('Failed to add reaction:', error);
+        }
+    };
+
     // Voice recording functions
     const startRecording = async () => {
         try {
@@ -381,12 +439,16 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ message: messageText }),
+                body: JSON.stringify({
+                    message: messageText,
+                    replyToId: replyingTo?.id
+                }),
             });
 
             if (response.ok) {
                 const dm = await response.json();
                 setMessages(prev => [...prev, dm]);
+                setReplyingTo(null); // Clear reply state
             } else {
                 // Restore message if send failed
                 setNewMessage(messageText);
@@ -710,7 +772,7 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
                 )}
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth">
+                <div className="flex-1 overflow-y-auto p-4 scroll-smooth">
                     {isLoading ? (
                         <div className="flex items-center justify-center h-full">
                             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -726,55 +788,190 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
                     ) : (
                         messages.map((msg, index) => {
                             const isMe = msg.fromUserId === user?.id;
-                            const showAvatar = !isMe && (index === 0 || messages[index - 1].fromUserId !== msg.fromUserId);
+                            const prevMsg = messages[index - 1];
+                            const nextMsg = messages[index + 1];
+
+                            // Calculate time differences for grouping
+                            const isTimeGapPrev = prevMsg && differenceInMinutes(new Date(msg.createdAt), new Date(prevMsg.createdAt)) >= 10;
+                            const isTimeGapNext = nextMsg && differenceInMinutes(new Date(nextMsg.createdAt), new Date(msg.createdAt)) >= 10;
+
+                            const isFirstInGroup = !prevMsg || prevMsg.fromUserId !== msg.fromUserId || isTimeGapPrev;
+                            const isLastInGroup = !nextMsg || nextMsg.fromUserId !== msg.fromUserId || isTimeGapNext;
+
+                            // Avatar is shown at the bottom of the group for friends
+                            const showAvatar = !isMe && isLastInGroup;
+
+                            // Dynamic border radius for grouping effect
+                            let borderRadiusClass = "rounded-2xl";
+                            if (!isMe) {
+                                // Friend's messages (Left aligned)
+                                if (!isFirstInGroup) borderRadiusClass += " rounded-tl-sm";
+                                if (!isLastInGroup) borderRadiusClass += " rounded-bl-sm";
+                            } else {
+                                // My messages (Right aligned)
+                                if (!isFirstInGroup) borderRadiusClass += " rounded-tr-sm";
+                                if (!isLastInGroup) borderRadiusClass += " rounded-br-sm";
+                            }
+
+                            // Spacing: very tight between group (1px), distinguishable between groups (2)
+                            const marginBottom = isLastInGroup ? "mb-2" : "mb-[1px]";
+
+                            // Find replied message
+                            const replyMessage = msg.replyToId ? messages.find(m => m.id === msg.replyToId) : null;
 
                             return (
                                 <div
                                     key={msg.id}
-                                    className={`flex gap-3 ${isMe ? 'justify-end' : 'justify-start'}`}
+                                    id={`msg-${msg.id}`}
+                                    className={`flex flex-col w-full ${isMe ? 'items-end' : 'items-start'} ${marginBottom} group/msg relative`}
                                 >
-                                    {!isMe && (
-                                        <div className="w-8 h-8 flex-shrink-0 flex flex-col justify-end">
-                                            {showAvatar ? (
-                                                <div className="w-8 h-8 rounded-full bg-primary/10 overflow-hidden ring-1 ring-border">
-                                                    {friend?.avatarUrl ? (
-                                                        <img src={friend.avatarUrl} alt={friend.username} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <span className="w-full h-full flex items-center justify-center text-xs font-medium">
-                                                            {friend?.username?.slice(0, 2).toUpperCase()}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            ) : <div className="w-8" />}
-                                        </div>
-                                    )}
+                                    <div className={`flex gap-2 max-w-[70%] ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                        {!isMe && (
+                                            <div className="w-8 flex-shrink-0 flex flex-col justify-end">
+                                                {showAvatar ? (
+                                                    <div className="w-8 h-8 rounded-full bg-primary/10 overflow-hidden ring-1 ring-border shadow-sm">
+                                                        {friend?.avatarUrl ? (
+                                                            <img src={friend.avatarUrl} alt={friend.username} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <span className="w-full h-full flex items-center justify-center text-xs font-medium">
+                                                                {friend?.username?.slice(0, 2).toUpperCase()}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ) : <div className="w-8" />}
+                                            </div>
+                                        )}
 
-                                    <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[75%]`}>
                                         <div
-                                            className={`rounded-2xl px-4 py-2.5 shadow-sm ${isMe
-                                                ? 'bg-primary text-primary-foreground rounded-tr-sm'
-                                                : 'bg-muted rounded-tl-sm'
-                                                } ${msg.attachmentType ? 'p-2' : ''}`}
+                                            className={`px-4 py-2 shadow-sm relative group-hover/msg:shadow-md transition-shadow ${borderRadiusClass} ${isMe
+                                                ? 'bg-primary text-primary-foreground'
+                                                : 'bg-muted'
+                                                } ${msg.attachmentType ? 'p-2' : ''} min-w-[80px] select-none`}
+                                            onDoubleClick={() => handleReply(msg)}
                                         >
+                                            {/* Reply Context */}
+                                            {msg.replyToId && (
+                                                <div
+                                                    className={`mb-2 rounded px-2 py-1 text-xs border-l-2 cursor-pointer opacity-80 hover:opacity-100 transition-opacity ${isMe
+                                                        ? 'bg-primary-foreground/10 border-primary-foreground/50'
+                                                        : 'bg-background/50 border-primary/50'
+                                                        }`}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation(); // Prevent double click trigger
+                                                        const el = document.getElementById(`msg-${msg.replyToId}`);
+                                                        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                        el?.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+                                                        setTimeout(() => el?.classList.remove('ring-2', 'ring-primary', 'ring-offset-2'), 2000);
+                                                    }}
+                                                >
+                                                    <div className="font-medium mb-0.5">
+                                                        {replyMessage ? (replyMessage.fromUserId === user?.id ? 'You' : friend?.username) : 'Message'}
+                                                    </div>
+                                                    <div className="truncate opacity-90">
+                                                        {replyMessage
+                                                            ? (replyMessage.message || `[${replyMessage.attachmentType}]`)
+                                                            : 'Message deleted or unavailable'
+                                                        }
+                                                    </div>
+                                                </div>
+                                            )}
                                             {msg.message && (
-                                                <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{msg.message}</p>
+                                                <>
+                                                    <p className={`${/^[\p{Extended_Pictographic}\u200d\ufe0f\s]+$/u.test(msg.message) && msg.message.length < 10
+                                                        ? 'text-4xl leading-normal'
+                                                        : 'text-sm leading-relaxed' // Standard size
+                                                        } break-words whitespace-pre-wrap`}>
+                                                        {msg.message}
+                                                    </p>
+                                                    {(() => {
+                                                        const urlMatch = msg.message.match(/(https?:\/\/[^\s]+)/);
+                                                        return urlMatch ? <LinkPreview url={urlMatch[0]} /> : null;
+                                                    })()}
+                                                </>
                                             )}
                                             {renderAttachment(msg)}
+
+                                            {/* Reactions Display */}
+                                            {msg.reactions && msg.reactions.length > 0 && (
+                                                <div className="absolute -bottom-2 right-0 flex gap-1 z-10 translate-y-1/2">
+                                                    <div className="bg-background/80 backdrop-blur-sm border rounded-full px-1.5 py-0.5 text-[10px] shadow-sm flex items-center gap-1 cursor-pointer hover:bg-background transition-colors">
+                                                        {Array.from(new Set(msg.reactions.map(r => r.emoji))).slice(0, 3).map(emoji => (
+                                                            <span key={emoji}>{emoji}</span>
+                                                        ))}
+                                                        {msg.reactions.length > 1 && <span className="text-muted-foreground ml-0.5">{msg.reactions.length}</span>}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className={`flex items-center gap-1.5 mt-1 px-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
+
+                                        {/* Reply Button (visible on hover or focus/active for touch) */}
+                                        {/* Message Actions (Reaction + Reply) */}
+                                        <div className={`flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 focus-within:opacity-100 transition-opacity self-center shrink-0 ${isMe ? 'mr-1 order-first' : 'ml-1'}`}>
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6 rounded-full"
+                                                        title="Add Reaction"
+                                                    >
+                                                        <Smile className="h-3 w-3 text-muted-foreground" />
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-auto p-1 flex gap-1 transform -translate-y-8" align="center" side="top">
+                                                    {['❤️', '😂', '😮', '😢', '😡', '👍'].map(emoji => (
+                                                        <button
+                                                            key={emoji}
+                                                            className="hover:bg-muted p-1.5 rounded text-lg transition-transform hover:scale-125 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                                            onClick={() => handleReaction(msg.id, emoji)}
+                                                        >
+                                                            {emoji}
+                                                        </button>
+                                                    ))}
+                                                    <Popover>
+                                                        <PopoverTrigger asChild>
+                                                            <button className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground">
+                                                                +
+                                                            </button>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-auto p-0 border-none bg-transparent shadow-none">
+                                                            <EmojiPicker
+                                                                onEmojiClick={(emojiData) => handleReaction(msg.id, emojiData.emoji)}
+                                                                theme={Theme.DARK}
+                                                                emojiStyle="native"
+                                                                lazyLoadEmojis={true}
+                                                            />
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                </PopoverContent>
+                                            </Popover>
+
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 rounded-full"
+                                                onClick={() => handleReply(msg)}
+                                                title="Reply (Double-tap message)"
+                                            >
+                                                <Reply className="h-3 w-3 text-muted-foreground" />
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    {/* Timestamps & Status - Outside the flex row to not affect avatar alignment */}
+                                    {isLastInGroup && (
+                                        <div className={`flex items-center gap-1.5 mt-1 px-1 ${isMe ? 'mr-1 justify-end' : 'ml-10 justify-start'} animate-in fade-in duration-300`}>
                                             <span className="text-[10px] opacity-70">
                                                 {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
                                             </span>
-                                            {/* Seen receipt - show for last sent message that was read */}
-                                            {isMe && msg.read && index === messages.length - 1 && (
+                                            {isMe && msg.read && (
                                                 <span className="text-[10px] text-primary font-medium">• Seen</span>
                                             )}
-                                            {/* Delivery indicator for unread messages */}
                                             {isMe && !msg.read && (
                                                 <span className="text-[10px] opacity-50">• Sent</span>
                                             )}
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             );
                         })
@@ -931,8 +1128,33 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
                     </div>
                 )}
 
+                {/* Reply Banner */}
+                {replyingTo && (
+                    <div className="px-4 py-2 bg-muted/50 border-t flex items-center justify-between animate-in slide-in-from-bottom-2">
+                        <div className="flex items-center gap-2 overflow-hidden">
+                            <Reply className="h-4 w-4 text-primary shrink-0" />
+                            <div className="flex flex-col overflow-hidden">
+                                <span className="text-xs font-medium text-primary">
+                                    Replying to {replyingTo.fromUserId === user?.id ? 'yourself' : friend?.username}
+                                </span>
+                                <span className="text-xs text-muted-foreground truncate max-w-[300px]">
+                                    {replyingTo.message || (replyingTo.attachmentType ? `[${replyingTo.attachmentType}]` : 'Message')}
+                                </span>
+                            </div>
+                        </div>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 rounded-full hover:bg-background/80"
+                            onClick={() => setReplyingTo(null)}
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </div>
+                )}
+
                 {/* Input Area */}
-                <div className="p-3 bg-background border-t mt-2">
+                <div className="p-3 bg-background border-t mt-0">
                     <div className="flex items-end gap-2 bg-muted/50 rounded-2xl p-1.5 transition-colors focus-within:bg-muted focus-within:ring-1 focus-within:ring-primary/20">
                         {/* Attach buttons */}
                         <div className="flex items-center gap-0.5 pb-1">

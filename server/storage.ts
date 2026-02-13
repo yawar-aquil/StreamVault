@@ -77,6 +77,9 @@ export interface DirectMessage {
   attachmentMimeType?: string;
   // Voice message specific
   audioDuration?: number;
+  // Reply support
+  replyToId?: string;
+  reactions?: { userId: string, emoji: string }[];
   read: boolean;
   createdAt: string;
 }
@@ -277,6 +280,7 @@ export interface IStorage {
     audioDuration?: number
   ): Promise<DirectMessage>;
   markMessagesRead(userId: string, friendId: string): Promise<void>;
+  addReaction(messageId: string, userId: string, emoji: string): Promise<DirectMessage>;
 
   // API Keys
   getApiKeysByUserId(userId: string): Promise<ApiKey[]>;
@@ -1999,7 +2003,8 @@ export class MemStorage implements IStorage {
     attachmentFilename?: string,
     attachmentSize?: number,
     attachmentMimeType?: string,
-    audioDuration?: number
+    audioDuration?: number,
+    replyToId?: string
   ): Promise<DirectMessage> {
     const id = randomUUID();
     const dm: DirectMessage = {
@@ -2013,6 +2018,8 @@ export class MemStorage implements IStorage {
       attachmentSize,
       attachmentMimeType,
       audioDuration,
+      replyToId,
+      reactions: [],
       read: false,
       createdAt: new Date().toISOString(),
     };
@@ -2038,6 +2045,35 @@ export class MemStorage implements IStorage {
       }
     }
     return counts;
+  }
+
+  async addReaction(messageId: string, userId: string, emoji: string): Promise<DirectMessage> {
+    const message = this.directMessages.get(messageId);
+    if (!message) throw new Error("Message not found");
+
+    if (!message.reactions) {
+      message.reactions = [];
+    }
+
+    // Check if user already reacted with ANY emoji (to replace) or SAME emoji (to remove)
+    const existingReactionIndex = message.reactions.findIndex(r => r.userId === userId);
+
+    if (existingReactionIndex !== -1) {
+      const existing = message.reactions[existingReactionIndex];
+      if (existing.emoji === emoji) {
+        // Toggle off if same emoji
+        message.reactions.splice(existingReactionIndex, 1);
+      } else {
+        // Replace if different emoji
+        message.reactions[existingReactionIndex].emoji = emoji;
+      }
+    } else {
+      // Add new reaction
+      message.reactions.push({ userId, emoji });
+    }
+
+    this.saveFriendsData();
+    return message;
   }
 
   // Save/Load friends data

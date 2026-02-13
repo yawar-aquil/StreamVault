@@ -22,6 +22,7 @@ import webpush from "web-push";
 import { hashPassword, verifyPassword, generateToken, verifyToken, setAuthCookie, clearAuthCookie, type AuthRequest } from "./auth";
 import multer from "multer";
 import storeRoutes from "./store";
+import { getLinkPreview } from "./link-preview";
 
 // Helper to convert ReadableStream to async iterable for Node.js
 async function* streamToAsyncIterable(stream: ReadableStream<Uint8Array>) {
@@ -3491,7 +3492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { friendId } = req.params;
-      const { message, attachmentType, attachmentUrl } = req.body;
+      const { message, attachmentType, attachmentUrl, replyToId } = req.body;
 
       // Allow empty message if there's an attachment
       if ((!message || !message.trim()) && !attachmentUrl) {
@@ -3509,7 +3510,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         friendId,
         message?.trim() || '',
         attachmentType,
-        attachmentUrl
+        attachmentUrl,
+        undefined, // attachmentFilename
+        undefined, // attachmentSize
+        undefined, // attachmentMimeType
+        undefined, // audioDuration
+        replyToId
       );
 
       // Create notification for recipient
@@ -3529,10 +3535,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Emit socket event for real-time updates
       emitDMReceived(friendId, {
-        id: dm.id,
+        ...dm,
         fromUserId: payload.userId,
-        message: dm.message,
-        createdAt: dm.createdAt,
       });
 
       res.status(201).json(dm);
@@ -3556,6 +3560,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { friendId } = req.params;
       const duration = parseInt(req.body.duration) || 0;
+      const replyToId = req.body.replyToId;
       const file = req.file;
 
       if (!file) {
@@ -3578,7 +3583,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         file.originalname,
         file.size,
         file.mimetype,
-        duration
+        duration,
+        replyToId
       );
 
       // Create notification
@@ -3594,10 +3600,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Emit socket event for real-time updates
       emitDMReceived(friendId, {
-        id: dm.id,
+        ...dm,
         fromUserId: payload.userId,
-        message: dm.message,
-        createdAt: dm.createdAt,
       });
 
       res.status(201).json(dm);
@@ -3620,6 +3624,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { friendId } = req.params;
+      const replyToId = req.body.replyToId;
       const file = req.file;
 
       if (!file) {
@@ -3647,35 +3652,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fileUrl,
         file.originalname,
         file.size,
-        file.mimetype
+        file.mimetype,
+        undefined, // audioDuration
+        replyToId
       );
 
       // Create notification
       const currentUser = await storage.getUserById(payload.userId);
-      const typeLabel = attachmentType === 'image' ? 'an image' :
-        attachmentType === 'video' ? 'a video' :
-          attachmentType === 'audio' ? 'an audio file' : 'a file';
       await storage.createNotification({
         userId: friendId,
         type: 'dm',
         title: 'New Attachment',
-        message: `${currentUser?.username || 'Someone'} sent ${typeLabel}`,
+        message: `${currentUser?.username || 'Someone'} sent a ${attachmentType}`,
         data: { fromUserId: payload.userId },
         read: false,
       });
 
       // Emit socket event for real-time updates
       emitDMReceived(friendId, {
-        id: dm.id,
+        ...dm,
         fromUserId: payload.userId,
-        message: dm.message,
-        createdAt: dm.createdAt,
       });
+
 
       res.status(201).json(dm);
     } catch (error) {
       console.error("Send attachment error:", error);
       res.status(500).json({ error: "Failed to send attachment" });
+    }
+  });
+
+  // Add/Toggle Reaction
+  app.post("/api/messages/:messageId/reactions", async (req, res) => {
+    try {
+      const token = req.cookies.authToken || req.headers.authorization?.replace('Bearer ', '');
+      if (!token) return res.status(401).json({ error: "Not authenticated" });
+      const payload = verifyToken(token);
+      if (!payload) return res.status(401).json({ error: "Invalid token" });
+
+      const { messageId } = req.params;
+      const { emoji } = req.body;
+
+      if (!emoji) return res.status(400).json({ error: "Emoji is required" });
+
+      const dm = await storage.addReaction(messageId, payload.userId, emoji);
+
+      // Notify relevant parties via socket
+      // Ideally we emit 'dm:reaction' here too if not already handled by storage or social logic
+      // Since social.ts handles the socket event 'dm:reaction', this API is mostly for non-socket clients or persistence.
+      // But we should emit the update to active sockets so they see the reaction immediately.
+
+      const recipientId = dm.fromUserId === payload.userId ? dm.toUserId : dm.fromUserId;
+      emitDMReceived(recipientId, dm); // This emits 'dm:received' which might update the whole message
+      // Also to self
+      emitDMReceived(payload.userId, dm);
+
+      res.json(dm);
+    } catch (error) {
+      console.error("Reaction error:", error);
+      res.status(500).json({ error: "Failed to add reaction" });
+    }
+  });
+
+  // Link Preview
+  app.post("/api/preview-link", async (req, res) => {
+    try {
+      const { url } = req.body;
+      if (!url) return res.status(400).json({ error: "URL is required" });
+
+      const preview = await getLinkPreview(url);
+      res.json(preview);
+    } catch (error) {
+      console.error("Link preview error:", error);
+      res.status(500).json({ error: "Failed to fetch link preview" });
     }
   });
 
