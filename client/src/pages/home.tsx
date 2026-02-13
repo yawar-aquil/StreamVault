@@ -9,6 +9,7 @@ import type { Show, Movie, Anime, ViewingProgress } from "@shared/schema";
 import { useMemo } from "react";
 import { Link } from "wouter";
 import { GuestSignupModal } from "@/components/guest-signup-modal";
+import { AdContainer } from "@/components/ad-manager";
 
 export default function Home() {
   const { t } = useTranslation();
@@ -168,12 +169,16 @@ export default function Home() {
 
       {/* Content Rows */}
       <div className="container mx-auto py-8 space-y-12">
+        <AdContainer type="native" />
+
         {top10Items.length > 0 && (
           <Top10Row
             title="Top 10 Today"
             items={top10Items}
           />
         )}
+
+        <AdContainer type="banner" />
 
         {/* Recommendations Row */}
         {recommendations.length > 0 && (

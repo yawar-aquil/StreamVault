@@ -1,13 +1,15 @@
 import { Link, useLocation } from "wouter";
 import { useTranslation } from 'react-i18next';
-import { Search, Moon, Sun, Play, Menu, X, Bookmark, Users, User, LogOut, PartyPopper, UserPlus, Download, Settings, Store, Wallet, Package, Trophy, Medal, BarChart2, Target, Gift, BookOpen, Code } from "lucide-react";
+import { Search, Moon, Sun, Play, Menu, X, Bookmark, Users, User, LogOut, PartyPopper, UserPlus, Download, Settings, Store, Wallet, Package, Trophy, Medal, BarChart2, Target, Gift, BookOpen, Code, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { useTheme } from "./theme-provider";
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Show, Movie, Anime } from "@shared/schema";
 import { useAuth } from "@/contexts/auth-context";
+import { useAds } from "@/components/ad-manager";
 import { NotificationsDropdown } from "@/components/notifications-dropdown";
 import StreamCoin from '@/components/stream-coin';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -23,6 +25,7 @@ export function Header() {
   const [location, navigate] = useLocation();
   const { theme, setTheme } = useTheme();
   const { user, isAuthenticated, logout } = useAuth();
+  const { adEnabled, toggleAds } = useAds();
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -457,6 +460,19 @@ export function Header() {
                   <Download className="mr-2 h-4 w-4" />
                   {t('actions.download')}
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {/* Ad Toggle */}
+                <div className="px-2 py-1.5 flex items-center justify-between text-sm outline-none">
+                  <div className="flex items-center">
+                    <Zap className="mr-2 h-4 w-4 text-yellow-500" />
+                    <span>Ad-Free Mode</span>
+                  </div>
+                  <Switch
+                    checked={!adEnabled}
+                    onCheckedChange={() => toggleAds()}
+                    className="ml-2 scale-75"
+                  />
+                </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => logout()} className="text-destructive focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />

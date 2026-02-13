@@ -10,6 +10,7 @@ import { Footer } from "@/components/footer";
 import { Chatbot } from "@/components/chatbot";
 import { AdBanner } from "@/components/ad-banner";
 import { AdBlockDetector } from "@/components/adblock-detector";
+import { AdProvider } from "@/components/ad-manager"; // Added this import
 import { InstallPrompt } from "@/components/install-prompt";
 import { NotificationPrompt } from "@/components/notification-prompt";
 import Home from "@/pages/home";
@@ -80,6 +81,7 @@ import { NotificationsProvider } from "@/contexts/notifications-context";
 import { FriendsProvider } from "@/contexts/friends-context";
 import { IncomingCallOverlay } from "@/components/incoming-call-overlay";
 import { ProtectedRoute } from "@/lib/protected-route";
+import { WatchTogetherProvider } from "@/contexts/watch-together-context";
 
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 
@@ -174,6 +176,8 @@ function Router() {
   );
 }
 
+
+
 function App() {
   return (
     <HelmetProvider>
@@ -183,10 +187,14 @@ function App() {
             <FriendsProvider>
               <ThemeProvider defaultTheme="dark">
                 <TooltipProvider>
-                  <Toaster />
-                  <AdBlockDetector />
-                  <AnalyticsTracker />
-                  <Router />
+                  <WatchTogetherProvider>
+                    <AdProvider>
+                      <Toaster />
+                      <AdBlockDetector />
+                      <AnalyticsTracker />
+                      <Router />
+                    </AdProvider>
+                  </WatchTogetherProvider>
                 </TooltipProvider>
               </ThemeProvider>
             </FriendsProvider>

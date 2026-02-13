@@ -237,7 +237,8 @@ export interface IStorage {
 
   // Coins & Transactions
   updateUserCoins(userId: string, amount: number): Promise<User>;
-  deductUserCoins(userId: string, amount: number): Promise<boolean>;
+  updateUserCoins(userId: string, amount: number): Promise<User>;
+  updateAdFreeStatus(userId: string, until: Date): Promise<User>;
   createCoinTransaction(transaction: InsertCoinTransaction): Promise<CoinTransaction>;
   getUserCoinTransactions(userId: string): Promise<CoinTransaction[]>;
   deletePasswordResetToken(email: string): Promise<void>;
@@ -3165,6 +3166,16 @@ export class MemStorage implements IStorage {
     this.users.set(userId, updatedUser);
     this.saveUsers();
     return true;
+  }
+
+  async updateAdFreeStatus(userId: string, until: Date): Promise<User> {
+    const user = this.users.get(userId);
+    if (!user) throw new Error("User not found");
+
+    const updatedUser = { ...user, adFreeUntil: until };
+    this.users.set(userId, updatedUser);
+    this.saveUsers();
+    return updatedUser;
   }
 
   async createCoinTransaction(transaction: InsertCoinTransaction): Promise<CoinTransaction> {

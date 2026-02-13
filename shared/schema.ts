@@ -25,6 +25,7 @@ export const users = pgTable("users", {
   referredBy: varchar("referred_by"),
   referralCount: integer("referral_count").default(0).notNull(),
   emailVerified: boolean("email_verified").default(false),
+  adFreeUntil: timestamp("ad_free_until"),
   coins: integer("coins").default(0).notNull(),
   activityVisible: boolean("activity_visible").default(true),
   settings: text("settings"), // JSON string for all user preferences

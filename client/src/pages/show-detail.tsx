@@ -13,6 +13,7 @@ import { ContentRow } from "@/components/content-row";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ReviewsSection } from "@/components/reviews-section";
+import { AdContainer } from "@/components/ad-manager";
 
 // Extract Google Drive ID from URL and generate thumbnail
 const getEpisodeThumbnail = (episode: Episode, showBackdrop?: string) => {
@@ -727,7 +728,7 @@ export default function ShowDetail() {
                 </div>
               )}
 
-              {/* User Reviews */}
+              <AdContainer type="banner" className="my-8" />
               <ReviewsSection contentType="show" contentId={show.id} />
             </div>
           </TabsContent>

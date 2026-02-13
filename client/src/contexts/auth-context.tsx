@@ -34,6 +34,7 @@ interface User {
         isSpecial?: boolean;
     } | null;
     coins?: number;
+    adFreeUntil?: string | null;
 }
 
 interface AuthContextType {

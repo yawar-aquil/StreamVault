@@ -1,0 +1,260 @@
+import React, { createContext, useContext, useEffect, useState, useRef } from "react";
+import { useAuth } from "@/contexts/auth-context";
+import { useLocation } from "wouter";
+
+interface AdContextType {
+    adEnabled: boolean;
+    toggleAds: () => void;
+    showAds: boolean;
+}
+
+const AdContext = createContext<AdContextType>({
+    adEnabled: true,
+    toggleAds: () => { },
+    showAds: false,
+});
+
+export const useAds = () => useContext(AdContext);
+
+export function AdProvider({ children }: { children: React.ReactNode }) {
+    const [adEnabled, setAdEnabled] = useState(true);
+    const { user } = useAuth();
+
+    // Initialize preference from localStorage
+    useEffect(() => {
+        const stored = localStorage.getItem("ad_preference");
+        if (stored !== null) {
+            setAdEnabled(stored === "true");
+        }
+    }, []);
+
+    const toggleAds = () => {
+        // Only allow toggling if user is subscribed
+        if (!user?.adFreeUntil || new Date(user.adFreeUntil) < new Date()) {
+            return;
+        }
+
+        const newState = !adEnabled;
+        setAdEnabled(newState);
+        localStorage.setItem("ad_preference", String(newState));
+    };
+
+    // Determine if ads should be shown
+    const isAdDomain = typeof window !== 'undefined' && window.location.hostname.includes("streamvault.in");
+    const isSubscribed = user?.adFreeUntil && new Date(user.adFreeUntil) > new Date();
+    const showAds = isAdDomain && !isSubscribed && adEnabled;
+
+    return (
+        <AdContext.Provider value={{ adEnabled, toggleAds, showAds }}>
+            <GlobalAds showAds={showAds} />
+            {children}
+        </AdContext.Provider>
+    );
+}
+
+// ----------------------------------------------------------------------
+// Reusable Ad Components
+// ----------------------------------------------------------------------
+
+// Helper to safely render iframe-based ads (Banner ads using atOptions)
+function AdsterraIframe({
+    width,
+    height,
+    adKey,
+    className
+}: {
+    width: number,
+    height: number,
+    adKey: string,
+    className?: string
+}) {
+    const { showAds } = useAds();
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!showAds || !containerRef.current) {
+            if (containerRef.current) containerRef.current.innerHTML = '';
+            return;
+        }
+
+        const iframe = document.createElement('iframe');
+        iframe.width = `${width}`;
+        iframe.height = `${height}`;
+        iframe.frameBorder = "0";
+        iframe.scrolling = "no";
+        iframe.style.border = "none";
+        iframe.style.overflow = "hidden";
+
+        // Clear previous content
+        containerRef.current.innerHTML = '';
+        containerRef.current.appendChild(iframe);
+
+        const doc = iframe.contentWindow?.document;
+        if (doc) {
+            doc.open();
+            doc.write(`
+                <!DOCTYPE html>
+                <html>
+                <body style="margin:0;padding:0;overflow:hidden;">
+                    <script type="text/javascript">
+                        atOptions = {
+                            'key' : '${adKey}',
+                            'format' : 'iframe',
+                            'height' : ${height},
+                            'width' : ${width},
+                            'params' : {}
+                        };
+                    </script>
+                    <script type="text/javascript" src="https://openairtowhardworking.com/${adKey}/invoke.js"></script>
+                </body>
+                </html>
+            `);
+            doc.close();
+        }
+
+    }, [showAds, adKey, width, height]);
+
+    if (!showAds) return null;
+
+    return (
+        <div
+            ref={containerRef}
+            className={`flex justify-center items-center overflow-hidden ${className || ''}`}
+            style={{ width: width, height: height, minHeight: height }}
+        />
+    );
+}
+
+// Global Ads (Popunder, Social Bar)
+function GlobalAds({ showAds }: { showAds: boolean }) {
+    useEffect(() => {
+        if (!showAds) return;
+
+        // Popunder
+        const popunderScript = document.createElement("script");
+        popunderScript.src = "https://openairtowhardworking.com/cc/92/4a/cc924a63b418bf115df7f329ab7cb09d.js";
+        popunderScript.async = true;
+        document.body.appendChild(popunderScript);
+
+        // Social Bar
+        const socialBarScript = document.createElement("script");
+        socialBarScript.src = "https://openairtowhardworking.com/32/04/23/320423cec477d343134fb84492d4efb2.js";
+        socialBarScript.async = true;
+        document.body.appendChild(socialBarScript);
+
+        return () => {
+            if (document.body.contains(popunderScript)) document.body.removeChild(popunderScript);
+            if (document.body.contains(socialBarScript)) document.body.removeChild(socialBarScript);
+        };
+    }, [showAds]);
+
+    return null;
+}
+
+// Native Banner (Async type)
+export function NativeBanner() {
+    const { showAds } = useAds();
+    const scriptRef = useRef<HTMLScriptElement | null>(null);
+
+    useEffect(() => {
+        if (!showAds) return;
+
+        const script = document.createElement("script");
+        script.async = true;
+        script.dataset.cfasync = "false";
+        script.src = "https://openairtowhardworking.com/2fe64366cad801afa603d926d7c7d413/invoke.js";
+
+        document.body.appendChild(script);
+        scriptRef.current = script;
+
+        return () => {
+            if (scriptRef.current && document.body.contains(scriptRef.current)) {
+                document.body.removeChild(scriptRef.current);
+            }
+        };
+    }, [showAds]);
+
+    if (!showAds) return null;
+
+    return (
+        <div className="flex justify-center my-4 w-full">
+            <div id="container-2fe64366cad801afa603d926d7c7d413"></div>
+        </div>
+    );
+}
+
+
+// ----------------------------------------------------------------------
+// Specific Ad Implementations
+// ----------------------------------------------------------------------
+
+export function Banner728x90() {
+    return <AdsterraIframe width={728} height={90} adKey="1a8887a1f7602c45803795a1a6e971db" className="hidden md:flex my-4" />;
+}
+
+export function Banner320x50() {
+    return <AdsterraIframe width={320} height={50} adKey="bc37847301010f38b235b5b78d8382d1" className="flex md:hidden my-4" />;
+}
+
+export function Banner468x60() {
+    return <AdsterraIframe width={468} height={60} adKey="3495d0b8d01a4fcf0328cbbb7abd76c8" className="hidden sm:flex md:hidden my-4" />;
+}
+
+export function Banner300x250({ className }: { className?: string }) {
+    return <AdsterraIframe width={300} height={250} adKey="30b9e1edda80cc79f456b9f7e7821c47" className={`my-4 ${className || ''}`} />;
+}
+
+export function Banner160x600({ className }: { className?: string }) {
+    return <AdsterraIframe width={160} height={600} adKey="931b8e6c69b0fa8ebccab7b0e9cfde9a" className={`my-4 ${className || ''}`} />;
+}
+
+export function Banner160x300({ className }: { className?: string }) {
+    return <AdsterraIframe width={160} height={300} adKey="e1bfd6b49d9cfccad14357530f5a0160" className={`my-4 ${className || ''}`} />;
+}
+
+// ----------------------------------------------------------------------
+// Container Component
+// ----------------------------------------------------------------------
+
+export function AdContainer({
+    type,
+    className
+}: {
+    type: 'banner' | 'sidebar' | 'native' | 'footer',
+    className?: string
+}) {
+    const { showAds } = useAds();
+    if (!showAds) return null;
+
+    if (type === 'native') return <NativeBanner />;
+
+    if (type === 'footer') {
+        return (
+            <div className={`flex justify-center w-full bg-black/20 py-2 ${className}`}>
+                <Banner728x90 />
+                <Banner320x50 />
+            </div>
+        );
+    }
+
+    if (type === 'sidebar') {
+        return (
+            <div className="flex flex-col items-center gap-4">
+                <Banner300x250 />
+                <Banner160x600 className="hidden xl:flex" />
+            </div>
+        );
+    }
+
+    if (type === 'banner') {
+        return (
+            <div className={`flex justify-center w-full ${className}`}>
+                <Banner728x90 />
+                <Banner468x60 />
+                <Banner320x50 />
+            </div>
+        );
+    }
+
+    return null;
+}
