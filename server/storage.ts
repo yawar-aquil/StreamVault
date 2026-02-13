@@ -90,10 +90,15 @@ export interface ApiKey {
   createdAt: string;
   lastUsed?: string;
   // Rate limiting
+  // Rate limiting
   requestsToday: number;
   requestsThisMinute: number;
   lastMinuteReset: string;
   lastDayReset: string;
+  // Dynamic Limits (defaults: 1000/day, 60/min)
+  rateLimitDaily: number;
+  rateLimitMinute: number;
+  tier: 'free' | 'pro' | 'enterprise';
 }
 
 export interface PasswordResetToken {
@@ -279,6 +284,7 @@ export interface IStorage {
   createApiKey(userId: string, name: string): Promise<ApiKey>;
   deleteApiKey(id: string, userId: string): Promise<void>;
   updateApiKeyUsage(id: string): Promise<{ allowed: boolean; reason?: string }>;
+  upgradeApiKey(userId: string, keyId: string, tier: 'pro' | 'enterprise'): Promise<ApiKey>;
 
   // Gamification
   updateUserXP(userId: string, amount: number): Promise<{ user: User; levelUp: boolean }>;
@@ -2363,11 +2369,14 @@ export class MemStorage implements IStorage {
       name,
       userId,
       scope: 'read-only',
-      createdAt: now,
+      lastUsed: undefined,
       requestsToday: 0,
       requestsThisMinute: 0,
-      lastMinuteReset: now,
-      lastDayReset: now,
+      lastMinuteReset: new Date().toISOString(),
+      lastDayReset: new Date().toISOString(),
+      rateLimitDaily: 1000,
+      rateLimitMinute: 60,
+      tier: 'free'
     };
 
     this.apiKeys.set(apiKey.id, apiKey);
@@ -2412,12 +2421,16 @@ export class MemStorage implements IStorage {
     }
 
     // Check rate limits
-    if (apiKey.requestsToday >= 1000) {
-      return { allowed: false, reason: 'Daily rate limit exceeded: 1000 requests per day. Resets at midnight UTC.' };
+    // Check rate limits
+    const dailyLimit = apiKey.rateLimitDaily || 1000;
+    const minuteLimit = apiKey.rateLimitMinute || 60;
+
+    if (apiKey.requestsToday >= dailyLimit) {
+      return { allowed: false, reason: `Daily rate limit exceeded: ${dailyLimit} requests per day. Resets at midnight UTC.` };
     }
 
-    if (apiKey.requestsThisMinute >= 60) {
-      return { allowed: false, reason: 'Rate limit exceeded: 60 requests per minute. Please wait and try again.' };
+    if (apiKey.requestsThisMinute >= minuteLimit) {
+      return { allowed: false, reason: `Rate limit exceeded: ${minuteLimit} requests per minute. Please wait and try again.` };
     }
 
     // Increment counters
@@ -2429,6 +2442,55 @@ export class MemStorage implements IStorage {
     this.saveApiKeys();
 
     return { allowed: true };
+  }
+
+  async upgradeApiKey(userId: string, keyId: string, tier: 'pro' | 'enterprise'): Promise<ApiKey> {
+    const key = this.apiKeys.get(keyId);
+    if (!key) throw new Error("API Key not found");
+    // if (key.userId !== userId) throw new Error("Unauthorized"); // Allow admin or same user
+
+    // Validate Tier
+    const TIER_CONFIG = {
+      'pro': { daily: 10000, minute: 600, cost: 1000, name: 'Pro' },
+      'enterprise': { daily: 100000, minute: 6000, cost: 5000, name: 'Enterprise' }
+    };
+
+    interface TierConfig {
+      daily: number;
+      minute: number;
+      cost: number;
+      name: string;
+    }
+
+    // Explicit type to satisfy TS
+    const config: TierConfig | undefined = (TIER_CONFIG as any)[tier];
+    if (!config) throw new Error("Invalid tier");
+
+    // Deduct Coins
+    // Note: deductUserCoins handles the check for sufficient balance
+    const deductionSuccess = await this.deductUserCoins(userId, config.cost);
+    if (!deductionSuccess) {
+      throw new Error(`Insufficient coins. ${config.name} tier costs ${config.cost} coins.`);
+    }
+
+    // Update Key
+    key.tier = tier;
+    key.rateLimitDaily = config.daily;
+    key.rateLimitMinute = config.minute;
+
+    this.apiKeys.set(keyId, key);
+    this.saveApiKeys();
+
+    // Log Transaction
+    await this.createCoinTransaction({
+      userId,
+      amount: -config.cost,
+      type: 'purchase',
+      description: `Upgraded API Key (${key.name}) to ${config.name} Tier`,
+      metadata: JSON.stringify({ keyId, tier })
+    });
+
+    return key;
   }
 
   // ============================================

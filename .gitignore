@@ -110,5 +110,10 @@ scripts/*.txt
 # Cached subtitles
 data/subtitles/
 
+# Data persistence (ignore production JSON files)
+data/*.json
+!data/sample-data.json 
+
+
 # User uploads
 uploads/

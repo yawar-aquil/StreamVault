@@ -3063,6 +3063,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Upgrade API key tier
+  app.post("/api/keys/:id/upgrade", async (req, res) => {
+    try {
+      const token = req.cookies?.authToken || req.headers.authorization?.replace('Bearer ', '');
+      if (!token) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const payload = verifyToken(token);
+      if (!payload) {
+        return res.status(401).json({ error: "Invalid token" });
+      }
+
+      const { id } = req.params;
+      const { tier } = req.body;
+
+      if (!tier || (tier !== 'pro' && tier !== 'enterprise')) {
+        return res.status(400).json({ error: "Invalid tier. Must be 'pro' or 'enterprise'" });
+      }
+
+      const updatedKey = await storage.upgradeApiKey(payload.userId, id, tier);
+      res.json(updatedKey);
+    } catch (error: any) {
+      console.error("Upgrade API key error:", error);
+      res.status(400).json({ error: error.message || "Failed to upgrade API key" });
+    }
+  });
+
   // ============================================
   // NOTIFICATIONS ROUTES
   // ============================================

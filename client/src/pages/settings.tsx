@@ -7,8 +7,16 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Settings, Bot, Bell, Volume2, Palette, Shield, Trash2, Key, Copy, Plus, Lock, Check, BarChart3, Smartphone } from 'lucide-react';
+import { Loader2, Settings, Bot, Bell, Volume2, Palette, Shield, Trash2, Key, Copy, Plus, Lock, Check, BarChart3, Smartphone, Zap, ArrowUpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
 import { useTheme } from '@/components/theme-provider';
 import { apiRequest } from '@/lib/queryClient';
 import { ReferralSection } from '@/components/referral-section';
@@ -56,7 +64,17 @@ interface ApiKey {
     requestsThisMinute: number;
     lastMinuteReset: string;
     lastDayReset: string;
+    // New fields
+    rateLimitDaily: number;
+    rateLimitMinute: number;
+    tier: 'free' | 'pro' | 'enterprise';
 }
+
+const TIER_CONFIG = {
+    'free': { daily: 1000, minute: 60, cost: 0, name: 'Free' },
+    'pro': { daily: 10000, minute: 600, cost: 1000, name: 'Pro' },
+    'enterprise': { daily: 100000, minute: 6000, cost: 5000, name: 'Enterprise' }
+};
 
 export default function SettingsPage() {
     const [, navigate] = useLocation();
@@ -89,6 +107,11 @@ export default function SettingsPage() {
     const [deletePassword, setDeletePassword] = useState('');
     const [deleteConfirmText, setDeleteConfirmText] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
+
+    // Upgrade state
+    const [upgradeKey, setUpgradeKey] = useState<ApiKey | null>(null);
+    const [isUpgrading, setIsUpgrading] = useState(false);
+
 
     // PWA App Icon state
     const [isPWA, setIsPWA] = useState(false);
@@ -211,6 +234,52 @@ export default function SettingsPage() {
             toast({ title: 'API Key Deleted', description: 'The API key has been revoked' });
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to delete API key', variant: 'destructive' });
+        }
+    };
+
+    const handleUpgrade = (key: ApiKey) => {
+        setUpgradeKey(key);
+    };
+
+    const confirmUpgrade = async (tier: 'pro' | 'enterprise') => {
+        if (!upgradeKey) return;
+
+        const config = TIER_CONFIG[tier];
+        if (user.coins < config.cost) {
+            toast({
+                title: 'Insufficient Coins',
+                description: `You need ${config.cost} coins for this upgrade. You have ${user.coins}.`,
+                variant: 'destructive'
+            });
+            return;
+        }
+
+        setIsUpgrading(true);
+        try {
+            const res = await apiRequest('POST', `/api/keys/${upgradeKey.id}/upgrade`, { tier });
+            const updatedKey = await res.json();
+
+            // Update local state
+            setApiKeys(apiKeys.map(k => k.id === updatedKey.id ? updatedKey : k));
+
+            // Refresh user to get updated coin balance
+            window.location.reload(); // Simple way to refresh auth context or invalidate query
+            // Or better: invalidate query
+            // queryClient.invalidateQueries(['/api/auth/me']); // Need queryClient access
+
+            toast({
+                title: 'Upgrade Successful!',
+                description: `API Key upgraded to ${config.name} tier.`
+            });
+            setUpgradeKey(null);
+        } catch (error: any) {
+            toast({
+                title: 'Upgrade Failed',
+                description: error.message || 'Failed to upgrade API key',
+                variant: 'destructive'
+            });
+        } finally {
+            setIsUpgrading(false);
         }
     };
 
@@ -424,8 +493,8 @@ export default function SettingsPage() {
                                 <button
                                     onClick={() => handleIconChange('default')}
                                     className={`relative flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all duration-200 ${selectedIcon === 'default'
-                                            ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20'
-                                            : 'border-muted hover:border-muted-foreground/30 hover:bg-muted/50'
+                                        ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20'
+                                        : 'border-muted hover:border-muted-foreground/30 hover:bg-muted/50'
                                         }`}
                                 >
                                     <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-md">
@@ -443,8 +512,8 @@ export default function SettingsPage() {
                                 <button
                                     onClick={() => handleIconChange('alt')}
                                     className={`relative flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all duration-200 ${selectedIcon === 'alt'
-                                            ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20'
-                                            : 'border-muted hover:border-muted-foreground/30 hover:bg-muted/50'
+                                        ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20'
+                                        : 'border-muted hover:border-muted-foreground/30 hover:bg-muted/50'
                                         }`}
                                 >
                                     <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-md">
@@ -686,8 +755,8 @@ export default function SettingsPage() {
                         {apiKeys.length > 0 ? (
                             <div className="space-y-3">
                                 {apiKeys.map((key) => {
-                                    const dailyPercent = Math.min((key.requestsToday / 1000) * 100, 100);
-                                    const minutePercent = Math.min((key.requestsThisMinute / 60) * 100, 100);
+                                    const dailyPercent = Math.min((key.requestsToday / (key.rateLimitDaily || 1000)) * 100, 100);
+                                    const minutePercent = Math.min((key.requestsThisMinute / (key.rateLimitMinute || 60)) * 100, 100);
                                     const dayResetDate = new Date(key.lastDayReset);
                                     dayResetDate.setUTCDate(dayResetDate.getUTCDate() + 1);
                                     dayResetDate.setUTCHours(0, 0, 0, 0);
@@ -695,28 +764,46 @@ export default function SettingsPage() {
                                     minuteResetDate.setTime(minuteResetDate.getTime() + 60000);
 
                                     return (
-                                        <div key={key.id} className="p-4 bg-muted/50 rounded-lg border">
-                                            <div className="flex items-start justify-between mb-3">
+                                        <div key={key.id} className="p-4 bg-muted/50 rounded-lg border relative overflow-hidden">
+                                            <div className="flex items-start justify-between mb-3 pr-16 relative">
                                                 <div className="min-w-0">
-                                                    <p className="font-medium">{key.name}</p>
+                                                    <div className="flex items-center gap-2 font-medium">
+                                                        {key.name}
+                                                        <Badge variant={key.tier === 'enterprise' ? 'default' : key.tier === 'pro' ? 'secondary' : 'outline'} className="uppercase text-[10px]">
+                                                            {key.tier || 'FREE'}
+                                                        </Badge>
+                                                    </div>
                                                     <p className="text-xs text-muted-foreground font-mono">{key.key}</p>
                                                     <p className="text-xs text-muted-foreground mt-1">
                                                         Created {new Date(key.createdAt).toLocaleDateString()}
                                                         {key.lastUsed && ` • Last used ${new Date(key.lastUsed).toLocaleString()}`}
                                                     </p>
                                                 </div>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="text-destructive hover:text-destructive"
-                                                    onClick={() => deleteApiKey(key.id)}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                <div className="flex gap-1 absolute top-0 right-0">
+                                                    {(!key.tier || key.tier === 'free') && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-8 gap-1 text-xs"
+                                                            onClick={() => handleUpgrade(key)}
+                                                        >
+                                                            <Zap className="h-3 w-3 text-yellow-500" />
+                                                            Upgrade
+                                                        </Button>
+                                                    )}
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-destructive hover:text-destructive"
+                                                        onClick={() => deleteApiKey(key.id)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
                                             </div>
 
                                             {/* Usage Stats */}
-                                            <div className="space-y-2 pt-2 border-t">
+                                            <div className="space-y-2 pt-2 border-t mt-2">
                                                 <div className="flex items-center gap-2">
                                                     <BarChart3 className="h-4 w-4 text-muted-foreground" />
                                                     <span className="text-xs font-medium">Usage</span>
@@ -724,7 +811,7 @@ export default function SettingsPage() {
                                                 <div className="space-y-2">
                                                     <div>
                                                         <div className="flex justify-between text-xs mb-1">
-                                                            <span>Daily ({key.requestsToday}/1000)</span>
+                                                            <span>Daily ({key.requestsToday}/{key.rateLimitDaily || 1000})</span>
                                                             <span className="text-muted-foreground">Resets at midnight UTC</span>
                                                         </div>
                                                         <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -736,7 +823,7 @@ export default function SettingsPage() {
                                                     </div>
                                                     <div>
                                                         <div className="flex justify-between text-xs mb-1">
-                                                            <span>Per minute ({key.requestsThisMinute}/60)</span>
+                                                            <span>Per minute ({key.requestsThisMinute}/{key.rateLimitMinute || 60})</span>
                                                             <span className="text-muted-foreground">Resets every minute</span>
                                                         </div>
                                                         <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -849,6 +936,80 @@ export default function SettingsPage() {
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Upgrade Dialog */}
+                <Dialog open={!!upgradeKey} onOpenChange={(open) => !open && setUpgradeKey(null)}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Upgrade API Plan</DialogTitle>
+                            <DialogDescription>
+                                Purchase higher rate limits for <strong>{upgradeKey?.name}</strong> using StreamCoins.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="grid gap-4 py-4">
+                            {/* Pro Tier */}
+                            <div className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${(!upgradeKey?.tier || upgradeKey?.tier === 'free') ? 'border-primary/50 hover:border-primary' : 'opacity-50 border-muted'}`}>
+                                <div className="flex justify-between items-start mb-2">
+                                    <div>
+                                        <h3 className="font-bold flex items-center gap-2">
+                                            Pro Tier
+                                            {upgradeKey?.tier === 'pro' && <Badge variant="secondary">Current</Badge>}
+                                        </h3>
+                                        <p className="text-sm text-muted-foreground">For serious developers</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="font-bold text-lg text-yellow-500">1,000</span>
+                                        <span className="text-xs text-muted-foreground block">coins</span>
+                                    </div>
+                                </div>
+                                <ul className="text-sm space-y-1">
+                                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> 10,000 requests / day</li>
+                                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> 600 requests / minute</li>
+                                </ul>
+                                {(!upgradeKey?.tier || upgradeKey?.tier === 'free') && (
+                                    <Button className="w-full mt-4" onClick={() => confirmUpgrade('pro')} disabled={isUpgrading}>
+                                        {isUpgrading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Purchase Pro"}
+                                    </Button>
+                                )}
+                            </div>
+
+                            {/* Enterprise Tier */}
+                            <div className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${upgradeKey?.tier !== 'enterprise' ? 'border-primary/50 hover:border-primary' : 'opacity-50 border-muted'}`}>
+                                <div className="flex justify-between items-start mb-2">
+                                    <div>
+                                        <h3 className="font-bold flex items-center gap-2">
+                                            Enterprise Tier
+                                            {upgradeKey?.tier === 'enterprise' && <Badge variant="default">Current</Badge>}
+                                        </h3>
+                                        <p className="text-sm text-muted-foreground">For commercial apps</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="font-bold text-lg text-yellow-500">5,000</span>
+                                        <span className="text-xs text-muted-foreground block">coins</span>
+                                    </div>
+                                </div>
+                                <ul className="text-sm space-y-1">
+                                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> 100,000 requests / day</li>
+                                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> 6,000 requests / minute</li>
+                                </ul>
+                                {upgradeKey?.tier !== 'enterprise' && (
+                                    <Button className="w-full mt-4" onClick={() => confirmUpgrade('enterprise')} disabled={isUpgrading}>
+                                        {isUpgrading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Purchase Enterprise"}
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+
+                        <DialogFooter className="sm:justify-between text-xs text-muted-foreground">
+                            <span>Your Balance: <span className="text-yellow-500 font-bold">{user?.coins || 0}</span> Coins</span>
+                            {/* <Button type="button" variant="secondary" onClick={() => setUpgradeKey(null)}>
+                                Close
+                            </Button> */}
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
 
                 {/* Actions */}
                 <div className="flex flex-col sm:flex-row gap-3">
