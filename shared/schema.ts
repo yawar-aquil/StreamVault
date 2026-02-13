@@ -67,8 +67,8 @@ export const reviews = pgTable("reviews", {
   spoilerWarning: boolean("spoiler_warning").default(false),
   helpfulCount: integer("helpful_count").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const insertReviewSchema = createInsertSchema(reviews);
@@ -250,7 +250,7 @@ export const updateProfileSchema = z.object({
 
 export type SocialLinks = z.infer<typeof socialLinksSchema>;
 export type Favorites = z.infer<typeof favoritesSchema>;
-export type User = typeof users.$inferSelect;
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
@@ -472,7 +472,7 @@ export type Reminder = typeof reminders.$inferSelect;
 export type InsertReminder = z.infer<typeof insertReminderSchema>;
 
 // Review types
-export type Review = typeof reviews.$inferSelect;
+
 export type ReviewHelpfulVote = typeof reviewHelpful.$inferSelect;
 
 // Challenge types

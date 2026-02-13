@@ -674,42 +674,10 @@ export class MemStorage implements IStorage {
   }
 
   // Load users from users.json
-  private loadUsers() {
-    try {
-      if (existsSync(this.usersFile)) {
-        console.log("📂 Loading users from file...");
-        const data = JSON.parse(readFileSync(this.usersFile, "utf-8"));
-        if (Array.isArray(data)) {
-          data.forEach((user: User) => this.users.set(user.id, user));
-        } else if (data.users && Array.isArray(data.users)) {
-          // Handle format { users: [...] }
-          data.users.forEach((user: User) => this.users.set(user.id, user));
-        }
-        console.log(`✅ Loaded ${this.users.size} users`);
-      } else {
-        console.log("No users file found.");
-      }
-    } catch (error) {
-      console.error("❌ Error loading users:", error);
-    }
-  }
+
 
   // Save users to users.json
-  private saveUsers() {
-    try {
-      const data = {
-        users: Array.from(this.users.values())
-      };
-      // Create data directory if it doesn't exist
-      const dataDir = join(process.cwd(), "data");
-      if (!existsSync(dataDir)) {
-        mkdirSync(dataDir, { recursive: true });
-      }
-      writeFileSync(this.usersFile, JSON.stringify(data, null, 2), "utf-8");
-    } catch (error) {
-      console.error("❌ Error saving users:", error);
-    }
-  }
+
 
   // Shows methods
   async getAllShows(): Promise<Show[]> {
@@ -3124,12 +3092,7 @@ export class MemStorage implements IStorage {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
-  async searchUsers(query: string): Promise<User[]> {
-    const term = query.toLowerCase();
-    return Array.from(this.users.values())
-      .filter(u => u.username.toLowerCase().includes(term))
-      .slice(0, 10); // Limit to 10 results
-  }
+
 
   // Admin stats
   // async getStats(): Promise<{
