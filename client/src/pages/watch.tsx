@@ -509,23 +509,69 @@ export default function Watch() {
             </div>
           </div>
 
-          {/* Sidebar Ad */}
-          <div className="mt-6">
-            <AdContainer type="sidebar" />
+          {/* Up Next Sidebar */}
+          <div className="lg:col-span-1">
+            <h3 className="text-lg font-semibold mb-4">Up Next</h3>
+            <div className="space-y-3">
+              {upNextEpisodes.length > 0 ? (
+                upNextEpisodes.map((episode) => (
+                  <Card
+                    key={episode.id}
+                    className="overflow-hidden cursor-pointer group hover-elevate active-elevate-2 transition-all"
+                    onClick={() => {
+                      const url = `/watch/${slug}?season=${episode.season}&episode=${episode.episodeNumber}`;
+                      window.location.replace(url);
+                    }}
+                  >
+                    <div className="flex gap-3">
+                      <div className="relative w-32 aspect-video flex-shrink-0">
+                        <img
+                          src={episode.thumbnailUrl}
+                          alt={episode.title}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <Play className="w-6 h-6 text-primary fill-current" />
+                        </div>
+                      </div>
+                      <div className="flex-1 py-2 pr-3 min-w-0">
+                        <p className="text-xs text-muted-foreground mb-1">
+                          S{episode.season} E{episode.episodeNumber}
+                        </p>
+                        <h4 className="text-sm font-medium line-clamp-2">
+                          {episode.title}
+                        </h4>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {episode.duration} min
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No more episodes available.
+                </p>
+              )}
+            </div>
+
+            {/* Sidebar Ad */}
+            <div className="mt-6">
+              <AdContainer type="sidebar" />
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Adsterra Native Banner - Above Comments */}
-      <div className="mt-8 flex justify-center">
-        <AdContainer type="native" />
-      </div>
+        {/* Adsterra Native Banner - Above Comments */}
+        <div className="mt-8 flex justify-center">
+          <AdContainer type="native" />
+        </div>
 
-      {/* Comments Section - Mobile only (below Up Next) */}
-      <div className="mt-8 lg:hidden">
-        <CommentsSection episodeId={currentEpisodeData.id} />
+        {/* Comments Section - Mobile only (below Up Next) */}
+        <div className="mt-8 lg:hidden">
+          <CommentsSection episodeId={currentEpisodeData.id} />
+        </div>
       </div>
     </div>
-    </div >
   );
 }
