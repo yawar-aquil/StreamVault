@@ -16,6 +16,7 @@ import { trackWatch } from "@/components/analytics-tracker";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/contexts/notifications-context";
+import { AdContainer } from "@/components/ad-manager";
 
 export default function WatchAnime() {
     const [, params] = useRoute("/watch-anime/:slug");
@@ -521,12 +522,18 @@ export default function WatchAnime() {
                                 </p>
                             )}
                         </div>
+
+                        {/* Sidebar Ad */}
+                        <div className="mt-6">
+                            <AdContainer type="sidebar" />
+                        </div>
                     </div>
                 </div>
 
+
                 {/* Adsterra Native Banner - Above Comments */}
                 <div className="mt-8 flex justify-center">
-                    <div id="container-326e4e570b95e9b55f432cac93890441"></div>
+                    <AdContainer type="native" />
                 </div>
 
                 {/* Comments Section - Mobile only (below Up Next) */}
