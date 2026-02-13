@@ -250,6 +250,9 @@ export function useSocialSocket() {
 
     const onDMReaction = useCallback((callback: (dm: any) => void) => {
         dmReactionCallbackRef.current = callback;
+        return () => {
+            dmReactionCallbackRef.current = null;
+        };
     }, []);
 
     const isFriendOnline = useCallback((friendId: string) => {

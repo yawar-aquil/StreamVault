@@ -391,7 +391,7 @@ export default function Friends() {
                                                 );
                                             }
                                             return (
-                                                <p className="text-sm text-muted-foreground">
+                                                <div className="text-sm text-muted-foreground">
                                                     <div className="flex flex-col gap-0.5">
                                                         {(() => {
                                                             const isOnline = isFriendOnline(friend.friendId);
@@ -407,7 +407,7 @@ export default function Friends() {
                                                             }
                                                         })()}
                                                     </div>
-                                                </p>
+                                                </div>
                                             );
                                         })()}
                                     </div>
