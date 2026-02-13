@@ -651,7 +651,6 @@ export class MemStorage implements IStorage {
         userChallenges: Array.from(this.userChallenges.values()),
         polls: Array.from(this.polls.values()),
         pollVotes: Array.from(this.pollVotes.values()),
-        pollVotes: Array.from(this.pollVotes.values()),
         xpHistory: Array.from(this.xpHistory.values()),
         badges: Array.from(this.badges.values()),
         userBadges: Array.from(this.userBadges.values()),
