@@ -471,6 +471,13 @@ MIT License - feel free to use for personal or commercial projects
 
 ## 🎉 What's New
 
+### Latest Updates (v5.4) - February 14, 2026
+- ✅ **Domain & SSL** - `streamvault.live` live with HTTPS & automated setup
+- ✅ **Advanced Chat** - Message reactions, replies, link previews, & jumbo emojis
+- ✅ **Voice 2.0** - Real-time audio visualizers & compact player UI
+- ✅ **Repository Cleanup** - Organized codebase with `dev-utils` & improved gitignore
+- ✅ **Stability** - Fixed friends page blank screen & login cookie issues
+
 ### Latest Updates (v5.3) - February 2026
 - ✅ **Badge Sorting Fixes** - Badges now sort correctly by equipped date everywhere
 - ✅ **Store & Economy** - Full purchasing and gifting system with StreamCoins live
