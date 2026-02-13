@@ -436,6 +436,49 @@ export function initSocialSocket(server: HttpServer, socketio?: Server) {
                 candidate: data.candidate,
             });
         });
+
+        // Room Invite
+        socket.on('room:invite', async (data: { toUserId: string; roomCode: string; roomTitle?: string; fromUserId: string }) => {
+            const { toUserId, roomCode, roomTitle, fromUserId } = data;
+            if (!toUserId || !roomCode || !fromUserId) return;
+
+            try {
+                const fromUser = await storage.getUserById(fromUserId);
+                const title = roomTitle || 'Watch Party';
+                const message = `${fromUser?.username || 'Someone'} invited you to watch ${title}`;
+
+                // Create persistent notification
+                await storage.createNotification({
+                    userId: toUserId,
+                    type: 'room_invite',
+                    title: 'Watch Party Invite',
+                    message: message,
+                    data: {
+                        roomCode,
+                        fromUserId,
+                        link: `/watch-together/${roomCode}`
+                    },
+                    read: false,
+                });
+
+                // Send real-time notification
+                io.of('/social').to(`user:${toUserId}`).emit('notification:new', {
+                    type: 'room_invite',
+                    title: 'Watch Party Invite',
+                    message: message,
+                    fromUser: fromUser ? {
+                        id: fromUser.id,
+                        username: fromUser.username,
+                        avatarUrl: fromUser.avatarUrl
+                    } : null,
+                    data: { roomCode }
+                });
+
+                console.log(`📩 Room invite sent: ${fromUserId} -> ${toUserId} (${roomCode})`);
+            } catch (error) {
+                console.error('Failed to process room invite:', error);
+            }
+        });
     });
 
     console.log('🤝 Social Socket.io namespace initialized');

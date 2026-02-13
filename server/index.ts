@@ -10,6 +10,7 @@ import { setupWatchTogether } from "./watch-together";
 import { initSocialSocket } from "./social";
 import cookieParser from "cookie-parser";
 import path from "path";
+import { startCleanupSchedule } from "./cleanup";
 
 const app = express();
 
@@ -127,4 +128,5 @@ const port = parseInt(process.env.PORT || '5000', 10);
 const host = '0.0.0.0';
 server.listen(port, host, () => {
   log(`serving on ${host}:${port}`);
+  startCleanupSchedule();
 });

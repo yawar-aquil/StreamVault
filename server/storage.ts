@@ -352,6 +352,7 @@ export interface IStorage {
 
   // Account Deletion
   deleteUserCompletely(userId: string): Promise<void>;
+  async getActivitiesForUser(userId: string): Promise<Activity[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -3406,6 +3407,16 @@ export class MemStorage implements IStorage {
         user: user ? { ...user, equippedBadges } : undefined
       };
     }));
+  }
+  async getActivitiesForUser(userId: string): Promise<Activity[]> {
+    const activities = Array.from(this.activities.values())
+      .filter(a => a.userId === userId)
+      .sort((a, b) => {
+        const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+        const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+        return dateB.getTime() - dateA.getTime();
+      });
+    return activities;
   }
 }
 

@@ -250,6 +250,8 @@ export const updateProfileSchema = z.object({
 export type SocialLinks = z.infer<typeof socialLinksSchema>;
 export type Favorites = z.infer<typeof favoritesSchema>;
 
+
+export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

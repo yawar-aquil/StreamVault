@@ -39,6 +39,9 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { InviteFriendsModal } from "@/components/invite-friends-modal";
+import { VoiceMessage } from '@/components/ui/voice-message';
+import { AudioVisualizer } from '@/components/ui/audio-visualizer';
 import { useWatchTogether, WatchTogetherProvider } from '@/contexts/watch-together-context';
 import { UserProfileModal } from '@/components/user-profile-modal';
 import { useAuth } from '@/contexts/auth-context';
@@ -106,12 +109,9 @@ function formatMessageWithMedia(text: string) {
                 );
             } else if (type === 'audio') {
                 parts.push(
-                    <audio
-                        key={`media-${keyIndex++}`}
-                        src={url}
-                        controls
-                        className="my-1 block max-w-[200px]"
-                    />
+                    <div key={`media-${keyIndex++}`} className="my-1 block">
+                        <VoiceMessage src={url} />
+                    </div>
                 );
             }
         }
@@ -176,6 +176,7 @@ function WatchTogetherContent() {
     // Custom modal state for mute/unmute notifications
     const [showMuteNotification, setShowMuteNotification] = useState(false);
     const [showUnmuteRequest, setShowUnmuteRequest] = useState(false);
+    const [showInviteModal, setShowInviteModal] = useState(false); // Invite modal state
     const [unmuteHandlers, setUnmuteHandlers] = useState<{ onAccept: () => void; onReject: () => void } | null>(null);
 
     // Voice chat with custom modal callbacks
@@ -260,6 +261,18 @@ function WatchTogetherContent() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const chatOverlayRef = useRef<HTMLDivElement>(null);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
+    const recordingTimerRef = useRef<number | null>(null);
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingStream, setRecordingStream] = useState<MediaStream | null>(null);
+    const [recordingDuration, setRecordingDuration] = useState(0);
+
+    const formatDuration = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
 
     // Countdown timer for scheduled rooms
     const [countdown, setCountdown] = useState<{ hours: number; minutes: number; seconds: number } | null>(null);
@@ -311,31 +324,7 @@ function WatchTogetherContent() {
         };
     }, []);
 
-    // Broadcast watch activity to friends
-    useEffect(() => {
-        if (roomInfo && isAuthenticated && roomCode) {
-            // Get slug from show/movie if available
-            const contentSlug = show?.slug || movie?.slug || undefined;
 
-            // Start activity when room is joined
-            startActivity({
-                roomCode: roomInfo.roomCode,
-                contentType: roomInfo.contentType,
-                contentId: roomInfo.contentId,
-                contentSlug: contentSlug,
-                contentTitle: roomInfo.contentTitle || 'Unknown',
-                contentPoster: roomInfo.contentPoster || undefined,
-                episodeTitle: roomInfo.episodeTitle || undefined,
-            });
-        }
-
-        // Stop activity when component unmounts or room changes
-        return () => {
-            if (isAuthenticated) {
-                stopActivity();
-            }
-        };
-    }, [roomInfo?.roomCode, roomInfo?.contentTitle, isAuthenticated, startActivity, stopActivity, show?.slug, movie?.slug]);
 
     // Countdown timer for scheduled rooms
     useEffect(() => {
@@ -378,6 +367,79 @@ function WatchTogetherContent() {
 
         return () => clearInterval(interval);
     }, [roomInfo?.scheduledFor]);
+
+    // Voice recording functions
+    const startRecordingMessage = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mediaRecorder = new MediaRecorder(stream);
+            mediaRecorderRef.current = mediaRecorder;
+            audioChunksRef.current = [];
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    audioChunksRef.current.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                stream.getTracks().forEach(track => track.stop());
+
+                // Convert blob to base64 for attachment
+                const reader = new FileReader();
+                reader.readAsDataURL(audioBlob);
+                reader.onloadend = () => {
+                    const base64data = reader.result as string;
+                    setAttachment({
+                        file: new File([audioBlob], 'voice_message.webm', { type: 'audio/webm' }),
+                        preview: base64data,
+                        type: 'audio'
+                    });
+                    // Auto-send could be implemented here, but let user preview/send explicitly
+                };
+            };
+
+            mediaRecorder.start();
+            setIsRecording(true);
+            setRecordingStream(stream);
+            setRecordingDuration(0);
+
+            recordingTimerRef.current = window.setInterval(() => {
+                setRecordingDuration(prev => prev + 1);
+            }, 1000);
+        } catch (error) {
+            console.error('Failed to start recording:', error);
+            alert('Could not access microphone. Please check permissions.');
+        }
+    };
+
+    const stopRecordingMessage = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+            setRecordingStream(null);
+            if (recordingTimerRef.current) {
+                clearInterval(recordingTimerRef.current);
+            }
+        }
+    };
+
+    const cancelRecordingMessage = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+            setRecordingStream(null);
+            audioChunksRef.current = []; // Clear chunks
+            if (recordingTimerRef.current) {
+                clearInterval(recordingTimerRef.current);
+            }
+            // Ensure stream tracks are stopped
+            if (mediaRecorderRef.current.stream) {
+                mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+            }
+        }
+    };
 
     // Handle file attachment - convert to base64 for sharing
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -476,6 +538,32 @@ function WatchTogetherContent() {
     const blogPost = (show || movie) ? blogPosts.find(
         (post) => post.contentId === (show?.id || movie?.id) || post.slug === (show?.slug || movie?.slug)
     ) : null;
+
+    // Broadcast watch activity to friends
+    useEffect(() => {
+        if (roomInfo && isAuthenticated && roomCode) {
+            // Get slug from show/movie if available
+            const contentSlug = show?.slug || movie?.slug || undefined;
+
+            // Start activity when room is joined
+            startActivity({
+                roomCode: roomInfo.roomCode,
+                contentType: roomInfo.contentType,
+                contentId: roomInfo.contentId,
+                contentSlug: contentSlug,
+                contentTitle: roomInfo.contentTitle || 'Unknown',
+                contentPoster: roomInfo.contentPoster || undefined,
+                episodeTitle: roomInfo.episodeTitle || undefined,
+            });
+        }
+
+        // Stop activity when component unmounts or room changes
+        return () => {
+            if (isAuthenticated) {
+                stopActivity();
+            }
+        };
+    }, [roomInfo?.roomCode, roomInfo?.contentTitle, isAuthenticated, startActivity, stopActivity, show?.slug, movie?.slug]);
 
     // State for subtitle tracks
     const [subtitleTracks, setSubtitleTracks] = useState<Array<{
@@ -1343,6 +1431,10 @@ function WatchTogetherContent() {
                                 </DropdownMenuContent>
                             </DropdownMenu>
 
+
+
+
+
                             {/* Users Count - Dropdown */}
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -1352,9 +1444,29 @@ function WatchTogetherContent() {
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-64">
-                                    <div className="p-2 border-b border-border">
+                                    <div className="p-2 border-b border-border flex justify-between items-center">
                                         <span className="text-sm font-semibold">Viewers ({users.length})</span>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-6 px-2 text-xs"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                setShowInviteModal(true);
+                                            }}
+                                        >
+                                            <UserPlus className="h-3 w-3 mr-1" />
+                                            Invite
+                                        </Button>
                                     </div>
+
+                                    {/* Invite Modal */}
+                                    <InviteFriendsModal
+                                        roomCode={roomInfo?.roomCode || ''}
+                                        roomTitle={title}
+                                        open={showInviteModal}
+                                        onOpenChange={setShowInviteModal}
+                                    />
                                     <div className="max-h-64 overflow-y-auto">
                                         {users.map((roomUser) => {
                                             const isRoomUserSpeaking = roomUser.id === currentUser?.id
@@ -1939,6 +2051,45 @@ function WatchTogetherContent() {
                                                 </div>
                                             )}
 
+                                            {/* Recording UI */}
+                                            {isRecording && (
+                                                <div className="flex items-center gap-3 bg-destructive/10 p-2 rounded-lg mb-2 animate-in slide-in-from-bottom-2">
+                                                    <div className="flex-1 h-6 flex items-center px-1 overflow-hidden">
+                                                        {recordingStream && (
+                                                            <AudioVisualizer
+                                                                stream={recordingStream}
+                                                                isRecording={isRecording}
+                                                                barColor="#ef4444"
+                                                                gap={2}
+                                                                barWidth={2}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                    <span className="text-sm font-medium text-destructive tabular-nums whitespace-nowrap">
+                                                        {formatDuration(recordingDuration)}
+                                                    </span>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={cancelRecordingMessage}
+                                                        className="h-6 w-6 p-0 hover:bg-destructive/20 text-destructive"
+                                                        title="Cancel"
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="default"
+                                                        size="sm"
+                                                        onClick={stopRecordingMessage}
+                                                        className="h-6 px-2 text-xs bg-destructive hover:bg-destructive/90 text-white"
+                                                    >
+                                                        Stop
+                                                    </Button>
+                                                </div>
+                                            )}
+
                                             {/* Attachment Preview */}
                                             {attachment && (
                                                 <div className="mb-3 relative inline-block">
@@ -1964,9 +2115,8 @@ function WatchTogetherContent() {
                                                         />
                                                     )}
                                                     {attachment.type === 'audio' && (
-                                                        <div className="flex items-center gap-2 bg-muted p-3 rounded-lg">
-                                                            <Music className="w-8 h-8 text-primary" />
-                                                            <audio src={attachment.preview} controls className="h-8" />
+                                                        <div className="flex items-center gap-2 bg-muted p-2 rounded-lg">
+                                                            <VoiceMessage src={attachment.preview} isMe={true} />
                                                         </div>
                                                     )}
                                                 </div>
@@ -2103,10 +2253,25 @@ function WatchTogetherContent() {
                                                     onChange={(e) => setChatMessage(e.target.value)}
                                                     placeholder="Type a message..."
                                                     className="flex-1 h-8"
+                                                    disabled={isRecording}
                                                 />
-                                                <Button type="submit" size="sm" disabled={!chatMessage.trim() && !attachment && !selectedGif} className="h-8 w-8 p-0">
-                                                    <Send className="h-4 w-4" />
-                                                </Button>
+
+                                                {chatMessage.trim() || attachment || selectedGif ? (
+                                                    <Button type="submit" size="sm" className="h-8 w-8 p-0">
+                                                        <Send className="h-4 w-4" />
+                                                    </Button>
+                                                ) : (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className={`h-8 w-8 p-0 ${isRecording ? 'text-destructive bg-destructive/10' : ''}`}
+                                                        onClick={isRecording ? stopRecordingMessage : startRecordingMessage}
+                                                        title="Voice Message"
+                                                    >
+                                                        <Mic className={`h-4 w-4 ${isRecording ? 'animate-pulse' : ''}`} />
+                                                    </Button>
+                                                )}
                                             </div>
                                         </form>
                                     </>
@@ -2137,9 +2302,18 @@ function WatchTogetherContent() {
                     isOpen={!!selectedProfileUser}
                     onClose={() => setSelectedProfileUser(null)}
                     user={selectedProfileUser}
+                    // For friend check: we handle it in the modal or pass if needed.
+                    // The original code was passing isFriend.
                     isFriend={selectedProfileUser.authUserId ? friends.some(f => f.friendId === selectedProfileUser.authUserId) : false}
                 />
             )}
+
+            <InviteFriendsModal
+                roomCode={roomCode || ''}
+                roomTitle={roomInfo?.contentTitle}
+                open={showInviteModal}
+                onOpenChange={setShowInviteModal}
+            />
         </div>
     );
 }

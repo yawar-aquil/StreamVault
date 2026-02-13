@@ -14,6 +14,8 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { VoiceMessage } from '@/components/ui/voice-message';
+import { AudioVisualizer } from '@/components/ui/audio-visualizer';
 
 interface DirectMessage {
     id: string;
@@ -72,10 +74,12 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
 
     // Voice recording states
     const [isRecording, setIsRecording] = useState(false);
+    const [recordingStream, setRecordingStream] = useState<MediaStream | null>(null);
     const [recordingDuration, setRecordingDuration] = useState(0);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const recordingTimerRef = useRef<number | null>(null);
+    const [recordedAudio, setRecordedAudio] = useState<{ blob: Blob; url: string; duration: number } | null>(null);
 
     // Audio playback states
     const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
@@ -210,6 +214,7 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
     }, [showGifPicker, gifSearch, searchGifs]);
 
     // Voice recording functions
+    // Voice recording functions
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -225,12 +230,20 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
 
             mediaRecorder.onstop = async () => {
                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                const audioUrl = URL.createObjectURL(audioBlob);
                 stream.getTracks().forEach(track => track.stop());
-                await sendVoiceMessage(audioBlob);
+
+                // Set preview instead of sending immediately
+                setRecordedAudio({
+                    blob: audioBlob,
+                    url: audioUrl,
+                    duration: recordingDuration
+                });
             };
 
             mediaRecorder.start();
             setIsRecording(true);
+            setRecordingStream(stream); // Set stream for visualizer
             setRecordingDuration(0);
 
             recordingTimerRef.current = window.setInterval(() => {
@@ -245,18 +258,38 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
         if (mediaRecorderRef.current && isRecording) {
             mediaRecorderRef.current.stop();
             setIsRecording(false);
+            setRecordingStream(null); // Clear stream
             if (recordingTimerRef.current) {
                 clearInterval(recordingTimerRef.current);
             }
         }
     };
 
-    const sendVoiceMessage = async (audioBlob: Blob) => {
+    const cancelRecording = () => {
+        if (isRecording) {
+            stopRecording();
+        }
+        if (recordedAudio) {
+            URL.revokeObjectURL(recordedAudio.url);
+            setRecordedAudio(null);
+        }
+        setRecordingDuration(0);
+    };
+
+    const confirmSendVoiceMessage = async () => {
+        if (!recordedAudio) return;
+        await sendVoiceMessage(recordedAudio.blob, recordedAudio.duration);
+        URL.revokeObjectURL(recordedAudio.url);
+        setRecordedAudio(null);
+        setRecordingDuration(0);
+    };
+
+    const sendVoiceMessage = async (audioBlob: Blob, duration: number) => {
         setIsSending(true);
         try {
             const formData = new FormData();
             formData.append('audio', audioBlob, 'voice.webm');
-            formData.append('duration', recordingDuration.toString());
+            formData.append('duration', duration.toString());
 
             const response = await fetch(`/api/messages/${friendId}/voice`, {
                 method: 'POST',
@@ -427,29 +460,12 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
                 );
             case 'audio':
                 return (
-                    <div className="flex items-center gap-3 mt-2 bg-black/20 rounded-full p-2 pr-4 transition-colors hover:bg-black/30">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-full bg-primary/20 text-primary hover:bg-primary/30 hover:text-primary"
-                            onClick={() => toggleAudio(msg.id, msg.attachmentUrl!)}
-                        >
-                            {playingAudioId === msg.id ? (
-                                <Pause className="h-4 w-4" />
-                            ) : (
-                                <Play className="h-4 w-4 ml-0.5" />
-                            )}
-                        </Button>
-                        <div className="flex-1 min-w-[100px]">
-                            <div className="h-1 bg-white/20 rounded-full overflow-hidden">
-                                {playingAudioId === msg.id && (
-                                    <div className="h-full bg-primary animate-[wiggle_1s_ease-in-out_infinite]" />
-                                )}
-                            </div>
-                        </div>
-                        <span className="text-xs font-mono font-medium">
-                            {msg.audioDuration ? formatDuration(msg.audioDuration) : '0:00'}
-                        </span>
+                    <div className="mt-2">
+                        <VoiceMessage
+                            src={msg.attachmentUrl!}
+                            duration={msg.audioDuration}
+                            isMe={msg.fromUserId === user?.id}
+                        />
                     </div>
                 );
             case 'file':
@@ -850,55 +866,113 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
                     </div>
                 )}
 
-                {/* Voice Recording Indicator */}
-                {isRecording && (
-                    <div className="px-4 py-3 bg-destructive/5 border-t flex items-center gap-3 animate-in slide-in-from-bottom-2">
-                        <div className="relative flex items-center justify-center w-8 h-8">
-                            <div className="absolute inset-0 bg-destructive/20 rounded-full animate-ping" />
-                            <div className="relative w-3 h-3 bg-destructive rounded-full" />
-                        </div>
-                        <span className="text-sm font-medium text-destructive tabular-nums">
-                            Recording... {formatDuration(recordingDuration)}
-                        </span>
-                        <div className="flex-1" />
-                        <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={stopRecording}
-                            className="rounded-full px-4"
-                        >
-                            <Square className="h-3.5 w-3.5 mr-2 fill-current" />
-                            Stop & Send
-                        </Button>
+                {/* Recording & Preview Section */}
+                {(isRecording || recordedAudio) && (
+                    <div className="px-4 pt-2">
+                        {isRecording && (
+                            <div className="flex items-center gap-3 bg-destructive/10 p-2 rounded-lg animate-in slide-in-from-bottom-2">
+                                <div className="flex-1 h-6 flex items-center px-1 overflow-hidden">
+                                    {recordingStream && (
+                                        <AudioVisualizer
+                                            stream={recordingStream}
+                                            isRecording={isRecording}
+                                            barColor="#ef4444"
+                                            gap={2}
+                                            barWidth={2}
+                                        />
+                                    )}
+                                </div>
+                                <span className="text-sm font-medium text-destructive tabular-nums whitespace-nowrap">
+                                    {formatDuration(recordingDuration)}
+                                </span>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={cancelRecording}
+                                    className="h-6 w-6 p-0 hover:bg-destructive/20 text-destructive"
+                                    title="Cancel"
+                                >
+                                    <X className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="default"
+                                    size="sm"
+                                    onClick={stopRecording}
+                                    className="h-6 px-2 text-xs bg-destructive hover:bg-destructive/90 text-white"
+                                >
+                                    Stop
+                                </Button>
+                            </div>
+                        )}
+
+                        {recordedAudio && (
+                            <div className="relative inline-flex items-center gap-2 bg-muted p-2 rounded-lg animate-in fade-in zoom-in-95">
+                                <button
+                                    type="button"
+                                    onClick={cancelRecording}
+                                    className="absolute -top-2 -right-2 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center hover:bg-destructive/80 z-10 shadow-sm"
+                                >
+                                    <X className="w-3 h-3" />
+                                </button>
+                                <VoiceMessage src={recordedAudio.url} isMe={true} />
+                                <Button
+                                    type="button"
+                                    size="icon"
+                                    className="h-8 w-8 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
+                                    onClick={confirmSendVoiceMessage}
+                                    disabled={isSending}
+                                >
+                                    <Send className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 )}
 
-                {/* Input Toolbar */}
-                <div className="p-3 bg-background border-t space-y-2">
+                {/* Input Area */}
+                <div className="p-3 bg-background border-t mt-2">
                     <div className="flex items-end gap-2 bg-muted/50 rounded-2xl p-1.5 transition-colors focus-within:bg-muted focus-within:ring-1 focus-within:ring-primary/20">
                         {/* Attach buttons */}
                         <div className="flex items-center gap-0.5 pb-1">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-background shadow-none"
-                                onClick={() => {
-                                    setShowEmojiPicker(!showEmojiPicker);
-                                    setShowGifPicker(false);
-                                }}
-                                title="Emoji"
-                            >
-                                <Smile className="h-5 w-5" />
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-background shadow-none"
-                                onClick={() => fileInputRef.current?.click()}
-                                title="Attach file"
-                            >
-                                <Paperclip className="h-5 w-5" />
-                            </Button>
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-background shadow-none"
+                                            onClick={() => {
+                                                setShowEmojiPicker(!showEmojiPicker);
+                                                setShowGifPicker(false);
+                                            }}
+                                            disabled={isRecording || !!recordedAudio}
+                                        >
+                                            <Smile className="h-5 w-5" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Emoji</TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-background shadow-none"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            disabled={isRecording || !!recordedAudio}
+                                        >
+                                            <Paperclip className="h-5 w-5" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Attach file</TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
                             <input
                                 type="file"
                                 ref={fileInputRef}
@@ -906,18 +980,26 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
                                 accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
                                 onChange={handleFileUpload}
                             />
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-background shadow-none"
-                                onClick={() => {
-                                    setShowGifPicker(!showGifPicker);
-                                    setShowEmojiPicker(false);
-                                }}
-                                title="GIF"
-                            >
-                                <span className="text-[10px] font-bold border rounded px-1 min-w-[24px]">GIF</span>
-                            </Button>
+
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-background shadow-none"
+                                            onClick={() => {
+                                                setShowGifPicker(!showGifPicker);
+                                                setShowEmojiPicker(false);
+                                            }}
+                                            disabled={isRecording || !!recordedAudio}
+                                        >
+                                            <span className="text-[10px] font-bold border rounded px-1 min-w-[24px]">GIF</span>
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>GIFs</TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
                         </div>
 
                         {/* Message input */}
@@ -926,8 +1008,8 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
                                 ref={inputRef}
                                 value={newMessage}
                                 onChange={(e) => setNewMessage(e.target.value)}
-                                placeholder="Type a message..."
-                                disabled={isSending || isRecording}
+                                placeholder={isRecording ? "Recording audio..." : "Type a message..."}
+                                disabled={isSending || isRecording || !!recordedAudio}
                                 autoFocus
                                 className="flex-1 border-0 bg-transparent focus-visible:ring-0 px-2 py-2.5 h-auto max-h-32 min-h-[44px] resize-none overflow-y-auto"
                                 style={{ boxShadow: 'none' }}
@@ -938,7 +1020,7 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
                                 {newMessage.trim() ? (
                                     <Button
                                         type="submit"
-                                        disabled={isSending || isRecording}
+                                        disabled={isSending}
                                         size="icon"
                                         className="h-8 w-8 rounded-full transition-all duration-200 hover:scale-105"
                                     >
@@ -956,6 +1038,7 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
                                         className={`h-8 w-8 rounded-full transition-all duration-200 ${isRecording ? 'opacity-0 scale-0 w-0 p-0' : 'text-muted-foreground hover:text-foreground hover:bg-background shadow-none'}`}
                                         onClick={startRecording}
                                         title="Voice message"
+                                        disabled={!!recordedAudio}
                                     >
                                         <Mic className="h-5 w-5" />
                                     </Button>
@@ -964,7 +1047,8 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
                         </form>
                     </div>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }
+
