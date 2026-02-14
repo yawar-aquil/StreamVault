@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/auth-context';
 import type { Badge } from '@shared/schema';
 import StreamCoin from '@/components/stream-coin';
 import { AnimatedAdFreeIcon } from '@/components/animated-ad-free-icon';
+import { PreloadedImage } from '@/components/preloaded-image';
 import {
     Command,
     CommandEmpty,
@@ -557,13 +558,11 @@ export default function StorePage() {
                                                     <div className="p-3 pb-0">
                                                         <div className="relative w-full aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-black/50 group-hover:shadow-primary/20 transition-all duration-500">
                                                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10 opacity-80 group-hover:opacity-60 transition-opacity" />
-                                                            <img
+                                                            <PreloadedImage
                                                                 src={product.imageUrl}
                                                                 alt={product.name}
                                                                 className="w-full h-full object-contain transform group-hover:scale-105 transition-transform duration-700"
-                                                                onError={(e) => {
-                                                                    (e.target as HTMLImageElement).src = product.imageUrl;
-                                                                }}
+                                                                containerClassName="w-full h-full"
                                                             />
                                                             {/* Preview Badge */}
                                                             <div className="absolute top-2 right-2 z-20 bg-black/50 backdrop-blur-md text-[10px] font-bold px-2 py-0.5 rounded text-white/90 border border-white/10">
@@ -575,13 +574,11 @@ export default function StorePage() {
                                                     <div className="p-3 pb-0">
                                                         <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-2xl border border-white/10 group-hover:shadow-primary/20 transition-all duration-500">
                                                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent z-10 opacity-60 group-hover:opacity-40 transition-opacity" />
-                                                            <img
+                                                            <PreloadedImage
                                                                 src={product.imageUrl}
                                                                 alt={product.name}
                                                                 className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
-                                                                onError={(e) => {
-                                                                    (e.target as HTMLImageElement).src = product.imageUrl;
-                                                                }}
+                                                                containerClassName="w-full h-full"
                                                             />
                                                             {/* Preview Badge */}
                                                             <div className="absolute top-2 right-2 z-20 bg-black/50 backdrop-blur-md text-[10px] font-bold px-2 py-0.5 rounded text-white/90 border border-white/10">
@@ -741,10 +738,11 @@ export default function StorePage() {
                             {/* Theme Preview Logic */}
                             {selectedProduct.category === 'theme' && !selectedProduct.name.includes('Skin') && (
                                 <div className="mb-4 rounded-xl overflow-hidden border border-white/10 shadow-2xl relative aspect-video group">
-                                    <img
+                                    <PreloadedImage
                                         src={selectedProduct.imageUrl}
                                         alt="Theme Preview"
                                         className="w-full h-full object-cover"
+                                        containerClassName="w-full h-full"
                                     />
                                     <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
                                     <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded text-xs text-white/90 font-medium">
@@ -756,10 +754,11 @@ export default function StorePage() {
                             {/* Skin Preview Logic */}
                             {(selectedProduct.category === 'skin' || selectedProduct.name.includes('Skin')) && (
                                 <div className="mb-4 rounded-xl overflow-hidden border border-white/10 shadow-2xl relative aspect-[2/3] w-2/3 mx-auto group bg-black/50">
-                                    <img
+                                    <PreloadedImage
                                         src={selectedProduct.imageUrl}
                                         alt="Skin Preview"
                                         className="w-full h-full object-contain"
+                                        containerClassName="w-full h-full"
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent z-10 opacity-60 group-hover:opacity-40 transition-opacity" />
                                     <div className="absolute bottom-2 left-2 z-20 bg-black/60 backdrop-blur-md px-2 py-1 rounded text-xs text-white/90 font-medium">
@@ -778,13 +777,14 @@ export default function StorePage() {
                                     {(selectedProduct.category === 'subscription' || selectedProduct.name.includes('Ad-Free')) ? (
                                         <AnimatedAdFreeIcon className={`w-full h-full ${selectedProduct.name.includes('Yearly') ? 'text-amber-500' : 'text-red-500'}`} />
                                     ) : (
-                                        <img
+                                        <PreloadedImage
                                             src={selectedProduct.imageUrl}
                                             alt={selectedProduct.name}
                                             className={`w-full h-full ${(selectedProduct.category === 'skin' || selectedProduct.name.includes('Skin') || selectedProduct.category === 'theme' || selectedProduct.name.includes('Theme'))
                                                 ? "object-cover rounded-sm"
                                                 : "object-contain"
                                                 }`}
+                                            containerClassName="w-full h-full"
                                         />
                                     )}
                                 </div>

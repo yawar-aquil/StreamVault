@@ -21,6 +21,7 @@ import { useTheme } from '@/components/theme-provider';
 import { apiRequest } from '@/lib/queryClient';
 import { ReferralSection } from '@/components/referral-section';
 import { THEME_MAPPING, THEME_PREVIEWS, DISPLAY_THEMES } from '@/lib/theme-data';
+import { PreloadedImage } from '@/components/preloaded-image';
 import { Badge } from '@/components/ui/badge';
 import StreamCoin from '@/components/stream-coin';
 import { useQuery } from '@tanstack/react-query';
@@ -1060,10 +1061,11 @@ function ThemeCard({ id, name, imageUrl, active, locked, setTheme, setLocation }
             <div className="aspect-video bg-muted relative overflow-hidden">
                 {/* Background Preview */}
                 <div className={`absolute inset-0 transition-transform duration-700 ease-out group-hover:scale-110 ${locked ? 'grayscale-[0.7] blur-[1px] group-hover:blur-none group-hover:grayscale-0' : ''}`}>
-                    <img
+                    <PreloadedImage
                         src={imageUrl || THEME_PREVIEWS[id]}
                         alt={name}
                         className="w-full h-full object-cover"
+                        containerClassName="w-full h-full"
                     />
                 </div>
 

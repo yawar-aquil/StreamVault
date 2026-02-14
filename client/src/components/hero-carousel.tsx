@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Play, Info, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,8 +23,23 @@ function isAnime(item: ContentItem): item is Anime {
 export function HeroCarousel({ shows }: HeroCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
   const touchStartX = useRef<number>(0);
   const touchEndX = useRef<number>(0);
+
+  // Preload all carousel images on mount
+  useEffect(() => {
+    shows.forEach((show) => {
+      const urls = [show.posterUrl, show.backdropUrl].filter(Boolean) as string[];
+      urls.forEach((url) => {
+        if (!loadedImages.has(url)) {
+          const img = new Image();
+          img.onload = () => setLoadedImages((prev) => new Set(prev).add(url));
+          img.src = url;
+        }
+      });
+    });
+  }, [shows]);
 
   useEffect(() => {
     if (!isAutoPlaying || shows.length === 0) return;
@@ -36,20 +51,20 @@ export function HeroCarousel({ shows }: HeroCarouselProps) {
     return () => clearInterval(interval);
   }, [isAutoPlaying, shows.length]);
 
-  const goToSlide = (index: number) => {
+  const goToSlide = useCallback((index: number) => {
     setCurrentIndex(index);
     setIsAutoPlaying(false);
-  };
+  }, []);
 
-  const goToPrevious = () => {
+  const goToPrevious = useCallback(() => {
     setCurrentIndex((prev) => (prev - 1 + shows.length) % shows.length);
     setIsAutoPlaying(false);
-  };
+  }, [shows.length]);
 
-  const goToNext = () => {
+  const goToNext = useCallback(() => {
     setCurrentIndex((prev) => (prev + 1) % shows.length);
     setIsAutoPlaying(false);
-  };
+  }, [shows.length]);
 
   // Touch/Swipe handlers
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -62,12 +77,10 @@ export function HeroCarousel({ shows }: HeroCarouselProps) {
 
   const handleTouchEnd = () => {
     if (touchStartX.current - touchEndX.current > 50) {
-      // Swipe left - next slide
       goToNext();
     }
 
     if (touchStartX.current - touchEndX.current < -50) {
-      // Swipe right - previous slide
       goToPrevious();
     }
   };
@@ -83,24 +96,28 @@ export function HeroCarousel({ shows }: HeroCarouselProps) {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Background Image with Gradient - Poster on mobile, Backdrop on desktop */}
-      <div
-        className="absolute inset-0 bg-cover bg-center transition-all duration-700"
-        style={{
-          backgroundImage: `url(${currentShow.posterUrl})`,
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/40 to-transparent hidden md:block" />
-      </div>
-      {/* Backdrop for desktop only */}
-      <div
-        className="absolute inset-0 bg-cover bg-center transition-all duration-700 hidden md:block"
-        style={{ backgroundImage: `url(${currentShow.backdropUrl})` }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/40 to-transparent" />
-      </div>
+      {/* All slide backgrounds rendered simultaneously — crossfade via opacity */}
+      {shows.map((show, index) => (
+        <div
+          key={show.id}
+          className="absolute inset-0 transition-opacity duration-700 ease-in-out"
+          style={{ opacity: index === currentIndex ? 1 : 0, zIndex: index === currentIndex ? 1 : 0 }}
+          aria-hidden={index !== currentIndex}
+        >
+          {/* Poster (mobile) */}
+          <div
+            className="absolute inset-0 bg-cover bg-center md:hidden"
+            style={{ backgroundImage: `url(${show.posterUrl})` }}
+          />
+          {/* Backdrop (desktop) */}
+          <div
+            className="absolute inset-0 bg-cover bg-center hidden md:block"
+            style={{ backgroundImage: `url(${show.backdropUrl})` }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/40 to-transparent hidden md:block" />
+        </div>
+      ))}
 
       {/* Content */}
       <div className="relative h-full container mx-auto px-4 flex items-end pb-20 md:pb-24">

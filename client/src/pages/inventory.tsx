@@ -10,6 +10,7 @@ import StreamCoin from '@/components/stream-coin';
 import { AnimatedAdFreeIcon } from '@/components/animated-ad-free-icon';
 import { Switch } from '@/components/ui/switch';
 import { THEME_MAPPING, THEME_PREVIEWS } from '@/lib/theme-data'; // Added
+import { PreloadedImage } from '@/components/preloaded-image';
 import { useTheme } from '@/components/theme-provider'; // Added useTheme
 import { useToast } from '@/hooks/use-toast'; // Added useToast
 // UIBadge import removed as it is not used or incorrect
@@ -169,13 +170,11 @@ export default function InventoryPage() {
                                                         <div className="p-3 pb-0">
                                                             <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-2xl border border-white/10 group-hover:shadow-primary/20 transition-all duration-500">
                                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent z-10 opacity-60 group-hover:opacity-40 transition-opacity" />
-                                                                <img
+                                                                <PreloadedImage
                                                                     src={item.imageUrl || THEME_PREVIEWS[THEME_MAPPING[item.name || '']]}
                                                                     alt={item.name}
                                                                     className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
-                                                                    onError={(e) => {
-                                                                        (e.target as HTMLImageElement).src = item.imageUrl;
-                                                                    }}
+                                                                    containerClassName="w-full h-full"
                                                                 />
                                                                 <div className="absolute top-2 right-2 z-20 bg-black/50 backdrop-blur-md text-[10px] font-bold px-2 py-0.5 rounded text-white/90 border border-white/10">
                                                                     THEME
@@ -187,13 +186,11 @@ export default function InventoryPage() {
                                                         <div className="p-3 pb-0">
                                                             <div className="relative w-full aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-black/50 group-hover:shadow-primary/20 transition-all duration-500">
                                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10 opacity-80 group-hover:opacity-60 transition-opacity" />
-                                                                <img
+                                                                <PreloadedImage
                                                                     src={item.imageUrl}
                                                                     alt={item.name}
                                                                     className="w-full h-full object-contain transform group-hover:scale-105 transition-transform duration-700"
-                                                                    onError={(e) => {
-                                                                        (e.target as HTMLImageElement).src = item.imageUrl;
-                                                                    }}
+                                                                    containerClassName="w-full h-full"
                                                                 />
                                                                 <div className="absolute top-2 right-2 z-20 bg-black/50 backdrop-blur-md text-[10px] font-bold px-2 py-0.5 rounded text-white/90 border border-white/10">
                                                                     SKIN
@@ -214,10 +211,11 @@ export default function InventoryPage() {
                                                         <div className="relative pt-8 pb-6 flex items-center justify-center bg-gradient-to-b from-white/5 to-transparent">
                                                             <div className="relative w-24 h-24">
                                                                 <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                                                                <img
+                                                                <PreloadedImage
                                                                     src={item.imageUrl}
                                                                     alt={item.name}
                                                                     className="w-full h-full object-contain relative z-10 drop-shadow-lg transform group-hover:scale-110 transition-transform duration-300"
+                                                                    containerClassName="w-full h-full"
                                                                 />
                                                             </div>
                                                             {isEquipped && (

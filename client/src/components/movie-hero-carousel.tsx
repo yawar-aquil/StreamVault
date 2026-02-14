@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Play, Info, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,8 +12,23 @@ interface MovieHeroCarouselProps {
 export function MovieHeroCarousel({ movies }: MovieHeroCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
   const touchStartX = useRef<number>(0);
   const touchEndX = useRef<number>(0);
+
+  // Preload all carousel images on mount
+  useEffect(() => {
+    movies.forEach((movie) => {
+      const urls = [movie.posterUrl, movie.backdropUrl].filter(Boolean) as string[];
+      urls.forEach((url) => {
+        if (!loadedImages.has(url)) {
+          const img = new Image();
+          img.onload = () => setLoadedImages((prev) => new Set(prev).add(url));
+          img.src = url;
+        }
+      });
+    });
+  }, [movies]);
 
   useEffect(() => {
     if (!isAutoPlaying || movies.length === 0) return;
@@ -25,20 +40,20 @@ export function MovieHeroCarousel({ movies }: MovieHeroCarouselProps) {
     return () => clearInterval(interval);
   }, [isAutoPlaying, movies.length]);
 
-  const goToSlide = (index: number) => {
+  const goToSlide = useCallback((index: number) => {
     setCurrentIndex(index);
     setIsAutoPlaying(false);
-  };
+  }, []);
 
-  const nextSlide = () => {
+  const nextSlide = useCallback(() => {
     setCurrentIndex((prev) => (prev + 1) % movies.length);
     setIsAutoPlaying(false);
-  };
+  }, [movies.length]);
 
-  const prevSlide = () => {
+  const prevSlide = useCallback(() => {
     setCurrentIndex((prev) => (prev - 1 + movies.length) % movies.length);
     setIsAutoPlaying(false);
-  };
+  }, [movies.length]);
 
   // Touch/Swipe handlers
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -51,12 +66,10 @@ export function MovieHeroCarousel({ movies }: MovieHeroCarouselProps) {
 
   const handleTouchEnd = () => {
     if (touchStartX.current - touchEndX.current > 50) {
-      // Swipe left - next slide
       nextSlide();
     }
 
     if (touchStartX.current - touchEndX.current < -50) {
-      // Swipe right - previous slide
       prevSlide();
     }
   };
@@ -72,26 +85,28 @@ export function MovieHeroCarousel({ movies }: MovieHeroCarouselProps) {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Background Image with Gradient - Poster on mobile, Backdrop on desktop */}
-      <div
-        className="absolute inset-0 bg-cover bg-center transition-all duration-700"
-        style={{
-          backgroundImage: `url(${currentMovie.posterUrl})`,
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-transparent to-transparent hidden md:block" />
-      </div>
-      {/* Backdrop for desktop only */}
-      <div
-        className="absolute inset-0 bg-cover bg-center transition-all duration-700 hidden md:block"
-        style={{
-          backgroundImage: `url(${currentMovie.backdropUrl})`,
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-transparent to-transparent" />
-      </div>
+      {/* All slide backgrounds rendered simultaneously — crossfade via opacity */}
+      {movies.map((movie, index) => (
+        <div
+          key={movie.id}
+          className="absolute inset-0 transition-opacity duration-700 ease-in-out"
+          style={{ opacity: index === currentIndex ? 1 : 0, zIndex: index === currentIndex ? 1 : 0 }}
+          aria-hidden={index !== currentIndex}
+        >
+          {/* Poster (mobile) */}
+          <div
+            className="absolute inset-0 bg-cover bg-center md:hidden"
+            style={{ backgroundImage: `url(${movie.posterUrl})` }}
+          />
+          {/* Backdrop (desktop) */}
+          <div
+            className="absolute inset-0 bg-cover bg-center hidden md:block"
+            style={{ backgroundImage: `url(${movie.backdropUrl})` }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-transparent to-transparent hidden md:block" />
+        </div>
+      ))}
 
       {/* Content */}
       <div className="relative h-full container mx-auto px-4 flex items-center">
