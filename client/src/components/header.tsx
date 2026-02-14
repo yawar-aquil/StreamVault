@@ -478,8 +478,8 @@ export function Header() {
                     <Switch
                       checked={!adEnabled}
                       onCheckedChange={(checked) => {
-                        if (!user?.adFreeUntil || new Date(user.adFreeUntil) < new Date()) {
-                          // Not subscribed - show upgrade modal
+                        if (checked && (!user?.adFreeUntil || new Date(user.adFreeUntil) < new Date())) {
+                          // Trying to turn ad-free ON but not subscribed - show upgrade modal
                           setShowUpgradeModal(true);
                           return;
                         }

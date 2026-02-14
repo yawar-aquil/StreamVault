@@ -31,8 +31,10 @@ export function AdProvider({ children }: { children: React.ReactNode }) {
     const isSubscribed = !!(user?.adFreeUntil && new Date(user.adFreeUntil) > new Date());
 
     const toggleAds = () => {
-        // Only allow toggling if user is subscribed
-        if (!isSubscribed) {
+        // Only block turning ad-free ON if not subscribed
+        // Always allow turning ad-free OFF (re-enabling ads)
+        if (!isSubscribed && adEnabled) {
+            // adEnabled=true means ads are showing, toggling would turn ad-free ON
             return;
         }
 
