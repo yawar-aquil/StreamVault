@@ -127,7 +127,7 @@ async function broadcastToDriveTabs(message) {
 async function broadcastToStreamVaultTabs(message) {
     try {
         const tabs = await chrome.tabs.query({
-            url: ['*://streamvault.live/*', '*://localhost:5000/*']
+            url: ['*://streamvault.live/*', '*://www.streamvault.live/*', '*://streamvault.in/*', '*://www.streamvault.in/*', '*://localhost:5000/*']
         });
 
         for (const tab of tabs) {

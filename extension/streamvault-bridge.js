@@ -1,14 +1,20 @@
 /**
  * StreamVault Watch Together - StreamVault Page Bridge
- * Runs on StreamVault watch-together pages
+ * Runs on StreamVault pages (streamvault.live, streamvault.in, localhost)
  * Bridges the extension with the page's Socket.io connection
  * Shows notifications and enables sync with external Drive tabs
+ * 
+ * KEY: Handles SPA navigation - monitors URL changes and re-detects
+ * video players when the user navigates to a watch-together room
  */
 
 console.log('[StreamVault Bridge] Content script loaded on StreamVault');
 
 let hasShownInitialNotification = false;
 let detectedVideoType = null;
+let currentUrl = window.location.href;
+let videoCheckInterval = null;
+let observer = null;
 
 // Show notification on the StreamVault page
 function showNotification(text, type = 'info', duration = 5000) {
@@ -86,8 +92,9 @@ function showNotification(text, type = 'info', duration = 5000) {
 
 // Detect embedded video player (Google Drive iframe, JW Player, or HTML5 video)
 function detectVideoPlayer() {
-    // Look for Drive iframe
-    const driveIframe = document.querySelector('iframe[src*="drive.google.com"]');
+    // Look for Drive iframe (check multiple possible src patterns)
+    const driveIframe = document.querySelector('iframe[src*="drive.google.com"]') ||
+        document.querySelector('iframe[data-app-iframe="gdrive"]');
     if (driveIframe) {
         console.log('[StreamVault Bridge] Found Google Drive iframe!');
         detectedVideoType = 'drive';
@@ -176,6 +183,11 @@ function getRoomCode() {
     return urlParams.get('room')?.toUpperCase() || null;
 }
 
+// Check if current URL is a watch-together page
+function isWatchTogetherPage() {
+    return window.location.pathname.includes('/watch-together');
+}
+
 // Notify extension that we're on a watch-together page
 function notifyExtension() {
     const roomCode = getRoomCode();
@@ -199,7 +211,170 @@ function notifyExtension() {
     return null;
 }
 
-// Initialize - detect video and notify extension
+// Start looking for video players (called when navigating to watch-together)
+function startVideoDetection() {
+    // Reset detection state for fresh detection
+    detectedVideoType = null;
+
+    // Clear any existing intervals/observers
+    if (videoCheckInterval) {
+        clearInterval(videoCheckInterval);
+        videoCheckInterval = null;
+    }
+    if (observer) {
+        observer.disconnect();
+        observer = null;
+    }
+
+    console.log('[StreamVault Bridge] Starting video detection...');
+
+    // Immediately check
+    const immediateResult = detectVideoPlayer();
+    if (immediateResult.found) {
+        onVideoDetected(immediateResult.type);
+        return;
+    }
+
+    // Use MutationObserver to watch for dynamically added iframes/videos
+    // This is the KEY fix: the observer stays active as long as we're on a watch-together page
+    observer = new MutationObserver((mutations) => {
+        if (detectedVideoType) return; // Already found
+
+        // Check if any added nodes contain or are video elements / iframes
+        for (const mutation of mutations) {
+            for (const node of mutation.addedNodes) {
+                if (node.nodeType !== Node.ELEMENT_NODE) continue;
+
+                const el = node;
+                // Check if the added element itself is an iframe or video
+                if (el.tagName === 'IFRAME' || el.tagName === 'VIDEO' ||
+                    el.querySelector?.('iframe, video, [id*="jwplayer"], .jwplayer')) {
+                    const result = detectVideoPlayer();
+                    if (result.found) {
+                        onVideoDetected(result.type);
+                        return;
+                    }
+                }
+            }
+        }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // Also poll periodically as a fallback (iframes might load content async)
+    let pollCount = 0;
+    videoCheckInterval = setInterval(() => {
+        pollCount++;
+        if (detectedVideoType) {
+            clearInterval(videoCheckInterval);
+            videoCheckInterval = null;
+            return;
+        }
+
+        const result = detectVideoPlayer();
+        if (result.found) {
+            onVideoDetected(result.type);
+            clearInterval(videoCheckInterval);
+            videoCheckInterval = null;
+            return;
+        }
+
+        // Keep polling for up to 2 minutes (every 2 seconds)
+        if (pollCount >= 60) {
+            clearInterval(videoCheckInterval);
+            videoCheckInterval = null;
+            console.log('[StreamVault Bridge] Stopped polling after 2 minutes');
+        }
+    }, 2000);
+}
+
+// Called when video is detected
+function onVideoDetected(type) {
+    console.log('[StreamVault Bridge] Video player detected:', type);
+    showNotification(`✅ ${type} player detected - Ready to sync!`, 'success');
+    chrome.runtime.sendMessage({ type: 'VIDEO_DETECTED_ON_PAGE' }).catch(() => { });
+}
+
+// Monitor URL changes for SPA navigation
+function monitorUrlChanges() {
+    // Check URL periodically (handles React Router pushState navigation)
+    setInterval(() => {
+        const newUrl = window.location.href;
+        if (newUrl !== currentUrl) {
+            const oldUrl = currentUrl;
+            currentUrl = newUrl;
+            console.log('[StreamVault Bridge] URL changed:', oldUrl, '->', newUrl);
+            onUrlChange();
+        }
+    }, 500);
+
+    // Also listen for popstate (browser back/forward)
+    window.addEventListener('popstate', () => {
+        setTimeout(() => {
+            const newUrl = window.location.href;
+            if (newUrl !== currentUrl) {
+                currentUrl = newUrl;
+                console.log('[StreamVault Bridge] URL changed via popstate');
+                onUrlChange();
+            }
+        }, 100);
+    });
+
+    // Intercept pushState and replaceState for immediate detection
+    const originalPushState = history.pushState;
+    const originalReplaceState = history.replaceState;
+
+    history.pushState = function (...args) {
+        originalPushState.apply(this, args);
+        setTimeout(() => {
+            const newUrl = window.location.href;
+            if (newUrl !== currentUrl) {
+                currentUrl = newUrl;
+                console.log('[StreamVault Bridge] URL changed via pushState');
+                onUrlChange();
+            }
+        }, 50);
+    };
+
+    history.replaceState = function (...args) {
+        originalReplaceState.apply(this, args);
+        setTimeout(() => {
+            const newUrl = window.location.href;
+            if (newUrl !== currentUrl) {
+                currentUrl = newUrl;
+                console.log('[StreamVault Bridge] URL changed via replaceState');
+                onUrlChange();
+            }
+        }, 50);
+    };
+}
+
+// Handle URL change (SPA navigation)
+function onUrlChange() {
+    if (isWatchTogetherPage()) {
+        console.log('[StreamVault Bridge] Navigated to watch-together page');
+
+        // Notify extension about the room
+        notifyExtension();
+
+        // Start detecting video players (they load dynamically)
+        // Small delay to let React render the page first
+        setTimeout(() => startVideoDetection(), 500);
+    } else {
+        // Left watch-together page, clean up
+        detectedVideoType = null;
+        if (videoCheckInterval) {
+            clearInterval(videoCheckInterval);
+            videoCheckInterval = null;
+        }
+        if (observer) {
+            observer.disconnect();
+            observer = null;
+        }
+    }
+}
+
+// Initialize
 function init() {
     console.log('[StreamVault Bridge] Initializing...');
 
@@ -209,53 +384,14 @@ function init() {
         showNotification('🔌 StreamVault Extension Active', 'success', 3000);
     }
 
-    // Notify extension about room
-    const roomCode = notifyExtension();
+    // Start monitoring URL changes for SPA navigation
+    monitorUrlChanges();
 
-    // Detect video player with retries
-    let attempts = 0;
-    const maxAttempts = 10;
-
-    const checkForVideo = () => {
-        attempts++;
-        const result = detectVideoPlayer();
-
-        if (result.found) {
-            console.log('[StreamVault Bridge] Video player detected:', result.type);
-            showNotification(`✅ ${result.type} player detected - Ready to sync!`, 'success');
-
-            chrome.runtime.sendMessage({ type: 'VIDEO_DETECTED_ON_PAGE' }).catch(() => { });
-        } else if (attempts < maxAttempts) {
-            // Retry after a delay
-            setTimeout(checkForVideo, 1000);
-        } else {
-            console.log('[StreamVault Bridge] No video player found after', maxAttempts, 'attempts');
-            if (roomCode) {
-                showNotification('⏳ Waiting for video player to load...', 'warning', 3000);
-            }
-        }
-    };
-
-    // Start checking for video
-    setTimeout(checkForVideo, 500);
-
-    // Also use MutationObserver for dynamic content
-    const observer = new MutationObserver(() => {
-        if (!detectedVideoType) {
-            const result = detectVideoPlayer();
-            if (result.found) {
-                console.log('[StreamVault Bridge] Video player appeared:', result.type);
-                showNotification(`✅ ${result.type} player detected - Ready to sync!`, 'success');
-                chrome.runtime.sendMessage({ type: 'VIDEO_DETECTED_ON_PAGE' }).catch(() => { });
-                observer.disconnect();
-            }
-        }
-    });
-
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    // Disconnect observer after 30 seconds to prevent memory leaks
-    setTimeout(() => observer.disconnect(), 30000);
+    // If already on a watch-together page, start detection immediately
+    if (isWatchTogetherPage()) {
+        notifyExtension();
+        setTimeout(() => startVideoDetection(), 500);
+    }
 }
 
 // Wait for page to load then initialize

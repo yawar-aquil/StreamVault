@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "StreamVault Watch Together",
     "description": "Sync Google Drive videos with StreamVault Watch Together rooms",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "permissions": [
         "storage",
         "activeTab",
@@ -11,6 +11,9 @@
     "host_permissions": [
         "https://drive.google.com/*",
         "https://streamvault.live/*",
+        "https://www.streamvault.live/*",
+        "https://streamvault.in/*",
+        "https://www.streamvault.in/*",
         "http://localhost:5000/*"
     ],
     "content_scripts": [
@@ -26,8 +29,11 @@
         },
         {
             "matches": [
-                "https://streamvault.live/watch-together*",
-                "http://localhost:5000/watch-together*"
+                "https://streamvault.live/*",
+                "https://www.streamvault.live/*",
+                "https://streamvault.in/*",
+                "https://www.streamvault.in/*",
+                "http://localhost:5000/*"
             ],
             "js": [
                 "streamvault-bridge.js"
