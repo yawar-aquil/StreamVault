@@ -361,9 +361,13 @@ export default function StorePage() {
                                 <Button
                                     className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-6 rounded-xl shadow-lg shadow-primary/20 group-hover:shadow-primary/40 transition-all"
                                     onClick={() => {
-                                        // Direct purchase or open modal with specific content
-                                        // For now, let's use a specialized purchase handler
-                                        toast({ title: "Coming Soon", description: "Subscription system is being finalized." });
+                                        const monthlySub = products.find(p => p.name === 'Ad-Free Monthly');
+                                        if (monthlySub) {
+                                            setSelectedProduct(monthlySub);
+                                            setShowPurchaseModal(true);
+                                        } else {
+                                            toast({ title: "Error", description: "Subscription plan not found.", variant: "destructive" });
+                                        }
                                     }}
                                 >
                                     Subscribe Now
@@ -394,7 +398,13 @@ export default function StorePage() {
                                 <Button
                                     className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-6 rounded-xl shadow-lg shadow-amber-500/20 group-hover:shadow-amber-500/40 transition-all"
                                     onClick={() => {
-                                        toast({ title: "Coming Soon", description: "Subscription system is being finalized." });
+                                        const yearlySub = products.find(p => p.name === 'Ad-Free Yearly');
+                                        if (yearlySub) {
+                                            setSelectedProduct(yearlySub);
+                                            setShowPurchaseModal(true);
+                                        } else {
+                                            toast({ title: "Error", description: "Subscription plan not found.", variant: "destructive" });
+                                        }
                                     }}
                                 >
                                     Subscribe Yearly
@@ -424,7 +434,14 @@ export default function StorePage() {
                             { id: 'skin', label: 'Skins', items: filteredProducts.filter(p => p.category === 'skin' || p.name.includes('Skin')) },
                             { id: 'theme', label: 'Themes', items: filteredProducts.filter(p => !p.name.includes('Skin') && (p.category === 'theme' || p.name.includes('Theme'))) },
                             { id: 'feature', label: 'Features', items: filteredProducts.filter(p => p.category === 'feature') },
-                            { id: 'badges', label: 'Badges', items: filteredProducts.filter(p => (!p.category || p.category === 'general' || p.category === 'achievement' || p.category === '') && !p.name.includes('Skin') && !p.name.includes('Theme')) }
+                            {
+                                id: 'badges', label: 'Badges', items: filteredProducts.filter(p =>
+                                    (!p.category || p.category === 'general' || p.category === 'achievement' || p.category === '') &&
+                                    !p.name.includes('Skin') &&
+                                    !p.name.includes('Theme') &&
+                                    p.category !== 'subscription' // Exclude subscriptions
+                                )
+                            }
                         ].map(section => (
                             section.items.length > 0 && (
                                 <div key={section.id}>
