@@ -103,7 +103,8 @@ export default function StorePage() {
             return data;
         },
         onSuccess: (data, variables) => {
-            queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] }); // Update coins
+            queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] }); // Update user data
+            queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/badges`] }); // Update badges
 
             // Find the item details
             const item = products.find(p => p.id === variables.badgeId);
@@ -363,7 +364,7 @@ export default function StorePage() {
 
                                     {(() => {
                                         const monthlySub = products.find(p => p.name === 'Ad-Free Monthly');
-                                        const ownsMonthly = monthlySub && userBadges.some((b: any) => (b.badgeId || b.id || b) === monthlySub.id);
+                                        const ownsMonthly = user?.subscriptionType === 'monthly';
                                         if (ownsMonthly && user?.adFreeUntil && new Date(user.adFreeUntil) > new Date()) {
                                             return (
                                                 <div className="flex flex-col gap-3">
@@ -437,7 +438,7 @@ export default function StorePage() {
 
                                     {(() => {
                                         const yearlySub = products.find(p => p.name === 'Ad-Free Yearly');
-                                        const ownsYearly = yearlySub && userBadges.some((b: any) => (b.badgeId || b.id || b) === yearlySub.id);
+                                        const ownsYearly = user?.subscriptionType === 'yearly';
                                         if (ownsYearly && user?.adFreeUntil && new Date(user.adFreeUntil) > new Date()) {
                                             return (
                                                 <div className="flex flex-col gap-3">

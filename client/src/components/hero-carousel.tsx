@@ -120,7 +120,7 @@ export function HeroCarousel({ shows }: HeroCarouselProps) {
       ))}
 
       {/* Content */}
-      <div className="relative h-full container mx-auto px-4 flex items-end pb-20 md:pb-24">
+      <div className="relative h-full container mx-auto px-4 flex items-end pb-20 md:pb-24 z-10">
         <div className="max-w-2xl space-y-4">
           {/* Title */}
           <h1

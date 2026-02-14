@@ -109,7 +109,7 @@ export function MovieHeroCarousel({ movies }: MovieHeroCarouselProps) {
       ))}
 
       {/* Content */}
-      <div className="relative h-full container mx-auto px-4 flex items-center">
+      <div className="relative h-full container mx-auto px-4 flex items-center z-10">
         <div className="max-w-2xl">
           <Badge className="mb-4" variant="secondary">
             Featured Movie
