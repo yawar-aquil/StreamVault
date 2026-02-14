@@ -624,7 +624,20 @@ export default function StorePage() {
 
                     {selectedProduct && (
                         <div className="py-6">
-                            {/* Theme Preview Logic */}
+                            {/* Subscription Preview Logic */}
+                            {(selectedProduct.category === 'subscription' || selectedProduct.name.includes('Ad-Free')) && (
+                                <div className={`mb-4 rounded-xl overflow-hidden border border-white/10 shadow-2xl relative aspect-video flex items-center justify-center group ${selectedProduct.name.includes('Yearly') ? 'bg-amber-500/10' : 'bg-red-500/10'
+                                    }`}>
+                                    <div className={`w-32 h-32 ${selectedProduct.name.includes('Yearly') ? 'text-amber-500' : 'text-red-500'}`}>
+                                        <AnimatedAdFreeIcon className="w-full h-full" />
+                                    </div>
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent z-10 opacity-60 group-hover:opacity-40 transition-opacity" />
+                                    <div className="absolute bottom-2 left-2 z-20 bg-black/60 backdrop-blur-md px-2 py-1 rounded text-xs text-white/90 font-medium">
+                                        Preview
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Theme Preview Logic */}
                             {selectedProduct.category === 'theme' && !selectedProduct.name.includes('Skin') && (
                                 <div className="mb-4 rounded-xl overflow-hidden border border-white/10 shadow-2xl relative aspect-video group">
@@ -662,14 +675,18 @@ export default function StorePage() {
                                         ? "w-28 h-16"
                                         : "w-16 h-16"
                                     }`}>
-                                    <img
-                                        src={selectedProduct.imageUrl}
-                                        alt={selectedProduct.name}
-                                        className={`w-full h-full ${(selectedProduct.category === 'skin' || selectedProduct.name.includes('Skin') || selectedProduct.category === 'theme' || selectedProduct.name.includes('Theme'))
-                                            ? "object-cover rounded-sm"
-                                            : "object-contain"
-                                            }`}
-                                    />
+                                    {(selectedProduct.category === 'subscription' || selectedProduct.name.includes('Ad-Free')) ? (
+                                        <AnimatedAdFreeIcon className={`w-full h-full ${selectedProduct.name.includes('Yearly') ? 'text-amber-500' : 'text-red-500'}`} />
+                                    ) : (
+                                        <img
+                                            src={selectedProduct.imageUrl}
+                                            alt={selectedProduct.name}
+                                            className={`w-full h-full ${(selectedProduct.category === 'skin' || selectedProduct.name.includes('Skin') || selectedProduct.category === 'theme' || selectedProduct.name.includes('Theme'))
+                                                ? "object-cover rounded-sm"
+                                                : "object-contain"
+                                                }`}
+                                        />
+                                    )}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <h3 className="font-bold truncate">{selectedProduct.name}</h3>
