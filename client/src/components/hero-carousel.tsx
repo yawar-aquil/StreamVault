@@ -197,7 +197,7 @@ export function HeroCarousel({ shows }: HeroCarouselProps) {
       </div>
 
       {/* Dots Indicator */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-20">
         {shows.map((_, index) => (
           <button
             key={index}
