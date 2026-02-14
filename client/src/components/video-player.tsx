@@ -418,6 +418,56 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
     );
 });
 
+// DriveIframe: Wrapper that notifies browser extensions when a GDrive iframe is dynamically added
+function DriveIframe({ src, className = '' }: { src: string; className?: string }) {
+    const iframeRef = useRef<HTMLIFrameElement>(null);
+
+    useEffect(() => {
+        const iframe = iframeRef.current;
+        if (!iframe) return;
+
+        // Dispatch events that extensions commonly listen for to detect new iframes
+        // 1. Dispatch a generic custom event
+        window.dispatchEvent(new CustomEvent('iframeAdded', { detail: { src } }));
+
+        // 2. Dispatch a DOMContentLoaded-like signal (extensions often re-scan on this)
+        try {
+            document.dispatchEvent(new Event('DOMContentLoaded', { bubbles: true }));
+        } catch (e) {
+            // Ignore if not supported
+        }
+
+        // 3. Re-insert the iframe after a brief delay to trigger MutationObserver in extensions
+        const timer = setTimeout(() => {
+            if (iframe && iframe.parentNode) {
+                const parent = iframe.parentNode;
+                const nextSibling = iframe.nextSibling;
+                // Temporarily remove and re-add to trigger MutationObserver
+                parent.removeChild(iframe);
+                if (nextSibling) {
+                    parent.insertBefore(iframe, nextSibling);
+                } else {
+                    parent.appendChild(iframe);
+                }
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [src]);
+
+    return (
+        <iframe
+            ref={iframeRef}
+            src={src}
+            className={`w-full h-full border-0 ${className}`}
+            allowFullScreen
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            style={{ border: 'none' }}
+            data-app-iframe="gdrive"
+        />
+    );
+}
+
 export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
     videoUrl,
     className = '',
@@ -530,12 +580,9 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
 
     if (playerType === 'drive') {
         return (
-            <iframe
+            <DriveIframe
                 src={processedUrl}
-                className={`w-full h-full border-0 ${className}`}
-                allowFullScreen
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                style={{ border: 'none' }}
+                className={className}
             />
         );
     }
