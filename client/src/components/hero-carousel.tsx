@@ -104,18 +104,18 @@ export function HeroCarousel({ shows }: HeroCarouselProps) {
           style={{ opacity: index === currentIndex ? 1 : 0, zIndex: index === currentIndex ? 1 : 0 }}
           aria-hidden={index !== currentIndex}
         >
-          {/* Poster (mobile) */}
+          {/* Poster layer (always rendered, visible on mobile, hidden behind backdrop on desktop) */}
           <div
-            className="absolute inset-0 bg-cover bg-center md:hidden"
-            style={{ backgroundImage: `url(${show.posterUrl})` }}
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${show.posterUrl})`, zIndex: 0 }}
           />
-          {/* Backdrop (desktop) */}
+          {/* Backdrop layer (always rendered on top, only visible on desktop via opacity) */}
           <div
-            className="absolute inset-0 bg-cover bg-center hidden md:block"
-            style={{ backgroundImage: `url(${show.backdropUrl})` }}
+            className="absolute inset-0 bg-cover bg-center opacity-0 md:opacity-100 transition-none"
+            style={{ backgroundImage: `url(${show.backdropUrl})`, zIndex: 1 }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/40 to-transparent hidden md:block" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" style={{ zIndex: 2 }} />
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/40 to-transparent hidden md:block" style={{ zIndex: 2 }} />
         </div>
       ))}
 
