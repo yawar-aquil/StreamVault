@@ -4,6 +4,7 @@ import { ContentRow } from "@/components/content-row";
 import { Top10Row } from "@/components/top10-row";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SEO } from "@/components/seo";
+import { AdContainer } from "@/components/ad-manager";
 import type { Show } from "@shared/schema";
 import { useMemo } from "react";
 
@@ -71,11 +72,15 @@ export default function SeriesPage() {
                     />
                 )}
 
+                <AdContainer type="native" />
+
                 {action.length > 0 && (
                     <ContentRow title="Action & Adventure" shows={action} />
                 )}
 
                 {drama.length > 0 && <ContentRow title="Drama" shows={drama} />}
+
+                <AdContainer type="banner" />
 
                 {comedy.length > 0 && <ContentRow title="Comedy" shows={comedy} />}
 

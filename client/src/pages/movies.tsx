@@ -4,6 +4,7 @@ import { MovieContentRow } from "@/components/movie-content-row";
 import { Top10Row } from "@/components/top10-row";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SEO } from "@/components/seo";
+import { AdContainer } from "@/components/ad-manager";
 import type { Movie } from "@shared/schema";
 import { useMemo } from "react";
 
@@ -70,11 +71,15 @@ export default function MoviesPage() {
           />
         )}
 
+        <AdContainer type="native" />
+
         {action.length > 0 && (
           <MovieContentRow title="Action & Thriller" movies={action} />
         )}
 
         {drama.length > 0 && <MovieContentRow title="Drama & Romance" movies={drama} />}
+
+        <AdContainer type="banner" />
 
         {comedy.length > 0 && <MovieContentRow title="Comedy" movies={comedy} />}
 

@@ -4,6 +4,7 @@ import { ContentRow } from "@/components/content-row";
 import { Top10Row } from "@/components/top10-row";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SEO } from "@/components/seo";
+import { AdContainer } from "@/components/ad-manager";
 import type { Anime } from "@shared/schema";
 import { useMemo } from "react";
 
@@ -76,6 +77,8 @@ export default function AnimePage() {
                     />
                 )}
 
+                <AdContainer type="native" />
+
                 {action.length > 0 && (
                     <ContentRow title="Action & Adventure" shows={action} />
                 )}
@@ -85,6 +88,8 @@ export default function AnimePage() {
                 )}
 
                 {romance.length > 0 && <ContentRow title="Romance" shows={romance} />}
+
+                <AdContainer type="banner" />
 
                 {fantasy.length > 0 && <ContentRow title="Fantasy" shows={fantasy} />}
 

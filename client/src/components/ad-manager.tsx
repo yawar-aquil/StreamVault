@@ -275,9 +275,10 @@ export function AdContainer({
     if (type === 'banner' || type === 'blog_top') {
         return (
             <div className={`flex justify-center w-full ${className}`}>
-                <Banner728x90 />
-                <Banner468x60 />
-                <Banner320x50 />
+                {/* Responsive: only show one banner size based on screen */}
+                <div className="hidden md:block"><Banner728x90 /></div>
+                <div className="hidden sm:block md:hidden"><Banner468x60 /></div>
+                <div className="block sm:hidden"><Banner320x50 /></div>
             </div>
         );
     }

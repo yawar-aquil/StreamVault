@@ -506,6 +506,11 @@ export default function Watch() {
               </div>
             </div>
 
+            {/* Banner Ad - Desktop only */}
+            <div className="mt-8 hidden lg:block">
+              <AdContainer type="banner" />
+            </div>
+
             {/* Comments Section - Desktop only */}
             <div className="mt-8 hidden lg:block">
               <CommentsSection episodeId={currentEpisodeData.id} />
@@ -568,6 +573,11 @@ export default function Watch() {
         {/* Adsterra Native Banner - Above Comments */}
         <div className="mt-8 flex justify-center">
           <AdContainer type="native" />
+        </div>
+
+        {/* Banner Ad - Mobile only */}
+        <div className="mt-8 lg:hidden flex justify-center">
+          <AdContainer type="banner" />
         </div>
 
         {/* Comments Section - Mobile only (below Up Next) */}

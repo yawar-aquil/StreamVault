@@ -416,6 +416,11 @@ export default function WatchMovie() {
             </div>
           </div>
 
+          {/* Banner Ad */}
+          <div className="mt-8">
+            <AdContainer type="banner" />
+          </div>
+
           {/* Recommended Movies Section */}
           {recommendedMovies.length > 0 && (
             <div className="mt-8">
