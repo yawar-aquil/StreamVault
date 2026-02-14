@@ -135,7 +135,27 @@ router.post('/purchase', async (req, res) => {
         // 4. Award Badge
         await storage.awardBadge(userId, badgeId);
 
-        // 5. Send Receipt Email (Async)
+        // 5. Handle Subscription (if applicable)
+        if (badge.category === 'subscription') {
+            const data = typeof badge.requirements === 'string' ? JSON.parse(badge.requirements || '{}') : badge.requirements;
+            const durationDays = data.durationDays || 30; // Default to 30 days if not specified
+
+            const now = new Date();
+            let newExpiry = new Date();
+
+            // If already active, extend from current expiry
+            if (user.adFreeUntil && new Date(user.adFreeUntil) > now) {
+                newExpiry = new Date(user.adFreeUntil);
+            }
+
+            // Add duration
+            newExpiry.setDate(newExpiry.getDate() + durationDays);
+
+            // Update User
+            await storage.updateUser(userId, { adFreeUntil: newExpiry });
+        }
+
+        // 6. Send Receipt Email (Async)
         const updatedUser = await storage.getUserById(userId);
         const remainingBalance = updatedUser?.coins || 0;
 

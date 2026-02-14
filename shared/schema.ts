@@ -148,6 +148,7 @@ export const badges = pgTable("badges", {
   displayPriority: integer("display_priority").default(0), // Higher = shown first
   isSpecial: boolean("is_special").default(false), // VIP, Sweetie - show next to username
   limited: boolean("limited").default(false), // Limited edition
+  requirements: text("requirements"), // JSON string: { durationDays: 30 } for subscriptions
   stock: integer("stock"), // null = unlimited
   active: boolean("active").default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),

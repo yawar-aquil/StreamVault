@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SEO } from "@/components/seo";
 import { useToast } from "@/hooks/use-toast";
 import { CommentsSection } from "@/components/comments-section";
+import { AdContainer, SmartlinkButton } from "@/components/ad-manager";
 import type { Show, Movie, Anime, BlogPost as BlogPostType } from "@shared/schema";
 
 interface CastMember {
@@ -293,7 +294,7 @@ export default function BlogPost() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
             {/* Action Buttons */}
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               <Link href={isMovie ? `/watch-movie/${slug}` : isAnime ? `/anime/${slug}` : `/show/${slug}`}>
                 <Button size="lg" className="gap-2">
                   <Play className="w-5 h-5" />
@@ -304,7 +305,10 @@ export default function BlogPost() {
                 <Share2 className="w-5 h-5" />
                 Share
               </Button>
+              <SmartlinkButton text="Download Now (Fast)" />
             </div>
+
+            <AdContainer type="blog_top" />
 
             {/* Overview */}
             <section>
@@ -318,6 +322,8 @@ export default function BlogPost() {
                 </p>
               </div>
             </section>
+
+            <AdContainer type="blog_content" />
 
             {/* YouTube Trailer */}
             {trailerUrl && (
@@ -850,6 +856,8 @@ export default function BlogPost() {
                 )}
               </div>
             </div>
+
+            <AdContainer type="blog_sidebar" />
 
             {/* Tags for SEO */}
             <div className="bg-card border border-border rounded-lg p-4">

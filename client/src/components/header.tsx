@@ -12,6 +12,8 @@ import { useAuth } from "@/contexts/auth-context";
 import { useAds } from "@/components/ad-manager";
 import { NotificationsDropdown } from "@/components/notifications-dropdown";
 import StreamCoin from '@/components/stream-coin';
+import { AnimatedAdFreeIcon } from '@/components/animated-ad-free-icon';
+import { AdFreeUpgradeModal } from '@/components/ad-free-upgrade-modal';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -30,6 +32,7 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showResults, setShowResults] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
 
@@ -463,16 +466,26 @@ export function Header() {
                 <DropdownMenuSeparator />
                 {/* Ad Toggle */}
                 <div className="px-2 py-1.5 flex items-center justify-between text-sm outline-none">
-                  <div className="flex items-center">
-                    <Zap className="mr-2 h-4 w-4 text-yellow-500" />
-                    <span>Ad-Free Mode</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 text-yellow-500">
+                      <AnimatedAdFreeIcon className="w-full h-full" />
+                    </div>
+                    <span>Ad-Free</span>
                   </div>
                   <Switch
                     checked={!adEnabled}
-                    onCheckedChange={() => toggleAds()}
+                    onCheckedChange={(checked) => {
+                      if (!user?.adFreeUntil || new Date(user.adFreeUntil) < new Date()) {
+                        // Not subscribed - show upgrade modal
+                        setShowUpgradeModal(true);
+                        return;
+                      }
+                      toggleAds();
+                    }}
                     className="ml-2 scale-75"
                   />
                 </div>
+                <AdFreeUpgradeModal open={showUpgradeModal} onOpenChange={setShowUpgradeModal} />
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => logout()} className="text-destructive focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />

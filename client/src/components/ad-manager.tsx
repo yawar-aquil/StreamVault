@@ -216,37 +216,59 @@ export function Banner160x300({ className }: { className?: string }) {
 // Container Component
 // ----------------------------------------------------------------------
 
+// Smartlink Button
+export function SmartlinkButton({ className, text = "Special Partner Offer" }: { className?: string, text?: string }) {
+    const { showAds } = useAds();
+
+    if (!showAds) return null;
+
+    const openSmartlink = () => {
+        window.open("https://openairtowhardworking.com/r52n12yhee?key=c9e42e6265a0e4becf4bde3064060d5e", "_blank");
+    };
+
+    return (
+        <button
+            onClick={openSmartlink}
+            className={`bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 ${className}`}
+        >
+            <span className="animate-pulse">🔥</span>
+            {text}
+            <span className="animate-pulse">🔥</span>
+        </button>
+    );
+}
+
 export function AdContainer({
     type,
     className
 }: {
-    type: 'banner' | 'sidebar' | 'native' | 'footer',
+    type: 'banner' | 'sidebar' | 'native' | 'footer' | 'blog_top' | 'blog_sidebar' | 'blog_content',
     className?: string
 }) {
     const { showAds } = useAds();
     if (!showAds) return null;
 
-    if (type === 'native') return <NativeBanner />;
+    if (type === 'native' || type === 'blog_content') return <NativeBanner />;
 
     if (type === 'footer') {
         return (
-            <div className={`flex justify-center w-full bg-black/20 py-2 ${className}`}>
+            <div className={`flex flex-col items-center gap-4 w-full bg-black/20 py-4 ${className}`}>
                 <Banner728x90 />
                 <Banner320x50 />
             </div>
         );
     }
 
-    if (type === 'sidebar') {
+    if (type === 'sidebar' || type === 'blog_sidebar') {
         return (
-            <div className="flex flex-col items-center gap-4">
+            <div className={`flex flex-col items-center gap-4 ${className}`}>
                 <Banner300x250 />
                 <Banner160x600 className="hidden xl:flex" />
             </div>
         );
     }
 
-    if (type === 'banner') {
+    if (type === 'banner' || type === 'blog_top') {
         return (
             <div className={`flex justify-center w-full ${className}`}>
                 <Banner728x90 />

@@ -16,7 +16,7 @@ import { trackWatch } from "@/components/analytics-tracker";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/contexts/notifications-context";
-import { AdContainer } from "@/components/ad-manager";
+import { AdContainer, SmartlinkButton } from "@/components/ad-manager";
 
 export default function WatchAnime() {
     const [, params] = useRoute("/watch-anime/:slug");
@@ -435,22 +435,25 @@ export default function WatchAnime() {
                                 >
                                     {anime.title}
                                 </h1>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="gap-2"
-                                    asChild
-                                >
-                                    <a
-                                        href={getGoogleDriveDownloadUrl(currentEpisodeData.videoUrl || currentEpisodeData.googleDriveUrl)}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        download
+                                <div className="flex items-center gap-2">
+                                    <SmartlinkButton text="Fast Download" className="h-9 px-4 py-2 text-sm" />
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-2"
+                                        asChild
                                     >
-                                        <Download className="w-4 h-4" />
-                                        Download
-                                    </a>
-                                </Button>
+                                        <a
+                                            href={getGoogleDriveDownloadUrl(currentEpisodeData.videoUrl || currentEpisodeData.googleDriveUrl)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            download
+                                        >
+                                            <Download className="w-4 h-4" />
+                                            Download
+                                        </a>
+                                    </Button>
+                                </div>
                             </div>
                             <h2 className="text-lg text-muted-foreground mb-3">
                                 S{currentSeason} E{currentEpisode}: {currentEpisodeData.title}

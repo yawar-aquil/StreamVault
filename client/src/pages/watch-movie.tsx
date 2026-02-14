@@ -15,7 +15,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/contexts/notifications-context";
-import { AdContainer } from "@/components/ad-manager";
+import { AdContainer, SmartlinkButton } from "@/components/ad-manager";
 
 export default function WatchMovie() {
   const [, params] = useRoute("/watch-movie/:slug");
@@ -376,22 +376,25 @@ export default function WatchMovie() {
                 >
                   {movie.title}
                 </h1>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  asChild
-                >
-                  <a
-                    href={getGoogleDriveDownloadUrl(movie.googleDriveUrl)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    download
+                <div className="flex items-center gap-2">
+                  <SmartlinkButton text="Fast Download" className="h-9 px-4 py-2 text-sm" />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    asChild
                   >
-                    <Download className="w-4 h-4" />
-                    Download
-                  </a>
-                </Button>
+                    <a
+                      href={getGoogleDriveDownloadUrl(movie.googleDriveUrl)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download
+                    >
+                      <Download className="w-4 h-4" />
+                      Download
+                    </a>
+                  </Button>
+                </div>
               </div>
               <p className="text-muted-foreground mb-4">
                 {movie.description}

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { FileVideo, Upload, Play, Info } from "lucide-react";
 import VideoPlayer from "@/components/video-player";
 import { SEO } from "@/components/seo"; // Assuming SEO component exists
+import { SmartlinkButton } from "@/components/ad-manager";
 
 export default function DownloadsPage() {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -112,6 +113,10 @@ export default function DownloadsPage() {
                         />
                     </CardContent>
                 </Card>
+
+                <div className="flex justify-center">
+                    <SmartlinkButton text="Download High Speed (Partner)" />
+                </div>
 
                 <div className="grid md:grid-cols-2 gap-6">
                     <Card className="bg-muted/20 border-border/40">
