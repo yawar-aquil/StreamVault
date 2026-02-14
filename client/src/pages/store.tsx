@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge as UIBadge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { Switch } from "@/components/ui/switch";
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
@@ -28,7 +28,7 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { ChevronsUpDown, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, isIndianDomain } from "@/lib/utils";
 import { useEffect, useRef } from "react";
 
 export default function StorePage() {
@@ -327,8 +327,8 @@ export default function StorePage() {
                     </div>
                 </div>
 
-                {/* Subscriptions Section */}
-                {(activeCategory === 'all' || activeCategory === 'feature') && (
+                {/* Subscriptions Section - ONLY on .in domain */}
+                {(activeCategory === 'all' || activeCategory === 'feature') && isIndianDomain() && (
                     <div className="mb-16">
                         <div className="flex items-center gap-4 mb-8">
                             <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 to-orange-500 flex items-center gap-2">
@@ -395,6 +395,7 @@ export default function StorePage() {
                                         <StreamCoin className="w-6 h-6" />
                                         <span className="text-muted-foreground text-sm">/ year</span>
                                     </div>
+
 
                                     <Button
                                         className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-6 rounded-xl shadow-lg shadow-amber-500/20 group-hover:shadow-amber-500/40 transition-all"
@@ -521,20 +522,53 @@ export default function StorePage() {
                                                             {/* Glow effect */}
                                                             <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full opacity-50 group-hover:opacity-75 transition-opacity duration-500 scale-75 group-hover:scale-100" />
                                                             <div className="relative w-full h-full flex items-center justify-center group-hover:scale-110 transition-transform duration-500 delay-75">
-                                                                <img
-                                                                    src={product.imageUrl}
-                                                                    alt={product.name}
-                                                                    className="w-full h-full object-contain drop-shadow-2xl"
-                                                                    onError={(e) => {
-                                                                        (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23888"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>';
-                                                                    }}
-                                                                />
+                                                                {(product.category === 'subscription' || product.name.includes('Ad-Free')) ? (
+                                                                    <div className={`w-full h-full ${product.name.includes('Yearly') ? 'text-amber-500' : 'text-red-500'}`}>
+                                                                        <AnimatedAdFreeIcon className="w-full h-full" />
+                                                                    </div>
+                                                                ) : (
+                                                                    <img
+                                                                        src={product.imageUrl}
+                                                                        alt={product.name}
+                                                                        className="w-full h-full object-contain drop-shadow-2xl"
+                                                                        onError={(e) => {
+                                                                            (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23888"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>';
+                                                                        }}
+                                                                    />
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>
                                                 )}
 
                                                 {/* Content */}
+                                                {user?.adFreeUntil && (product.category === 'subscription' || product.name.includes('Ad-Free')) && (
+                                                    <div className="flex flex-col gap-3 w-full p-6 pt-0">
+                                                        <Button
+                                                            className="w-full bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white border-0"
+                                                            disabled
+                                                        >
+                                                            {Math.ceil((new Date(user.adFreeUntil).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} Days Remaining
+                                                        </Button>
+
+                                                        <div className="flex items-center justify-between px-2 py-1 bg-muted/50 rounded-lg">
+                                                            <span className="text-sm font-medium text-muted-foreground">Auto-Renew</span>
+                                                            <Switch
+                                                                checked={user.subscriptionAutoRenew}
+                                                                onCheckedChange={(checked) => {
+                                                                    fetch('/api/subscription/autorenew', {
+                                                                        method: 'POST',
+                                                                        headers: { 'Content-Type': 'application/json' },
+                                                                        body: JSON.stringify({ autoRenew: checked }),
+                                                                    }).then(() => {
+                                                                        queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+                                                                    });
+                                                                }}
+                                                                className="scale-90"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 <div className="p-6 relative">
                                                     <div className="mb-4 text-center">
                                                         <h3 className="text-xl font-bold truncate mb-1 text-foreground/90 group-hover:text-primary transition-colors">
@@ -962,6 +996,6 @@ export default function StorePage() {
                     </div>
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     );
 }

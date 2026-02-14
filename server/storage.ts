@@ -213,6 +213,8 @@ export interface IStorage {
   updateBlogPost(id: string, updates: Partial<BlogPost>): Promise<BlogPost>;
   deleteBlogPost(id: string): Promise<void>;
 
+  updateSubscriptionAutoRenew(userId: string, autoRenew: boolean): Promise<User>;
+
   // Activity Feed
   createActivity(activity: InsertActivity): Promise<Activity>;
   getActivities(limit?: number, filter?: 'all' | 'friends' | 'mentions', userId?: string): Promise<(Activity & { user?: User })[]>; // Join with user for display
@@ -2281,6 +2283,8 @@ export class MemStorage implements IStorage {
         name: badge.name,
         description: badge.description,
         icon: 'award', // Fallback for old UI
+        categoryId: badge.category, // Store category for frontend filtering
+        category: badge.category,
         imageUrl: badge.imageUrl,
         earnedAt: userBadge.earnedAt.toISOString()
       });
@@ -3381,6 +3385,14 @@ export class MemStorage implements IStorage {
   // ============================================
 
   activities: Map<string, Activity> = new Map();
+
+  async updateSubscriptionAutoRenew(userId: string, autoRenew: boolean): Promise<User> {
+    const user = this.users.get(userId);
+    if (!user) throw new Error("User not found");
+    const updatedUser = { ...user, subscriptionAutoRenew: autoRenew };
+    this.users.set(userId, updatedUser);
+    return updatedUser;
+  }
 
   async createActivity(insertActivity: InsertActivity): Promise<Activity> {
     const id = randomUUID();

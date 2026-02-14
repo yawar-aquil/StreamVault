@@ -497,7 +497,11 @@ export default function ProfilePage() {
                                                                 <Check className="w-3 h-3 text-black" />
                                                             </div>
                                                         )}
-                                                        {badge.imageUrl ? (
+                                                        {(badge.category === 'subscription' || badge.name.includes('Ad-Free')) ? (
+                                                            <div className={`w-12 h-12 mb-2 transition-transform group-hover:scale-110 ${badge.name.includes('Yearly') ? 'text-amber-500' : 'text-red-500'}`}>
+                                                                <AnimatedAdFreeIcon className="w-full h-full" />
+                                                            </div>
+                                                        ) : badge.imageUrl ? (
                                                             <img
                                                                 src={badge.imageUrl}
                                                                 alt={badge.name}
@@ -507,10 +511,6 @@ export default function ProfilePage() {
                                                                     e.currentTarget.nextElementSibling?.classList.remove('hidden');
                                                                 }}
                                                             />
-                                                        ) : (badge.category === 'subscription' || badge.name.includes('Ad-Free')) ? (
-                                                            <div className={`w-12 h-12 mb-2 transition-transform group-hover:scale-110 ${badge.name.includes('Yearly') ? 'text-amber-500' : 'text-red-500'}`}>
-                                                                <AnimatedAdFreeIcon className="w-full h-full" />
-                                                            </div>
                                                         ) : null}
 
                                                         <div className={`w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500 mb-2 group-hover:bg-yellow-500/20 transition-colors ${(badge.imageUrl || badge.category === 'subscription' || badge.name.includes('Ad-Free')) ? 'hidden' : ''}`}>

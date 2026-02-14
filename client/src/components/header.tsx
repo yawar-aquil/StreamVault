@@ -11,7 +11,7 @@ import type { Show, Movie, Anime } from "@shared/schema";
 import { useAuth } from "@/contexts/auth-context";
 import { useAds } from "@/components/ad-manager";
 import { NotificationsDropdown } from "@/components/notifications-dropdown";
-import StreamCoin from '@/components/stream-coin';
+import { cn, isIndianDomain } from "@/lib/utils";
 import { AnimatedAdFreeIcon } from '@/components/animated-ad-free-icon';
 import { AdFreeUpgradeModal } from '@/components/ad-free-upgrade-modal';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -465,28 +465,31 @@ export function Header() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {/* Ad Toggle */}
-                <div className="px-2 py-1.5 flex items-center justify-between text-sm outline-none">
-                  <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 text-yellow-500">
-                      <AnimatedAdFreeIcon className="w-full h-full" />
+                {/* Ad Toggle - Only on .in domain */}
+                {isIndianDomain() && (
+                  <div className="px-2 py-1.5 flex items-center justify-between text-sm outline-none">
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 text-yellow-500">
+                        <AnimatedAdFreeIcon className="w-full h-full" />
+                      </div>
+                      <span>Ad-Free</span>
                     </div>
-                    <span>Ad-Free</span>
+                    <Switch
+                      checked={!adEnabled}
+                      onCheckedChange={(checked) => {
+                        if (!user?.adFreeUntil || new Date(user.adFreeUntil) < new Date()) {
+                          // Not subscribed - show upgrade modal
+                          setShowUpgradeModal(true);
+                          return;
+                        }
+                        toggleAds();
+                      }}
+                      className="ml-2 scale-75"
+                    />
                   </div>
-                  <Switch
-                    checked={!adEnabled}
-                    onCheckedChange={(checked) => {
-                      if (!user?.adFreeUntil || new Date(user.adFreeUntil) < new Date()) {
-                        // Not subscribed - show upgrade modal
-                        setShowUpgradeModal(true);
-                        return;
-                      }
-                      toggleAds();
-                    }}
-                    className="ml-2 scale-75"
-                  />
-                </div>
-                <AdFreeUpgradeModal open={showUpgradeModal} onOpenChange={setShowUpgradeModal} />
-                <DropdownMenuSeparator />
+                )}
+                {isIndianDomain() && <AdFreeUpgradeModal open={showUpgradeModal} onOpenChange={setShowUpgradeModal} />}
+                {isIndianDomain() && <DropdownMenuSeparator />}
                 <DropdownMenuItem onClick={() => logout()} className="text-destructive focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
                   {t('nav.logout')}

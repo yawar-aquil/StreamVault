@@ -7583,6 +7583,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/subscription/autorenew", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    const { autoRenew } = req.body;
+    if (typeof autoRenew !== 'boolean') {
+      return res.status(400).json({ error: "autoRenew must be a boolean" });
+    }
+
+    try {
+      const user = await storage.updateSubscriptionAutoRenew(req.user.id, autoRenew);
+      res.json(user);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to update subscription settings" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // ============================================

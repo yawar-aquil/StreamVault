@@ -30,3 +30,8 @@ export function getGoogleDriveDownloadUrl(url: string | null | undefined): strin
 
   return url;
 }
+
+export function isIndianDomain(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.location.hostname.endsWith('.in') || window.location.hostname === 'localhost';
+}
