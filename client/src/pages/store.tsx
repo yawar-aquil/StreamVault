@@ -328,91 +328,93 @@ export default function StorePage() {
                 </div>
 
                 {/* Subscriptions Section */}
-                <div className="mb-16">
-                    <div className="flex items-center gap-4 mb-8">
-                        <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 to-orange-500 flex items-center gap-2">
-                            <Crown className="w-6 h-6 text-yellow-500" />
-                            Premium Subscriptions
-                        </h2>
-                        <div className="h-px bg-white/10 flex-1" />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {/* Monthly Ad-Free */}
-                        <div className="relative group bg-gradient-to-b from-slate-900 to-slate-950 border border-white/10 rounded-3xl overflow-hidden hover:border-primary/50 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10">
-                            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
-                            <div className="p-8">
-                                <div className="flex justify-between items-start mb-6">
-                                    <div className="p-3 bg-primary/10 rounded-2xl">
-                                        <AnimatedAdFreeIcon className="w-8 h-8 text-primary" />
-                                    </div>
-                                    <UIBadge className="bg-primary/20 text-primary border-0">POPULAR</UIBadge>
-                                </div>
-
-                                <h3 className="text-2xl font-bold mb-2">Ad-Free Monthly</h3>
-                                <p className="text-muted-foreground mb-6 h-12">Remove all ads across StreamVault.in for one month.</p>
-
-                                <div className="flex items-baseline gap-1 mb-8">
-                                    <span className="text-4xl font-bold text-white">500</span>
-                                    <StreamCoin className="w-6 h-6" />
-                                    <span className="text-muted-foreground text-sm">/ month</span>
-                                </div>
-
-                                <Button
-                                    className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-6 rounded-xl shadow-lg shadow-primary/20 group-hover:shadow-primary/40 transition-all"
-                                    onClick={() => {
-                                        const monthlySub = products.find(p => p.name === 'Ad-Free Monthly');
-                                        if (monthlySub) {
-                                            setSelectedProduct(monthlySub);
-                                            setShowPurchaseModal(true);
-                                        } else {
-                                            toast({ title: "Error", description: "Subscription plan not found.", variant: "destructive" });
-                                        }
-                                    }}
-                                >
-                                    Subscribe Now
-                                </Button>
-                            </div>
+                {(activeCategory === 'all' || activeCategory === 'feature') && (
+                    <div className="mb-16">
+                        <div className="flex items-center gap-4 mb-8">
+                            <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 to-orange-500 flex items-center gap-2">
+                                <Crown className="w-6 h-6 text-yellow-500" />
+                                Premium Subscriptions
+                            </h2>
+                            <div className="h-px bg-white/10 flex-1" />
                         </div>
 
-                        {/* Yearly Ad-Free */}
-                        <div className="relative group bg-gradient-to-b from-amber-900/20 to-slate-950 border border-amber-500/20 rounded-3xl overflow-hidden hover:border-amber-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/10">
-                            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
-                            <div className="p-8">
-                                <div className="flex justify-between items-start mb-6">
-                                    <div className="p-3 bg-amber-500/10 rounded-2xl">
-                                        <AnimatedAdFreeIcon className="w-8 h-8 text-amber-500" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {/* Monthly Ad-Free */}
+                            <div className="relative group bg-gradient-to-b from-slate-900 to-slate-950 border border-white/10 rounded-3xl overflow-hidden hover:border-primary/50 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10">
+                                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
+                                <div className="p-8">
+                                    <div className="flex justify-between items-start mb-6">
+                                        <div className="p-3 bg-primary/10 rounded-2xl">
+                                            <AnimatedAdFreeIcon className="w-8 h-8 text-primary" />
+                                        </div>
+                                        <UIBadge className="bg-primary/20 text-primary border-0">POPULAR</UIBadge>
                                     </div>
-                                    <UIBadge className="bg-amber-500/20 text-amber-500 border-0">BEST VALUE</UIBadge>
+
+                                    <h3 className="text-2xl font-bold mb-2">Ad-Free Monthly</h3>
+                                    <p className="text-muted-foreground mb-6 h-12">Remove all ads across StreamVault.in for one month.</p>
+
+                                    <div className="flex items-baseline gap-1 mb-8">
+                                        <span className="text-4xl font-bold text-white">500</span>
+                                        <StreamCoin className="w-6 h-6" />
+                                        <span className="text-muted-foreground text-sm">/ month</span>
+                                    </div>
+
+                                    <Button
+                                        className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-6 rounded-xl shadow-lg shadow-primary/20 group-hover:shadow-primary/40 transition-all"
+                                        onClick={() => {
+                                            const monthlySub = products.find(p => p.name === 'Ad-Free Monthly');
+                                            if (monthlySub) {
+                                                setSelectedProduct(monthlySub);
+                                                setShowPurchaseModal(true);
+                                            } else {
+                                                toast({ title: "Error", description: "Subscription plan not found.", variant: "destructive" });
+                                            }
+                                        }}
+                                    >
+                                        Subscribe Now
+                                    </Button>
                                 </div>
+                            </div>
 
-                                <h3 className="text-2xl font-bold mb-2">Ad-Free Yearly</h3>
-                                <p className="text-muted-foreground mb-6 h-12">Uninterrupted streaming for a full year. Save 17%.</p>
+                            {/* Yearly Ad-Free */}
+                            <div className="relative group bg-gradient-to-b from-amber-900/20 to-slate-950 border border-amber-500/20 rounded-3xl overflow-hidden hover:border-amber-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/10">
+                                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
+                                <div className="p-8">
+                                    <div className="flex justify-between items-start mb-6">
+                                        <div className="p-3 bg-amber-500/10 rounded-2xl">
+                                            <AnimatedAdFreeIcon className="w-8 h-8 text-amber-500" />
+                                        </div>
+                                        <UIBadge className="bg-amber-500/20 text-amber-500 border-0">BEST VALUE</UIBadge>
+                                    </div>
 
-                                <div className="flex items-baseline gap-1 mb-8">
-                                    <span className="text-4xl font-bold text-white">5,000</span>
-                                    <StreamCoin className="w-6 h-6" />
-                                    <span className="text-muted-foreground text-sm">/ year</span>
+                                    <h3 className="text-2xl font-bold mb-2">Ad-Free Yearly</h3>
+                                    <p className="text-muted-foreground mb-6 h-12">Uninterrupted streaming for a full year. Save 17%.</p>
+
+                                    <div className="flex items-baseline gap-1 mb-8">
+                                        <span className="text-4xl font-bold text-white">5,000</span>
+                                        <StreamCoin className="w-6 h-6" />
+                                        <span className="text-muted-foreground text-sm">/ year</span>
+                                    </div>
+
+                                    <Button
+                                        className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-6 rounded-xl shadow-lg shadow-amber-500/20 group-hover:shadow-amber-500/40 transition-all"
+                                        onClick={() => {
+                                            const yearlySub = products.find(p => p.name === 'Ad-Free Yearly');
+                                            if (yearlySub) {
+                                                setSelectedProduct(yearlySub);
+                                                setShowPurchaseModal(true);
+                                            } else {
+                                                toast({ title: "Error", description: "Subscription plan not found.", variant: "destructive" });
+                                            }
+                                        }}
+                                    >
+                                        Subscribe Yearly
+                                    </Button>
                                 </div>
-
-                                <Button
-                                    className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-6 rounded-xl shadow-lg shadow-amber-500/20 group-hover:shadow-amber-500/40 transition-all"
-                                    onClick={() => {
-                                        const yearlySub = products.find(p => p.name === 'Ad-Free Yearly');
-                                        if (yearlySub) {
-                                            setSelectedProduct(yearlySub);
-                                            setShowPurchaseModal(true);
-                                        } else {
-                                            toast({ title: "Error", description: "Subscription plan not found.", variant: "destructive" });
-                                        }
-                                    }}
-                                >
-                                    Subscribe Yearly
-                                </Button>
                             </div>
                         </div>
                     </div>
-                </div>
+                )}
 
                 {/* Products Grid */}
                 {isLoading ? (
