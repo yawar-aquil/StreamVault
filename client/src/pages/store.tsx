@@ -381,7 +381,7 @@ export default function StorePage() {
                             <div className="p-8">
                                 <div className="flex justify-between items-start mb-6">
                                     <div className="p-3 bg-amber-500/10 rounded-2xl">
-                                        <Crown className="w-8 h-8 text-amber-500" />
+                                        <AnimatedAdFreeIcon className="w-8 h-8 text-amber-500" />
                                     </div>
                                     <UIBadge className="bg-amber-500/20 text-amber-500 border-0">BEST VALUE</UIBadge>
                                 </div>
