@@ -60,7 +60,7 @@ async function detectRoom() {
         const url = currentTab.url;
 
         // Check if on streamvault.live or localhost watch-together page
-        const watchTogetherPattern = /^https?:\/\/(streamvault\.live|localhost:5000)\/watch-together\/([A-Za-z0-9]{6})/;
+        const watchTogetherPattern = /^https?:\/\/((?:www\.)?streamvault\.(?:live|in)|localhost:5000)\/watch-together\/([A-Za-z0-9]{6})/;
         const match = url.match(watchTogetherPattern);
 
         if (match && match[2]) {

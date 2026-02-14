@@ -188,27 +188,106 @@ function isWatchTogetherPage() {
     return window.location.pathname.includes('/watch-together');
 }
 
-// Notify extension that we're on a watch-together page
+// Detect if the current user is the host by reading the page DOM
+function detectHostStatus() {
+    // Method 1: Look for the host badge with Crown icon (most reliable)
+    // The badge is a div with "You're the host" text and a Crown SVG icon
+    const badges = document.querySelectorAll('div');
+    for (const el of badges) {
+        // Only check leaf-level divs that directly contain the host text
+        // The badge element has an SVG (Crown) + text "You're the host"
+        if (el.children.length <= 2 && el.innerText?.trim() === "You're the host") {
+            console.log('[StreamVault Bridge] Host badge detected on page!');
+            return true;
+        }
+    }
+
+    // Method 2: Check for the host badge via its specific styling class
+    // The badge has bg-primary and rounded-full classes
+    const styledBadges = document.querySelectorAll('.bg-primary.rounded-full');
+    for (const el of styledBadges) {
+        if (el.textContent?.includes("host")) {
+            console.log('[StreamVault Bridge] Host badge detected via class!');
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// Notify extension that we're on a watch-together page (with host status)
 function notifyExtension() {
     const roomCode = getRoomCode();
 
     if (roomCode) {
-        console.log('[StreamVault Bridge] Room detected:', roomCode);
+        const isHost = detectHostStatus();
+        console.log('[StreamVault Bridge] Room detected:', roomCode, 'isHost:', isHost);
 
+        // Send room connection with host status
         chrome.runtime.sendMessage({
-            type: 'STREAMVAULT_TAB_READY',
-            roomCode: roomCode
+            type: 'JOIN_ROOM',
+            roomCode: roomCode,
+            isHost: isHost
         }).then(() => {
-            console.log('[StreamVault Bridge] Extension connected to room:', roomCode);
+            console.log('[StreamVault Bridge] Extension connected to room:', roomCode, 'as', isHost ? 'HOST' : 'VIEWER');
             chrome.runtime.sendMessage({ type: 'BRIDGE_CONNECTED' }).catch(() => { });
+
+            if (isHost) {
+                showNotification('👑 Connected as HOST', 'host', 3000);
+            } else {
+                showNotification('👁️ Connected as VIEWER', 'info', 3000);
+            }
         }).catch(err => {
             console.log('[StreamVault Bridge] Extension not available:', err);
         });
+
+        // Also keep monitoring for host status changes (host might change dynamically)
+        startHostStatusMonitor(roomCode);
 
         return roomCode;
     }
 
     return null;
+}
+
+// Monitor for host status changes on the page
+let hostMonitorInterval = null;
+let lastKnownHostStatus = null;
+
+function startHostStatusMonitor(roomCode) {
+    if (hostMonitorInterval) {
+        clearInterval(hostMonitorInterval);
+    }
+
+    lastKnownHostStatus = detectHostStatus();
+
+    // Check every 2 seconds if host status changed
+    hostMonitorInterval = setInterval(() => {
+        if (!isWatchTogetherPage()) {
+            clearInterval(hostMonitorInterval);
+            hostMonitorInterval = null;
+            return;
+        }
+
+        const currentHostStatus = detectHostStatus();
+        if (currentHostStatus !== lastKnownHostStatus) {
+            lastKnownHostStatus = currentHostStatus;
+            console.log('[StreamVault Bridge] Host status changed to:', currentHostStatus);
+
+            // Update extension with new host status
+            chrome.runtime.sendMessage({
+                type: 'JOIN_ROOM',
+                roomCode: roomCode,
+                isHost: currentHostStatus
+            }).catch(() => { });
+
+            if (currentHostStatus) {
+                showNotification('👑 You are now the HOST', 'host', 3000);
+            } else {
+                showNotification('👁️ You are now a VIEWER', 'info', 3000);
+            }
+        }
+    }, 2000);
 }
 
 // Start looking for video players (called when navigating to watch-together)
