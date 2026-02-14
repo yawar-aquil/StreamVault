@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { HeartRain } from '@/components/heart-rain';
 import { GalaxyAnimation } from '@/components/galaxy-animation';
 import { AnimeMotion } from '@/components/anime-motion';
+import { AnimatedAdFreeIcon } from '@/components/animated-ad-free-icon';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -296,11 +297,17 @@ export default function ProfilePage() {
                                                 .sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime())
                                                 .map((badge: any) => (
                                                     <div key={badge.id} className="relative group/tooltip" title={badge.name}>
-                                                        <img
-                                                            src={badge.imageUrl}
-                                                            alt={badge.name}
-                                                            className="w-6 h-6 object-contain drop-shadow-md hover:scale-110 transition-transform"
-                                                        />
+                                                        {(badge.category === 'subscription' || badge.name.includes('Ad-Free')) ? (
+                                                            <div className={`w-6 h-6 ${badge.name.includes('Yearly') ? 'text-amber-500' : 'text-red-500'}`}>
+                                                                <AnimatedAdFreeIcon className="w-full h-full" />
+                                                            </div>
+                                                        ) : (
+                                                            <img
+                                                                src={badge.imageUrl}
+                                                                alt={badge.name}
+                                                                className="w-6 h-6 object-contain drop-shadow-md hover:scale-110 transition-transform"
+                                                            />
+                                                        )}
                                                     </div>
                                                 ))
                                             }
@@ -500,9 +507,13 @@ export default function ProfilePage() {
                                                                     e.currentTarget.nextElementSibling?.classList.remove('hidden');
                                                                 }}
                                                             />
+                                                        ) : (badge.category === 'subscription' || badge.name.includes('Ad-Free')) ? (
+                                                            <div className={`w-12 h-12 mb-2 transition-transform group-hover:scale-110 ${badge.name.includes('Yearly') ? 'text-amber-500' : 'text-red-500'}`}>
+                                                                <AnimatedAdFreeIcon className="w-full h-full" />
+                                                            </div>
                                                         ) : null}
 
-                                                        <div className={`w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500 mb-2 group-hover:bg-yellow-500/20 transition-colors ${badge.imageUrl ? 'hidden' : ''}`}>
+                                                        <div className={`w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500 mb-2 group-hover:bg-yellow-500/20 transition-colors ${(badge.imageUrl || badge.category === 'subscription' || badge.name.includes('Ad-Free')) ? 'hidden' : ''}`}>
                                                             <IconComponent className="w-6 h-6" />
                                                         </div>
 
