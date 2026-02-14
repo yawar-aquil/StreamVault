@@ -134,27 +134,72 @@ function AdsterraIframe({
 // Global Ads (Popunder, Social Bar)
 function GlobalAds({ showAds }: { showAds: boolean }) {
     useEffect(() => {
-        if (!showAds) return;
+        if (!showAds) {
+            // Aggressively clean up any Adsterra-injected elements when ad-free is active
+            cleanupAllAdElements();
+            return;
+        }
 
         // Popunder
         const popunderScript = document.createElement("script");
         popunderScript.src = "https://openairtowhardworking.com/cc/92/4a/cc924a63b418bf115df7f329ab7cb09d.js";
         popunderScript.async = true;
+        popunderScript.setAttribute('data-ad-script', 'popunder');
         document.body.appendChild(popunderScript);
 
         // Social Bar
         const socialBarScript = document.createElement("script");
         socialBarScript.src = "https://openairtowhardworking.com/32/04/23/320423cec477d343134fb84492d4efb2.js";
         socialBarScript.async = true;
+        socialBarScript.setAttribute('data-ad-script', 'socialbar');
         document.body.appendChild(socialBarScript);
 
         return () => {
             if (document.body.contains(popunderScript)) document.body.removeChild(popunderScript);
             if (document.body.contains(socialBarScript)) document.body.removeChild(socialBarScript);
+            cleanupAllAdElements();
         };
     }, [showAds]);
 
     return null;
+}
+
+// Aggressively remove all Adsterra-injected DOM elements
+function cleanupAllAdElements() {
+    // Remove all scripts from Adsterra domain
+    document.querySelectorAll('script[src*="openairtowhardworking.com"]').forEach(el => el.remove());
+    document.querySelectorAll('script[data-ad-script]').forEach(el => el.remove());
+
+    // Remove social bar / popunder injected iframes and containers
+    document.querySelectorAll('iframe[src*="openairtowhardworking.com"]').forEach(el => el.remove());
+    document.querySelectorAll('iframe[src*="adsterra"]').forEach(el => el.remove());
+
+    // Remove fixed/absolute positioned ad overlays injected by Adsterra
+    // Social bar typically injects elements with very high z-index
+    document.querySelectorAll('div[id*="ad-"], div[id*="_ad"], div[class*="adsterra"]').forEach(el => el.remove());
+
+    // Remove any elements with inline styles that look like ad overlays (high z-index fixed elements)
+    document.querySelectorAll('body > div').forEach(el => {
+        const htmlEl = el as HTMLElement;
+        const style = htmlEl.style;
+        const zIndex = parseInt(style.zIndex || '0');
+        // Adsterra social bar / popunder typically creates fixed position divs with z-index > 9000
+        if ((style.position === 'fixed' || style.position === 'absolute') && zIndex > 9000) {
+            // Don't remove our own app elements
+            if (!htmlEl.id?.startsWith('root') && !htmlEl.classList.contains('toaster') && !htmlEl.hasAttribute('data-radix-portal')) {
+                htmlEl.remove();
+            }
+        }
+    });
+
+    // Remove any remaining ad-related iframes injected into body
+    document.querySelectorAll('body > iframe').forEach(el => {
+        const iframe = el as HTMLIFrameElement;
+        // Keep only our own iframes (if any), remove ad iframes
+        if (!iframe.id?.startsWith('root') && !iframe.getAttribute('data-app-iframe')) {
+            iframe.remove();
+        }
+    });
 }
 
 // Native Banner (Async type)
@@ -224,9 +269,7 @@ export function Banner160x300({ className }: { className?: string }) {
 
 // Smartlink Button
 export function SmartlinkButton({ className, text = "Special Partner Offer" }: { className?: string, text?: string }) {
-    const { showAds } = useAds();
-
-    if (!showAds) return null;
+    // Smartlinks are always visible regardless of ad-free state (per user request)
 
     const openSmartlink = () => {
         window.open("https://openairtowhardworking.com/r52n12yhee?key=c9e42e6265a0e4becf4bde3064060d5e", "_blank");
