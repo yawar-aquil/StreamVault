@@ -13,6 +13,7 @@ import { useAds } from "@/components/ad-manager";
 import { NotificationsDropdown } from "@/components/notifications-dropdown";
 import { cn, isIndianDomain } from "@/lib/utils";
 import { AnimatedAdFreeIcon } from '@/components/animated-ad-free-icon';
+import StreamCoin from '@/components/stream-coin';
 import { AdFreeUpgradeModal } from '@/components/ad-free-upgrade-modal';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
