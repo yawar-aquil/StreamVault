@@ -11,6 +11,7 @@ import { initSocialSocket } from "./social";
 import cookieParser from "cookie-parser";
 import path from "path";
 import { startCleanupSchedule } from "./cleanup";
+import { startSubscriptionScheduler } from "./subscription-scheduler";
 
 const app = express();
 app.set('trust proxy', 1); // Trust first proxy (Nginx)
@@ -130,4 +131,5 @@ const host = '0.0.0.0';
 server.listen(port, host, () => {
   log(`serving on ${host}:${port}`);
   startCleanupSchedule();
+  startSubscriptionScheduler();
 });

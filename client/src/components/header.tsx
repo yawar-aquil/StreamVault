@@ -489,7 +489,6 @@ export function Header() {
                     />
                   </div>
                 )}
-                {isIndianDomain() && <AdFreeUpgradeModal open={showUpgradeModal} onOpenChange={setShowUpgradeModal} />}
                 {isIndianDomain() && <DropdownMenuSeparator />}
                 <DropdownMenuItem onClick={() => logout()} className="text-destructive focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
@@ -505,6 +504,8 @@ export function Header() {
               </Button>
             </Link>
           )}
+
+          {isIndianDomain() && <AdFreeUpgradeModal open={showUpgradeModal} onOpenChange={setShowUpgradeModal} />}
 
           {/* Mobile Menu Toggle */}
           <Button

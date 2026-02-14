@@ -151,8 +151,11 @@ router.post('/purchase', async (req, res) => {
             // Add duration
             newExpiry.setDate(newExpiry.getDate() + durationDays);
 
+            // Determine subscription type from badge name
+            const subType = badge.name.toLowerCase().includes('yearly') ? 'yearly' : 'monthly';
+
             // Update User
-            await storage.updateUser(userId, { adFreeUntil: newExpiry });
+            await storage.updateUser(userId, { adFreeUntil: newExpiry, subscriptionType: subType });
         }
 
         // 6. Send Receipt Email (Async)

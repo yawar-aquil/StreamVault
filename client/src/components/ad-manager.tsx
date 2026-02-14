@@ -28,9 +28,11 @@ export function AdProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
+    const isSubscribed = !!(user?.adFreeUntil && new Date(user.adFreeUntil) > new Date());
+
     const toggleAds = () => {
         // Only allow toggling if user is subscribed
-        if (!user?.adFreeUntil || new Date(user.adFreeUntil) < new Date()) {
+        if (!isSubscribed) {
             return;
         }
 
@@ -40,9 +42,11 @@ export function AdProvider({ children }: { children: React.ReactNode }) {
     };
 
     // Determine if ads should be shown
-    const isAdDomain = typeof window !== 'undefined' && window.location.hostname.includes("streamvault.in");
-    const isSubscribed = user?.adFreeUntil && new Date(user.adFreeUntil) > new Date();
-    const showAds = isAdDomain && !isSubscribed && adEnabled;
+    // adEnabled=true means "ads are enabled" (default state)
+    // Switch in header: checked={!adEnabled} → switch ON = ad-free active = adEnabled=false
+    // Show ads on ad domain UNLESS user is subscribed AND has toggled ad-free ON (adEnabled=false)
+    const isAdDomain = typeof window !== 'undefined' && (window.location.hostname.includes("streamvault.in") || window.location.hostname === 'localhost');
+    const showAds = isAdDomain && !(isSubscribed && !adEnabled);
 
     return (
         <AdContext.Provider value={{ adEnabled, toggleAds, showAds }}>

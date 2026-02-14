@@ -1187,6 +1187,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           badges: user.badges,
           equippedBadge: equippedBadge,
           coins: user.coins,
+          adFreeUntil: user.adFreeUntil || null,
+          subscriptionAutoRenew: user.subscriptionAutoRenew || false,
+          subscriptionType: user.subscriptionType || null,
         },
       });
     } catch (error) {
@@ -7584,15 +7587,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/subscription/autorenew", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-
-    const { autoRenew } = req.body;
-    if (typeof autoRenew !== 'boolean') {
-      return res.status(400).json({ error: "autoRenew must be a boolean" });
-    }
-
     try {
-      const user = await storage.updateSubscriptionAutoRenew(req.user.id, autoRenew);
+      const token = req.cookies?.authToken || req.headers.authorization?.replace('Bearer ', '');
+      if (!token) return res.status(401).json({ error: "Not authenticated" });
+      const payload = verifyToken(token);
+      if (!payload) return res.status(401).json({ error: "Invalid token" });
+
+      const { autoRenew } = req.body;
+      if (typeof autoRenew !== 'boolean') {
+        return res.status(400).json({ error: "autoRenew must be a boolean" });
+      }
+
+      const user = await storage.updateSubscriptionAutoRenew(payload.userId, autoRenew);
       res.json(user);
     } catch (err) {
       res.status(500).json({ error: "Failed to update subscription settings" });

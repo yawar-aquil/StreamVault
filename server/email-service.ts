@@ -794,6 +794,373 @@ Thank you for your request!
   }
 }
 
+export async function sendSubscriptionRenewalEmail(
+  email: string,
+  username: string,
+  subType: string,
+  price: number,
+  daysLeft: number
+): Promise<boolean> {
+  const planName = subType === 'yearly' ? 'Ad-Free Yearly' : 'Ad-Free Monthly';
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subscription Renewing Soon</title>
+</head>
+<body style="margin:0; padding:0; background-color:#09090b; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#09090b;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color:#18181b; border-radius:16px; overflow:hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.6); border: 1px solid #27272a;">
+          <tr>
+            <td align="center" style="padding: 40px 0 20px 0; background: linear-gradient(180deg, rgba(34,197,94,0.15) 0%, rgba(24,24,27,1) 100%);">
+              <h1 style="margin:0 0 10px 0; color:#E50914; font-size:24px; font-weight:900; letter-spacing:3px; text-transform:uppercase;">STREAMVAULT</h1>
+              <div style="font-size:48px;">🔄</div>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding: 20px 40px 30px 40px;">
+              <h2 style="margin:0 0 10px 0; color:#ffffff; font-size:24px; font-weight:bold;">Subscription Renewing Tomorrow</h2>
+              <p style="margin:0; color:#a1a1aa; font-size:16px;">Hi ${username}, your <strong style="color:#fbbf24;">${planName}</strong> subscription will auto-renew in <strong style="color:#22c55e;">${daysLeft} day${daysLeft !== 1 ? 's' : ''}</strong>.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 40px 40px 40px;">
+              <div style="background-color:#27272a; border-radius: 12px; padding: 20px;">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td style="padding: 12px 0; color:#a1a1aa; font-size:14px; border-bottom: 1px solid #3f3f46;">Plan</td>
+                    <td style="padding: 12px 0; color:#fff; font-size:15px; font-weight: 600; text-align: right; border-bottom: 1px solid #3f3f46;">${planName}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px 0; color:#a1a1aa; font-size:14px; border-bottom: 1px solid #3f3f46;">Renewal Cost</td>
+                    <td style="padding: 12px 0; color:#E50914; font-size:15px; font-weight: 600; text-align: right; border-bottom: 1px solid #3f3f46;">${price} Coins</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px 0; color:#a1a1aa; font-size:14px;">Auto-Renew</td>
+                    <td style="padding: 12px 0; color:#22c55e; font-size:15px; font-weight: 600; text-align: right;">✅ Enabled</td>
+                  </tr>
+                </table>
+              </div>
+              <p style="margin:20px 0 0; color:#71717a; font-size:13px; text-align:center;">Make sure you have enough coins in your wallet. You can manage auto-renewal in your <a href="https://streamvault.live/store" style="color:#fbbf24; text-decoration:none;">Store</a> settings.</p>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding: 30px; background-color:#18181b; border-top:1px solid #27272a;">
+              <p style="margin:0; color:#52525b; font-size:12px;">© ${new Date().getFullYear()} StreamVault. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  const text = `SUBSCRIPTION RENEWING SOON
+
+Hi ${username},
+
+Your ${planName} subscription will auto-renew in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}.
+
+Plan: ${planName}
+Renewal Cost: ${price} Coins
+Auto-Renew: Enabled
+
+Make sure you have enough coins. Manage settings: https://streamvault.live/store
+
+© StreamVault
+`;
+
+  return sendEmail({
+    to: email,
+    subject: `🔄 Your ${planName} subscription renews tomorrow`,
+    html,
+    text,
+  });
+}
+
+export async function sendSubscriptionExpiringEmail(
+  email: string,
+  username: string,
+  subType: string,
+  daysLeft: number
+): Promise<boolean> {
+  const planName = subType === 'yearly' ? 'Ad-Free Yearly' : 'Ad-Free Monthly';
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subscription Expiring Soon</title>
+</head>
+<body style="margin:0; padding:0; background-color:#09090b; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#09090b;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color:#18181b; border-radius:16px; overflow:hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.6); border: 1px solid #27272a;">
+          <tr>
+            <td align="center" style="padding: 40px 0 20px 0; background: linear-gradient(180deg, rgba(239,68,68,0.15) 0%, rgba(24,24,27,1) 100%);">
+              <h1 style="margin:0 0 10px 0; color:#E50914; font-size:24px; font-weight:900; letter-spacing:3px; text-transform:uppercase;">STREAMVAULT</h1>
+              <div style="font-size:48px;">⏰</div>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding: 20px 40px 30px 40px;">
+              <h2 style="margin:0 0 10px 0; color:#ffffff; font-size:24px; font-weight:bold;">Your Subscription Expires Tomorrow</h2>
+              <p style="margin:0; color:#a1a1aa; font-size:16px;">Hi ${username}, your <strong style="color:#fbbf24;">${planName}</strong> subscription expires in <strong style="color:#ef4444;">${daysLeft} day${daysLeft !== 1 ? 's' : ''}</strong>. Don't lose your ad-free experience!</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 40px 20px 40px;">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 10px;">
+                <tr>
+                  <td align="center">
+                    <a href="https://streamvault.live/store?category=subscription" style="display: inline-block; background: linear-gradient(135deg, #E50914, #ff6b6b); color: #ffffff; padding: 16px 40px; font-size: 16px; font-weight: bold; text-decoration: none; border-radius: 12px; text-transform: uppercase; box-shadow: 0 4px 15px rgba(229,9,20,0.4);">Renew Now</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 40px 40px 40px;">
+              <p style="margin:0; color:#71717a; font-size:13px; text-align:center;">You can also enable auto-renewal in your store settings to never miss a day of ad-free streaming.</p>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding: 30px; background-color:#18181b; border-top:1px solid #27272a;">
+              <p style="margin:0; color:#52525b; font-size:12px;">© ${new Date().getFullYear()} StreamVault. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  const text = `SUBSCRIPTION EXPIRING SOON
+
+Hi ${username},
+
+Your ${planName} subscription expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}. Don't lose your ad-free experience!
+
+Renew now: https://streamvault.live/store?category=subscription
+
+You can also enable auto-renewal in your store settings.
+
+© StreamVault
+`;
+
+  return sendEmail({
+    to: email,
+    subject: `⏰ Your ${planName} subscription expires tomorrow`,
+    html,
+    text,
+  });
+}
+
+export async function sendSubscriptionRenewedEmail(
+  email: string,
+  username: string,
+  subType: string,
+  price: number,
+  remainingCoins: number,
+  newExpiryDate: Date
+): Promise<boolean> {
+  const planName = subType === 'yearly' ? 'Ad-Free Yearly' : 'Ad-Free Monthly';
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subscription Renewed</title>
+</head>
+<body style="margin:0; padding:0; background-color:#09090b; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#09090b;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color:#18181b; border-radius:16px; overflow:hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.6); border: 1px solid #27272a;">
+          <tr>
+            <td align="center" style="padding: 40px 0 20px 0; background: linear-gradient(180deg, rgba(34,197,94,0.15) 0%, rgba(24,24,27,1) 100%);">
+              <h1 style="margin:0 0 10px 0; color:#E50914; font-size:24px; font-weight:900; letter-spacing:3px; text-transform:uppercase;">STREAMVAULT</h1>
+              <div style="font-size:48px;">✅</div>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding: 20px 40px 30px 40px;">
+              <h2 style="margin:0 0 10px 0; color:#ffffff; font-size:24px; font-weight:bold;">Subscription Renewed!</h2>
+              <p style="margin:0; color:#a1a1aa; font-size:16px;">Hi ${username}, your <strong style="color:#fbbf24;">${planName}</strong> has been automatically renewed.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 40px 40px 40px;">
+              <div style="background-color:#27272a; border-radius: 12px; padding: 20px;">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td style="padding: 12px 0; color:#a1a1aa; font-size:14px; border-bottom: 1px solid #3f3f46;">Plan</td>
+                    <td style="padding: 12px 0; color:#fff; font-size:15px; font-weight: 600; text-align: right; border-bottom: 1px solid #3f3f46;">${planName}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px 0; color:#a1a1aa; font-size:14px; border-bottom: 1px solid #3f3f46;">Charged</td>
+                    <td style="padding: 12px 0; color:#E50914; font-size:15px; font-weight: 600; text-align: right; border-bottom: 1px solid #3f3f46;">${price} Coins</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px 0; color:#a1a1aa; font-size:14px; border-bottom: 1px solid #3f3f46;">New Expiry</td>
+                    <td style="padding: 12px 0; color:#fff; font-size:15px; font-weight: 600; text-align: right; border-bottom: 1px solid #3f3f46;">${newExpiryDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px 0; color:#a1a1aa; font-size:14px;">Remaining Balance</td>
+                    <td style="padding: 12px 0; color:#22c55e; font-size:16px; font-weight: bold; text-align: right;">${remainingCoins} Coins</td>
+                  </tr>
+                </table>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding: 30px; background-color:#18181b; border-top:1px solid #27272a;">
+              <p style="margin:0; color:#52525b; font-size:12px;">© ${new Date().getFullYear()} StreamVault. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  const text = `SUBSCRIPTION RENEWED
+
+Hi ${username},
+
+Your ${planName} has been automatically renewed!
+
+Plan: ${planName}
+Charged: ${price} Coins
+New Expiry: ${newExpiryDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+Remaining Balance: ${remainingCoins} Coins
+
+© StreamVault
+`;
+
+  return sendEmail({
+    to: email,
+    subject: `✅ Your ${planName} subscription has been renewed`,
+    html,
+    text,
+  });
+}
+
+export async function sendSubscriptionFailedEmail(
+  email: string,
+  username: string,
+  subType: string,
+  price: number,
+  currentCoins: number
+): Promise<boolean> {
+  const planName = subType === 'yearly' ? 'Ad-Free Yearly' : 'Ad-Free Monthly';
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Renewal Failed</title>
+</head>
+<body style="margin:0; padding:0; background-color:#09090b; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#09090b;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color:#18181b; border-radius:16px; overflow:hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.6); border: 1px solid #27272a;">
+          <tr>
+            <td align="center" style="padding: 40px 0 20px 0; background: linear-gradient(180deg, rgba(239,68,68,0.15) 0%, rgba(24,24,27,1) 100%);">
+              <h1 style="margin:0 0 10px 0; color:#E50914; font-size:24px; font-weight:900; letter-spacing:3px; text-transform:uppercase;">STREAMVAULT</h1>
+              <div style="font-size:48px;">❌</div>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding: 20px 40px 30px 40px;">
+              <h2 style="margin:0 0 10px 0; color:#ffffff; font-size:24px; font-weight:bold;">Renewal Failed — Insufficient Coins</h2>
+              <p style="margin:0; color:#a1a1aa; font-size:16px;">Hi ${username}, we couldn't renew your <strong style="color:#fbbf24;">${planName}</strong> because you don't have enough coins.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 40px 20px 40px;">
+              <div style="background-color:#27272a; border-radius: 12px; padding: 20px;">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td style="padding: 12px 0; color:#a1a1aa; font-size:14px; border-bottom: 1px solid #3f3f46;">Required</td>
+                    <td style="padding: 12px 0; color:#E50914; font-size:15px; font-weight: 600; text-align: right; border-bottom: 1px solid #3f3f46;">${price} Coins</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px 0; color:#a1a1aa; font-size:14px;">Your Balance</td>
+                    <td style="padding: 12px 0; color:#ef4444; font-size:15px; font-weight: 600; text-align: right;">${currentCoins} Coins</td>
+                  </tr>
+                </table>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 40px 20px 40px;">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="center">
+                    <a href="https://streamvault.live/wallet" style="display: inline-block; background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #000; padding: 16px 40px; font-size: 16px; font-weight: bold; text-decoration: none; border-radius: 12px; text-transform: uppercase; box-shadow: 0 4px 15px rgba(251,191,36,0.4);">Top Up Coins</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 40px 40px 40px;">
+              <p style="margin:0; color:#71717a; font-size:13px; text-align:center;">Auto-renewal has been turned off. You can re-enable it after topping up your wallet.</p>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding: 30px; background-color:#18181b; border-top:1px solid #27272a;">
+              <p style="margin:0; color:#52525b; font-size:12px;">© ${new Date().getFullYear()} StreamVault. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  const text = `RENEWAL FAILED
+
+Hi ${username},
+
+We couldn't renew your ${planName} because you don't have enough coins.
+
+Required: ${price} Coins
+Your Balance: ${currentCoins} Coins
+
+Top up your wallet: https://streamvault.live/wallet
+
+Auto-renewal has been turned off. Re-enable it after topping up.
+
+© StreamVault
+`;
+
+  return sendEmail({
+    to: email,
+    subject: `❌ ${planName} renewal failed — insufficient coins`,
+    html,
+    text,
+  });
+}
+
 export async function sendIssueReportResolvedEmail(report: IssueReport): Promise<void> {
   const html = `
 <!DOCTYPE html>

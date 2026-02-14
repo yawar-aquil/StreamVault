@@ -360,20 +360,56 @@ export default function StorePage() {
                                         <span className="text-muted-foreground text-sm">/ month</span>
                                     </div>
 
-                                    <Button
-                                        className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-6 rounded-xl shadow-lg shadow-primary/20 group-hover:shadow-primary/40 transition-all"
-                                        onClick={() => {
-                                            const monthlySub = products.find(p => p.name === 'Ad-Free Monthly');
-                                            if (monthlySub) {
-                                                setSelectedProduct(monthlySub);
-                                                setShowPurchaseModal(true);
-                                            } else {
-                                                toast({ title: "Error", description: "Subscription plan not found.", variant: "destructive" });
-                                            }
-                                        }}
-                                    >
-                                        Subscribe Now
-                                    </Button>
+                                    {(() => {
+                                        const monthlySub = products.find(p => p.name === 'Ad-Free Monthly');
+                                        const ownsMonthly = monthlySub && userBadges.some((b: any) => (b.badgeId || b.id || b) === monthlySub.id);
+                                        if (ownsMonthly && user?.adFreeUntil && new Date(user.adFreeUntil) > new Date()) {
+                                            return (
+                                                <div className="flex flex-col gap-3">
+                                                    <Button
+                                                        className="w-full bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white border-0 py-6 rounded-xl font-bold"
+                                                        disabled
+                                                    >
+                                                        {Math.ceil((new Date(user.adFreeUntil).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} Days Remaining
+                                                    </Button>
+                                                    <div className="flex items-center justify-between px-2 py-1 bg-muted/50 rounded-lg">
+                                                        <span className="text-sm font-medium text-muted-foreground">Auto-Renew</span>
+                                                        <Switch
+                                                            checked={user.subscriptionAutoRenew}
+                                                            onCheckedChange={(checked) => {
+                                                                fetch('/api/subscription/autorenew', {
+                                                                    method: 'POST',
+                                                                    headers: { 'Content-Type': 'application/json' },
+                                                                    credentials: 'include',
+                                                                    body: JSON.stringify({ autoRenew: checked }),
+                                                                }).then(() => {
+                                                                    queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+                                                                });
+                                                            }}
+                                                            className="scale-90"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                        const hasActiveSub = user?.adFreeUntil && new Date(user.adFreeUntil) > new Date();
+                                        return (
+                                            <Button
+                                                className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-6 rounded-xl shadow-lg shadow-primary/20 group-hover:shadow-primary/40 transition-all"
+                                                disabled={!!hasActiveSub}
+                                                onClick={() => {
+                                                    if (monthlySub) {
+                                                        setSelectedProduct(monthlySub);
+                                                        setShowPurchaseModal(true);
+                                                    } else {
+                                                        toast({ title: "Error", description: "Subscription plan not found.", variant: "destructive" });
+                                                    }
+                                                }}
+                                            >
+                                                {hasActiveSub ? 'Subscription Active' : 'Subscribe Now'}
+                                            </Button>
+                                        );
+                                    })()}
                                 </div>
                             </div>
 
@@ -398,20 +434,56 @@ export default function StorePage() {
                                     </div>
 
 
-                                    <Button
-                                        className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-6 rounded-xl shadow-lg shadow-amber-500/20 group-hover:shadow-amber-500/40 transition-all"
-                                        onClick={() => {
-                                            const yearlySub = products.find(p => p.name === 'Ad-Free Yearly');
-                                            if (yearlySub) {
-                                                setSelectedProduct(yearlySub);
-                                                setShowPurchaseModal(true);
-                                            } else {
-                                                toast({ title: "Error", description: "Subscription plan not found.", variant: "destructive" });
-                                            }
-                                        }}
-                                    >
-                                        Subscribe Yearly
-                                    </Button>
+                                    {(() => {
+                                        const yearlySub = products.find(p => p.name === 'Ad-Free Yearly');
+                                        const ownsYearly = yearlySub && userBadges.some((b: any) => (b.badgeId || b.id || b) === yearlySub.id);
+                                        if (ownsYearly && user?.adFreeUntil && new Date(user.adFreeUntil) > new Date()) {
+                                            return (
+                                                <div className="flex flex-col gap-3">
+                                                    <Button
+                                                        className="w-full bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white border-0 py-6 rounded-xl font-bold"
+                                                        disabled
+                                                    >
+                                                        {Math.ceil((new Date(user.adFreeUntil).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} Days Remaining
+                                                    </Button>
+                                                    <div className="flex items-center justify-between px-2 py-1 bg-muted/50 rounded-lg">
+                                                        <span className="text-sm font-medium text-muted-foreground">Auto-Renew</span>
+                                                        <Switch
+                                                            checked={user.subscriptionAutoRenew}
+                                                            onCheckedChange={(checked) => {
+                                                                fetch('/api/subscription/autorenew', {
+                                                                    method: 'POST',
+                                                                    headers: { 'Content-Type': 'application/json' },
+                                                                    credentials: 'include',
+                                                                    body: JSON.stringify({ autoRenew: checked }),
+                                                                }).then(() => {
+                                                                    queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+                                                                });
+                                                            }}
+                                                            className="scale-90"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                        const hasActiveSub = user?.adFreeUntil && new Date(user.adFreeUntil) > new Date();
+                                        return (
+                                            <Button
+                                                className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-6 rounded-xl shadow-lg shadow-amber-500/20 group-hover:shadow-amber-500/40 transition-all"
+                                                disabled={!!hasActiveSub}
+                                                onClick={() => {
+                                                    if (yearlySub) {
+                                                        setSelectedProduct(yearlySub);
+                                                        setShowPurchaseModal(true);
+                                                    } else {
+                                                        toast({ title: "Error", description: "Subscription plan not found.", variant: "destructive" });
+                                                    }
+                                                }}
+                                            >
+                                                {hasActiveSub ? 'Subscription Active' : 'Subscribe Yearly'}
+                                            </Button>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         </div>
@@ -543,7 +615,7 @@ export default function StorePage() {
                                                 )}
 
                                                 {/* Content */}
-                                                {user?.adFreeUntil && (product.category === 'subscription' || product.name.includes('Ad-Free')) && (
+                                                {user?.adFreeUntil && new Date(user.adFreeUntil) > new Date() && (product.category === 'subscription' || product.name.includes('Ad-Free')) && userBadges.some((b: any) => (b.badgeId || b.id || b) === product.id) && (
                                                     <div className="flex flex-col gap-3 w-full p-6 pt-0">
                                                         <Button
                                                             className="w-full bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white border-0"
@@ -560,6 +632,7 @@ export default function StorePage() {
                                                                     fetch('/api/subscription/autorenew', {
                                                                         method: 'POST',
                                                                         headers: { 'Content-Type': 'application/json' },
+                                                                        credentials: 'include',
                                                                         body: JSON.stringify({ autoRenew: checked }),
                                                                     }).then(() => {
                                                                         queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
@@ -958,11 +1031,15 @@ export default function StorePage() {
                         <div className="relative mx-auto w-40 h-40 mb-8">
                             <div className="absolute inset-0 bg-gradient-to-tr from-yellow-500/10 to-purple-500/10 rounded-2xl blur-xl animate-pulse" />
                             <div className="relative w-full h-full bg-zinc-900/80 backdrop-blur-sm rounded-2xl border border-white/10 flex items-center justify-center p-6 shadow-2xl">
-                                <img
-                                    src={purchasedItem?.imageUrl}
-                                    alt={purchasedItem?.name}
-                                    className="w-full h-full object-contain drop-shadow-xl"
-                                />
+                                {(purchasedItem?.category === 'subscription' || purchasedItem?.name?.includes('Ad-Free')) ? (
+                                    <AnimatedAdFreeIcon className={`w-full h-full ${purchasedItem?.name?.includes('Yearly') ? 'text-amber-500' : 'text-red-500'}`} />
+                                ) : (
+                                    <img
+                                        src={purchasedItem?.imageUrl}
+                                        alt={purchasedItem?.name}
+                                        className="w-full h-full object-contain drop-shadow-xl"
+                                    />
+                                )}
                             </div>
                             {/* Centered Checkmark Badge */}
                             <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-green-500 to-emerald-600 text-white p-2.5 rounded-full border-[6px] border-zinc-950 shadow-xl flex items-center justify-center transform hover:scale-110 transition-transform">

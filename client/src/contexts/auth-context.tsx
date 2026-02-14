@@ -35,6 +35,8 @@ interface User {
     } | null;
     coins?: number;
     adFreeUntil?: string | null;
+    subscriptionAutoRenew?: boolean;
+    subscriptionType?: string | null;
 }
 
 interface AuthContextType {

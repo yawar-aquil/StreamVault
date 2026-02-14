@@ -27,6 +27,7 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").default(false),
   adFreeUntil: timestamp("ad_free_until"),
   subscriptionAutoRenew: boolean("subscription_auto_renew").default(false),
+  subscriptionType: varchar("subscription_type"),
   coins: integer("coins").default(0).notNull(),
   activityVisible: boolean("activity_visible").default(true),
   settings: text("settings"), // JSON string for all user preferences
