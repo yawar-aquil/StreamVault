@@ -426,7 +426,17 @@ export async function sendPurchaseReceiptEmail(
                   <td align="center">
                     <div style="position: relative; display: inline-block;">
                       <div style="background-color: #27272a; padding: 20px; border-radius: 20px; border: 1px solid #3f3f46; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-                        <img src="${productImageUrl}" alt="${productName}" width="120" height="120" style="display: block; object-fit: contain;">
+                        ${productImageUrl.match(/\.(png|jpg|jpeg|webp|gif)(\?|$)/i)
+      ? `<img src="${productImageUrl}" alt="${productName}" width="120" height="120" style="display: block; object-fit: contain;">`
+      : `<div style="width: 120px; height: 120px; position: relative;">
+                              <div style="width: 120px; height: 120px; border-radius: 50%; border: 4px solid #EAB308; position: relative; overflow: hidden;">
+                                <div style="position: absolute; top: 50%; left: 50%; width: 140%; height: 4px; background-color: #EAB308; transform: translate(-50%, -50%) rotate(-45deg);"></div>
+                              </div>
+                              <div style="position: absolute; bottom: 12px; left: 0; right: 0; text-align: center;">
+                                <span style="font-size: 28px; font-weight: 900; color: #EAB308; font-family: 'Helvetica Neue', Arial, sans-serif; letter-spacing: 2px;">AD</span>
+                              </div>
+                            </div>`
+    }
                       </div>
                       <!-- Checkmark Badge -->
                       <div style="position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); background-color: #22c55e; width: 40px; height: 40px; border-radius: 50%; border: 4px solid #18181b; text-align: center; line-height: 40px; color: white; font-size: 20px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
