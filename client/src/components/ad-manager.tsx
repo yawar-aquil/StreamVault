@@ -138,10 +138,25 @@ function GlobalAds({ showAds }: { showAds: boolean }) {
             // Run cleanup immediately
             cleanupAllAdElements();
 
-            // Use MutationObserver to catch async ad element injections
+            // Override window.open to block popunders
+            const originalWindowOpen = window.open;
+            window.open = function (url?: string | URL, target?: string, features?: string) {
+                // Block all window.open calls when ad-free is active
+                // unless it's from our own code (check call stack for known patterns)
+                const stack = new Error().stack || '';
+                // Allow our own navigation (share links, external links clicked by user, etc.)
+                if (stack.includes('openSmartlink') || stack.includes('handleClick') || stack.includes('onClick')) {
+                    return originalWindowOpen.call(window, url, target, features);
+                }
+                // Block everything else (popunder scripts call window.open on click events)
+                console.log('[AdFree] Blocked popunder window.open');
+                return null;
+            };
+
+            // Use MutationObserver to catch async ad element injections — runs CONTINUOUSLY
             const observer = new MutationObserver((mutations) => {
                 for (const mutation of mutations) {
-                    for (const node of mutation.addedNodes) {
+                    for (const node of Array.from(mutation.addedNodes)) {
                         if (node.nodeType !== Node.ELEMENT_NODE) continue;
                         const el = node as HTMLElement;
 
@@ -150,25 +165,34 @@ function GlobalAds({ showAds }: { showAds: boolean }) {
                             el.remove();
                             continue;
                         }
+
+                        // Also check children of added nodes (social bar wraps in containers)
+                        if (el.children?.length) {
+                            Array.from(el.querySelectorAll('*')).forEach(child => {
+                                if (isAdElement(child as HTMLElement)) {
+                                    el.remove(); // Remove the parent container
+                                }
+                            });
+                        }
                     }
                 }
             });
 
             observer.observe(document.body, { childList: true, subtree: true });
 
-            // Also run periodic cleanup as a safety net (catches elements injected before observer was ready)
-            const cleanupInterval = setInterval(() => {
-                cleanupAllAdElements();
-            }, 500);
-
-            // After 10 seconds, slow down the interval (ads should be fully cleaned by then)
+            // Periodic cleanup as safety net — runs every 1s for first 15s, then every 3s indefinitely
+            const fastCleanup = setInterval(() => cleanupAllAdElements(), 1000);
             const slowdownTimer = setTimeout(() => {
-                clearInterval(cleanupInterval);
-            }, 10000);
+                clearInterval(fastCleanup);
+            }, 15000);
+
+            const slowCleanup = setInterval(() => cleanupAllAdElements(), 3000);
 
             return () => {
+                window.open = originalWindowOpen; // Restore original
                 observer.disconnect();
-                clearInterval(cleanupInterval);
+                clearInterval(fastCleanup);
+                clearInterval(slowCleanup);
                 clearTimeout(slowdownTimer);
             };
         }
@@ -197,68 +221,103 @@ function GlobalAds({ showAds }: { showAds: boolean }) {
     return null;
 }
 
+// List of known Adsterra / ad network domains to detect
+const AD_DOMAINS = ['openairtowhardworking.com', 'adsterra', 'wayfarer', 'profitabledisplaynetwork', 'richinfo', 'topcpmnetwork'];
+
 // Check if a DOM element is an ad-injected element
 function isAdElement(el: HTMLElement): boolean {
     const tag = el.tagName;
 
-    // Scripts from Adsterra
+    // Scripts from ad networks
     if (tag === 'SCRIPT') {
         const src = el.getAttribute('src') || '';
-        if (src.includes('openairtowhardworking.com') || src.includes('adsterra')) return true;
+        if (AD_DOMAINS.some(d => src.includes(d))) return true;
         if (el.hasAttribute('data-ad-script')) return true;
+        // Inline scripts that set ad-related globals
+        const text = el.textContent || '';
+        if (text.includes('atOptions') || text.includes('_push') && text.includes('zone')) return true;
     }
 
-    // Iframes from Adsterra
+    // Iframes from ad networks
     if (tag === 'IFRAME') {
         const src = el.getAttribute('src') || '';
-        if (src.includes('openairtowhardworking.com') || src.includes('adsterra') || src.includes('wayfarer')) return true;
+        if (AD_DOMAINS.some(d => src.includes(d))) return true;
         // Body-level iframes without our data attribute are likely ads
         if (el.parentElement === document.body && !el.getAttribute('data-app-iframe') && !el.id?.startsWith('root')) return true;
+        // Hidden iframes or zero-size iframes injected for tracking
+        const rect = el.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) {
+            if (!el.getAttribute('data-app-iframe')) return true;
+        }
     }
 
-    // High z-index fixed/absolute positioned overlays (social bar, popunder overlays)
+    // Fixed/absolute positioned overlays (social bar, popunder overlays, notification bars)
     const style = el.style;
-    const zIndex = parseInt(style.zIndex || '0');
-    if ((style.position === 'fixed' || style.position === 'absolute') && zIndex > 9000) {
-        if (!el.id?.startsWith('root') && !el.classList.contains('toaster') && !el.hasAttribute('data-radix-portal') && !el.id?.includes('streamvault')) {
+    const computedZIndex = parseInt(style.zIndex || '0');
+    if ((style.position === 'fixed' || style.position === 'absolute') && computedZIndex > 999) {
+        // Whitelist our own app elements
+        if (!el.id?.startsWith('root') &&
+            !el.classList.contains('toaster') &&
+            !el.hasAttribute('data-radix-portal') &&
+            !el.hasAttribute('data-radix-popper-content-wrapper') &&
+            !el.id?.includes('streamvault') &&
+            !el.closest('[data-radix-portal]') &&
+            !el.closest('.toaster') &&
+            !el.closest('#root')) {
             return true;
         }
     }
 
+    // Elements that contain ad network iframes or links
+    if (tag === 'DIV' || tag === 'SPAN' || tag === 'A') {
+        const innerHTML = el.innerHTML || '';
+        if (AD_DOMAINS.some(d => innerHTML.includes(d)) && el.parentElement === document.body) return true;
+    }
+
     // Divs with ad-related IDs or classes
     if (el.id?.match(/^ad[-_]|[-_]ad$/i) || el.className?.toString().includes('adsterra')) return true;
+
+    // <ins> elements (common ad containers)
+    if (tag === 'INS' && el.parentElement === document.body) return true;
 
     return false;
 }
 
 // Aggressively remove all Adsterra-injected DOM elements
 function cleanupAllAdElements() {
-    // Remove all scripts from Adsterra domain
-    document.querySelectorAll('script[src*="openairtowhardworking.com"]').forEach(el => el.remove());
-    document.querySelectorAll('script[src*="adsterra"]').forEach(el => el.remove());
+    // Remove all scripts from ad network domains
+    AD_DOMAINS.forEach(domain => {
+        document.querySelectorAll(`script[src*="${domain}"]`).forEach(el => el.remove());
+        document.querySelectorAll(`iframe[src*="${domain}"]`).forEach(el => {
+            // Also remove parent if it's a wrapper div
+            if (el.parentElement && el.parentElement !== document.body && el.parentElement.tagName === 'DIV') {
+                el.parentElement.remove();
+            } else {
+                el.remove();
+            }
+        });
+    });
     document.querySelectorAll('script[data-ad-script]').forEach(el => el.remove());
 
-    // Remove social bar / popunder injected iframes and containers
-    document.querySelectorAll('iframe[src*="openairtowhardworking.com"]').forEach(el => el.remove());
-    document.querySelectorAll('iframe[src*="adsterra"]').forEach(el => el.remove());
-    document.querySelectorAll('iframe[src*="wayfarer"]').forEach(el => el.remove());
-
-    // Remove fixed/absolute positioned ad overlays injected by Adsterra
+    // Remove ad-related divs
     document.querySelectorAll('div[id*="ad-"], div[id*="_ad"], div[class*="adsterra"]').forEach(el => el.remove());
 
-    // Remove any elements with inline styles that look like ad overlays (high z-index fixed elements)
-    document.querySelectorAll('body > div, body > iframe, body > ins').forEach(el => {
+    // Remove fixed/absolute positioned ad overlays (lowered threshold from 9000 to 999)
+    document.querySelectorAll('body > div, body > iframe, body > ins, body > span, body > a').forEach(el => {
         const htmlEl = el as HTMLElement;
         const style = htmlEl.style;
         const zIndex = parseInt(style.zIndex || '0');
-        if ((style.position === 'fixed' || style.position === 'absolute') && zIndex > 9000) {
-            if (!htmlEl.id?.startsWith('root') && !htmlEl.classList.contains('toaster') && !htmlEl.hasAttribute('data-radix-portal')) {
+        if ((style.position === 'fixed' || style.position === 'absolute') && zIndex > 999) {
+            if (!htmlEl.id?.startsWith('root') &&
+                !htmlEl.classList.contains('toaster') &&
+                !htmlEl.hasAttribute('data-radix-portal') &&
+                !htmlEl.hasAttribute('data-radix-popper-content-wrapper')) {
                 htmlEl.remove();
             }
         }
     });
 
-    // Remove any remaining ad-related iframes injected into body
+    // Remove any body-level iframes that aren't ours
     document.querySelectorAll('body > iframe').forEach(el => {
         const iframe = el as HTMLIFrameElement;
         if (!iframe.id?.startsWith('root') && !iframe.getAttribute('data-app-iframe')) {
@@ -268,6 +327,13 @@ function cleanupAllAdElements() {
 
     // Remove any <ins> elements (Adsterra uses these)
     document.querySelectorAll('body > ins').forEach(el => el.remove());
+
+    // Remove any elements with Adsterra-specific attributes
+    document.querySelectorAll('[data-zone]').forEach(el => {
+        if (el.parentElement === document.body || el.closest('body') === el.parentElement) {
+            el.remove();
+        }
+    });
 }
 
 // Native Banner (Async type)
