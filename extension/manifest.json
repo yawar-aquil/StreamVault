@@ -1,32 +1,30 @@
 {
     "manifest_version": 3,
-    "name": "StreamVault Watch Together",
-    "description": "Sync Google Drive videos with StreamVault Watch Together rooms",
-    "version": "1.1.0",
+    "name": "StreamVault",
+    "description": "Ad blocker, quick search, dashboard & more for StreamVault",
+    "version": "2.0.0",
     "permissions": [
         "storage",
         "activeTab",
-        "tabs"
+        "tabs",
+        "declarativeNetRequest",
+        "notifications",
+        "alarms"
+    ],
+    "optional_permissions": [
+        "history"
     ],
     "host_permissions": [
-        "https://drive.google.com/*",
         "https://streamvault.live/*",
         "https://www.streamvault.live/*",
         "https://streamvault.in/*",
         "https://www.streamvault.in/*",
-        "http://localhost:5000/*"
+        "http://localhost:5000/*",
+        "https://www.imdb.com/*",
+        "https://www.themoviedb.org/*",
+        "https://myanimelist.net/*"
     ],
     "content_scripts": [
-        {
-            "matches": [
-                "https://drive.google.com/*"
-            ],
-            "js": [
-                "content-script.js"
-            ],
-            "run_at": "document_end",
-            "all_frames": true
-        },
         {
             "matches": [
                 "https://streamvault.live/*",
@@ -36,16 +34,29 @@
                 "http://localhost:5000/*"
             ],
             "js": [
-                "streamvault-bridge.js"
+                "content-scripts/ad-blocker.js",
+                "content-scripts/streamvault-bridge.js"
             ],
-            "run_at": "document_end"
+            "run_at": "document_start"
+        },
+        {
+            "matches": [
+                "https://www.imdb.com/title/*",
+                "https://www.themoviedb.org/movie/*",
+                "https://www.themoviedb.org/tv/*",
+                "https://myanimelist.net/anime/*"
+            ],
+            "js": [
+                "content-scripts/imdb-detector.js"
+            ],
+            "run_at": "document_idle"
         }
     ],
     "background": {
         "service_worker": "background.js"
     },
     "action": {
-        "default_popup": "popup.html",
+        "default_popup": "popup/popup.html",
         "default_icon": {
             "16": "icons/icon16.png",
             "48": "icons/icon48.png",
@@ -56,5 +67,38 @@
         "16": "icons/icon16.png",
         "48": "icons/icon48.png",
         "128": "icons/icon128.png"
+    },
+    "chrome_url_overrides": {
+        "newtab": "newtab/newtab.html"
+    },
+    "commands": {
+        "quick-search": {
+            "suggested_key": {
+                "default": "Ctrl+Shift+S",
+                "mac": "Command+Shift+S"
+            },
+            "description": "Quick search StreamVault"
+        },
+        "open-dms": {
+            "suggested_key": {
+                "default": "Ctrl+Shift+D"
+            },
+            "description": "Open DMs"
+        },
+        "open-watchlist": {
+            "suggested_key": {
+                "default": "Ctrl+Shift+W"
+            },
+            "description": "Open watchlist"
+        }
+    },
+    "declarative_net_request": {
+        "rule_resources": [
+            {
+                "id": "ad_rules",
+                "enabled": true,
+                "path": "rules/ad-rules.json"
+            }
+        ]
     }
 }

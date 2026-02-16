@@ -160,19 +160,23 @@ function GlobalAds({ showAds }: { showAds: boolean }) {
                 return null;
             };
 
-            // 3) Inject CSS that hides ad elements — targets body-level non-app elements
-            // NOTE: Radix portals have [data-radix-portal], so :not() correctly skips them
-            // We do NOT use z-index catch-all rules — those break dropdowns inside portals
+            // 3) Inject CSS that hides ad elements
+            // We do NOT hide body > div blanket — that breaks React portals (toast announce, etc.)
+            // JS cleanup with React fiber detection handles body-level divs instead
             const adBlockStyle = document.createElement('style');
             adBlockStyle.id = 'streamvault-adblocker-css';
+            // Build domain-specific CSS selectors for iframes/scripts/links
+            const domainSelectors = AD_DOMAINS.map(d => [
+                `iframe[src*="${d}"]`,
+                `a[href*="${d}"]`,
+            ]).flat().join(',\n');
             adBlockStyle.textContent = `
-                /* Hide body-level divs that are NOT part of our app */
-                body > div:not(#root):not([data-radix-portal]):not([data-radix-focus-guard]):not(.toaster):not([data-streamvault]):not([data-sonner-toaster]):not([data-radix-popper-content-wrapper]) {
+                /* Hide iframes/links from known ad networks */
+                ${domainSelectors} {
                     display: none !important;
                     visibility: hidden !important;
                     width: 0 !important;
                     height: 0 !important;
-                    overflow: hidden !important;
                 }
                 /* Hide body-level iframes not from our app */
                 body > iframe:not([data-app-iframe]) {
@@ -181,12 +185,8 @@ function GlobalAds({ showAds }: { showAds: boolean }) {
                     width: 0 !important;
                     height: 0 !important;
                 }
-                /* Hide ad containers */
-                body > ins, body > span:not([data-radix-focus-guard]) {
-                    display: none !important;
-                    visibility: hidden !important;
-                }
-                /* Known ad patterns */
+                /* Hide ad containers by known patterns */
+                body > ins,
                 [data-ad-script],
                 [data-zone],
                 div[class*="adsterra"],
@@ -240,7 +240,7 @@ function GlobalAds({ showAds }: { showAds: boolean }) {
                         const el = node as HTMLElement;
 
                         if (isAdElement(el)) {
-                            el.remove();
+                            try { el.remove(); } catch { }
                             continue;
                         }
 
@@ -248,7 +248,7 @@ function GlobalAds({ showAds }: { showAds: boolean }) {
                         if (el.children?.length) {
                             Array.from(el.querySelectorAll('*')).forEach(child => {
                                 if (isAdElement(child as HTMLElement)) {
-                                    el.remove();
+                                    try { el.remove(); } catch { }
                                 }
                             });
                         }
@@ -258,7 +258,7 @@ function GlobalAds({ showAds }: { showAds: boolean }) {
                     if (mutation.type === 'attributes' && mutation.target) {
                         const el = mutation.target as HTMLElement;
                         if (el.parentElement === document.body && isAdElement(el)) {
-                            el.remove();
+                            try { el.remove(); } catch { }
                         }
                     }
                 }
@@ -372,6 +372,13 @@ function isWhitelisted(el: HTMLElement): boolean {
     if (el.closest('#root')) return true;
     // Check if inside a radix portal
     if (el.closest('[data-radix-portal]')) return true;
+    // Check if element is managed by React (has React fiber internals)
+    // React-managed portals (toast, dropdown, dialog) always have these properties
+    // Ad-injected elements from external scripts never do
+    const hasReactFiber = Object.keys(el).some(key =>
+        key.startsWith('__reactFiber$') || key.startsWith('__reactInternalInstance$')
+    );
+    if (hasReactFiber) return true;
     return false;
 }
 
@@ -438,35 +445,41 @@ function isAdElement(el: HTMLElement): boolean {
     return false;
 }
 
+// Safe DOM removal — prevents React reconciliation errors
+// When we remove nodes, React may later try removeChild on the same node
+function safeRemove(el: Element | HTMLElement) {
+    try { el.remove(); } catch { /* Node already removed or not a child */ }
+}
+
 // Remove ad-injected DOM elements — body-level cleanup with whitelist protection
 function cleanupAllAdElements() {
     // 1) Remove all scripts/iframes/links from ad network domains
     AD_DOMAINS.forEach(domain => {
-        document.querySelectorAll(`script[src*="${domain}"]`).forEach(el => el.remove());
+        document.querySelectorAll(`script[src*="${domain}"]`).forEach(el => safeRemove(el));
         document.querySelectorAll(`iframe[src*="${domain}"]`).forEach(el => {
             if (el.parentElement && el.parentElement !== document.body && el.parentElement.tagName === 'DIV') {
-                el.parentElement.remove();
+                safeRemove(el.parentElement);
             } else {
-                el.remove();
+                safeRemove(el);
             }
         });
         document.querySelectorAll(`a[href*="${domain}"]`).forEach(el => {
-            if (el.parentElement === document.body) el.remove();
-            else if (el.parentElement && !el.closest('#root')) el.parentElement.remove();
+            if (el.parentElement === document.body) safeRemove(el);
+            else if (el.parentElement && !el.closest('#root')) safeRemove(el.parentElement);
         });
     });
-    document.querySelectorAll('script[data-ad-script]').forEach(el => el.remove());
+    document.querySelectorAll('script[data-ad-script]').forEach(el => safeRemove(el));
 
     // 2) Remove known ad containers
-    document.querySelectorAll('div[class*="adsterra"], div[class*="adsbox"], div[class*="ad-banner"]').forEach(el => el.remove());
-    document.querySelectorAll('[data-zone]').forEach(el => el.remove());
-    document.querySelectorAll('body > ins').forEach(el => el.remove());
+    document.querySelectorAll('div[class*="adsterra"], div[class*="adsbox"], div[class*="ad-banner"]').forEach(el => safeRemove(el));
+    document.querySelectorAll('[data-zone]').forEach(el => safeRemove(el));
+    document.querySelectorAll('body > ins').forEach(el => safeRemove(el));
 
     // 3) Remove body-level iframes not from our app
     document.querySelectorAll('body > iframe').forEach(el => {
         const iframe = el as HTMLIFrameElement;
         if (!iframe.getAttribute('data-app-iframe')) {
-            iframe.remove();
+            safeRemove(iframe);
         }
     });
 
@@ -486,14 +499,14 @@ function cleanupAllAdElements() {
         if (el.tagName === 'SCRIPT') {
             const src = el.getAttribute('src') || '';
             if (AD_DOMAINS.some(d => src.includes(d)) || el.hasAttribute('data-ad-script')) {
-                el.remove();
+                safeRemove(el);
             }
             return; // Keep all other scripts
         }
 
         // Remove any non-whitelisted divs/iframes/ins/spans/anchors/imgs on body
         if (['DIV', 'IFRAME', 'INS', 'SPAN', 'A', 'IMG'].includes(el.tagName)) {
-            el.remove();
+            safeRemove(el);
             return;
         }
     });
