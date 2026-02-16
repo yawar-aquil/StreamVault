@@ -7504,6 +7504,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Detailed analysis for a single show/anime pending content
+  app.get("/api/admin/pending-content/:type/:id", requireAdmin, async (req, res) => {
+    try {
+      const { type, id } = req.params;
+
+      let content: any;
+      let episodes: any[] = [];
+
+      if (type === 'show') {
+        const shows = await storage.getAllShows();
+        content = shows.find(s => s.id === id);
+        if (!content) return res.status(404).json({ error: "Show not found" });
+        episodes = await storage.getEpisodesByShowId(id);
+      } else if (type === 'anime') {
+        const animeList = await storage.getAllAnime();
+        content = animeList.find(a => a.id === id);
+        if (!content) return res.status(404).json({ error: "Anime not found" });
+        episodes = await storage.getAnimeEpisodesByAnimeId(id);
+      } else {
+        return res.status(400).json({ error: "Type must be 'show' or 'anime'" });
+      }
+
+      // Build local season map
+      const localSeasons: Record<number, { episodes: number[]; total: number }> = {};
+      for (const ep of episodes) {
+        const s = ep.season;
+        if (!localSeasons[s]) localSeasons[s] = { episodes: [], total: 0 };
+        localSeasons[s].episodes.push(ep.episodeNumber);
+        localSeasons[s].total++;
+      }
+
+      // Get TMDB data (with retry for rate limiting)
+      let tmdbData: any = null;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const tmdbId = await searchShow(content.title);
+        if (tmdbId) {
+          tmdbData = await getShowDetails(tmdbId);
+          if (tmdbData) break;
+        }
+        if (attempt < 1) await new Promise(r => setTimeout(r, 1000)); // wait 1s before retry
+      }
+
+      // For anime, use local totalEpisodes as fallback if TMDB fails
+      const fallbackTotalEpisodes = type === 'anime' && content.totalEpisodes ? content.totalEpisodes : null;
+
+      // Build per-season analysis
+      const seasonAnalysis: any[] = [];
+
+      if (tmdbData && tmdbData.seasons) {
+        for (const tmdbSeason of tmdbData.seasons) {
+          if (tmdbSeason.season_number === 0) continue; // skip specials
+
+          const local = localSeasons[tmdbSeason.season_number];
+          const localEps = local ? local.episodes.sort((a: number, b: number) => a - b) : [];
+          const tmdbCount = tmdbSeason.episode_count;
+
+          // Find missing episodes
+          const missingEps: number[] = [];
+          for (let i = 1; i <= tmdbCount; i++) {
+            if (!localEps.includes(i)) missingEps.push(i);
+          }
+
+          seasonAnalysis.push({
+            season: tmdbSeason.season_number,
+            tmdbEpisodeCount: tmdbCount,
+            localEpisodeCount: localEps.length,
+            airDate: tmdbSeason.air_date,
+            localEpisodes: localEps,
+            missingEpisodes: missingEps,
+            status: missingEps.length === 0 ? 'complete' :
+              localEps.length === 0 ? 'empty' : 'incomplete',
+            completionPercent: tmdbCount > 0 ? Math.round((localEps.length / tmdbCount) * 100) : 100
+          });
+        }
+      } else {
+        // No TMDB data — just show local seasons
+        for (const [seasonNum, data] of Object.entries(localSeasons)) {
+          seasonAnalysis.push({
+            season: parseInt(seasonNum),
+            tmdbEpisodeCount: null,
+            localEpisodeCount: data.total,
+            airDate: null,
+            localEpisodes: data.episodes.sort((a: number, b: number) => a - b),
+            missingEpisodes: [],
+            status: 'unknown',
+            completionPercent: null
+          });
+        }
+      }
+
+      res.json({
+        id: content.id,
+        title: content.title,
+        posterUrl: content.posterUrl,
+        backdropUrl: content.backdropUrl,
+        year: content.year,
+        genres: content.genres,
+        rating: content.rating,
+        imdbRating: content.imdbRating,
+        totalSeasons: content.totalSeasons,
+        totalLocalEpisodes: episodes.length,
+        totalTmdbEpisodes: tmdbData?.number_of_episodes || fallbackTotalEpisodes,
+        tmdbStatus: tmdbData?.status || null,
+        seasonAnalysis,
+        overallCompletion: (tmdbData?.number_of_episodes || fallbackTotalEpisodes)
+          ? Math.round((episodes.length / (tmdbData?.number_of_episodes || fallbackTotalEpisodes)) * 100)
+          : null
+      });
+    } catch (error) {
+      console.error("Pending content detail error:", error);
+      res.status(500).json({ error: "Failed to fetch content details" });
+    }
+  });
+
   // Check a single URL
   app.post("/api/admin/url-health/check-single", requireAdmin, async (req, res) => {
     try {

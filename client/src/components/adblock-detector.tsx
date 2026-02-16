@@ -2,15 +2,18 @@ import { useState, useEffect } from "react";
 import { ShieldOff, Heart, RefreshCw, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import { useAds } from "@/components/ad-manager";
 
 export function AdBlockDetector() {
   const [adBlockDetected, setAdBlockDetected] = useState(false);
   const [checking, setChecking] = useState(false);
   const [location] = useLocation();
+  const { showAds } = useAds();
 
   const checkAdBlocker = async (): Promise<boolean> => {
-    // Don't check on downloads page or if offline
-    if (location === '/downloads' || !navigator.onLine) {
+    // Don't check when ad-free is active (nuclear CSS would cause false positive),
+    // on downloads page, or if offline
+    if (!showAds || location === '/downloads' || !navigator.onLine) {
       return false;
     }
 
@@ -78,7 +81,7 @@ export function AdBlockDetector() {
     }
   };
 
-  if (!adBlockDetected || location === '/downloads') {
+  if (!adBlockDetected || !showAds || location === '/downloads') {
     return null;
   }
 

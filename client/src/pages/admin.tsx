@@ -6224,7 +6224,7 @@ function AllTransactionsTable() {
 // Pending Content Tab Component
 function PendingContentTab() {
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
+  const [selectedItem, setSelectedItem] = useState<{ id: string; type: 'show' | 'anime'; tmdbEpisodes: number | null; localEpisodes: number } | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery<{
     shows: {
@@ -6254,6 +6254,20 @@ function PendingContentTab() {
       if (!res.ok) throw new Error("Failed to fetch pending content");
       return res.json();
     },
+  });
+
+  // Fetch detail data when a modal is opened
+  const { data: detailData, isLoading: detailLoading } = useQuery<any>({
+    queryKey: ["/api/admin/pending-content", selectedItem?.type, selectedItem?.id],
+    queryFn: async () => {
+      if (!selectedItem) return null;
+      const res = await fetch(`/api/admin/pending-content/${selectedItem.type}/${selectedItem.id}`, {
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to fetch details");
+      return res.json();
+    },
+    enabled: !!selectedItem,
   });
 
   const handleManageEpisodes = (type: 'show' | 'anime', id: string) => {
@@ -6288,6 +6302,66 @@ function PendingContentTab() {
   const hasPendingShows = data?.shows && data.shows.length > 0;
   const hasPendingAnime = data?.anime && data.anime.length > 0;
 
+  const renderContentCard = (item: any, type: 'show' | 'anime') => (
+    <div
+      key={item.id}
+      className="flex items-start gap-4 p-4 border rounded-lg hover:bg-muted/30 cursor-pointer transition-all hover:border-primary/50 hover:shadow-md group"
+      onClick={() => setSelectedItem({ id: item.id, type, tmdbEpisodes: item.tmdbEpisodes, localEpisodes: item.localEpisodes })}
+    >
+      <img src={item.posterUrl} alt={item.title} className="w-16 h-24 object-cover rounded shadow group-hover:shadow-lg transition-shadow" />
+      <div className="flex-1 min-w-0">
+        <div className="flex justify-between items-start">
+          <div>
+            <h4 className="font-bold text-lg truncate group-hover:text-primary transition-colors">{item.title}</h4>
+            <div className="flex gap-2 mt-1 mb-2">
+              <Badge variant="outline" className="text-xs">
+                Local: {item.localEpisodes} eps
+              </Badge>
+              {item.tmdbEpisodes !== null && (
+                <Badge variant="secondary" className="text-xs">
+                  TMDB: {item.tmdbEpisodes} eps
+                </Badge>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="destructive">{item.status}</Badge>
+            <Eye className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+        </div>
+
+        <div className="bg-destructive/10 text-destructive p-2 rounded text-sm mb-3">
+          <strong>Missing:</strong> {item.missing}
+        </div>
+
+        {/* Progress bar */}
+        {item.tmdbEpisodes !== null && item.tmdbEpisodes > 0 && (
+          <div className="mb-3">
+            <div className="flex justify-between text-xs text-muted-foreground mb-1">
+              <span>Completion</span>
+              <span>{Math.round((item.localEpisodes / item.tmdbEpisodes) * 100)}%</span>
+            </div>
+            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all bg-gradient-to-r from-orange-500 to-red-500"
+                style={{ width: `${Math.min(100, Math.round((item.localEpisodes / item.tmdbEpisodes) * 100))}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={(e) => { e.stopPropagation(); handleManageEpisodes(type, item.id); }}
+        >
+          <Edit className="w-4 h-4 mr-2" />
+          Copy ID & Manage
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-8">
       <Card>
@@ -6297,7 +6371,7 @@ function PendingContentTab() {
             Pending Content (Incomplete Episodes)
           </CardTitle>
           <CardDescription>
-            Content that has fewer episodes uploaded than listed on TMDB.
+            Content that has fewer episodes uploaded than listed on TMDB. Click any item for detailed per-season analysis.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -6315,38 +6389,7 @@ function PendingContentTab() {
                 </div>
               ) : (
                 <div className="grid gap-4">
-                  {data?.shows.map((show) => (
-                    <div key={show.id} className="flex items-start gap-4 p-4 border rounded-lg hover:bg-muted/30">
-                      <img src={show.posterUrl} alt={show.title} className="w-16 h-24 object-cover rounded shadow" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-bold text-lg truncate">{show.title}</h4>
-                            <div className="flex gap-2 mt-1 mb-2">
-                              <Badge variant="outline" className="text-xs">
-                                Local: {show.localEpisodes} eps
-                              </Badge>
-                              {show.tmdbEpisodes !== null && (
-                                <Badge variant="secondary" className="text-xs">
-                                  TMDB: {show.tmdbEpisodes} eps
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          <Badge variant="destructive">{show.status}</Badge>
-                        </div>
-
-                        <div className="bg-destructive/10 text-destructive p-2 rounded text-sm mb-3">
-                          <strong>Missing:</strong> {show.missing}
-                        </div>
-
-                        <Button size="sm" onClick={() => handleManageEpisodes('show', show.id)}>
-                          <Edit className="w-4 h-4 mr-2" />
-                          Copy ID & Manage
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                  {data?.shows.map((show) => renderContentCard(show, 'show'))}
                 </div>
               )}
             </TabsContent>
@@ -6359,44 +6402,223 @@ function PendingContentTab() {
                 </div>
               ) : (
                 <div className="grid gap-4">
-                  {data?.anime.map((anime) => (
-                    <div key={anime.id} className="flex items-start gap-4 p-4 border rounded-lg hover:bg-muted/30">
-                      <img src={anime.posterUrl} alt={anime.title} className="w-16 h-24 object-cover rounded shadow" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-bold text-lg truncate">{anime.title}</h4>
-                            <div className="flex gap-2 mt-1 mb-2">
-                              <Badge variant="outline" className="text-xs">
-                                Local: {anime.localEpisodes} eps
-                              </Badge>
-                              {anime.tmdbEpisodes !== null && (
-                                <Badge variant="secondary" className="text-xs">
-                                  TMDB: {anime.tmdbEpisodes} eps
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          <Badge variant="destructive">{anime.status}</Badge>
-                        </div>
-
-                        <div className="bg-destructive/10 text-destructive p-2 rounded text-sm mb-3">
-                          <strong>Missing:</strong> {anime.missing}
-                        </div>
-
-                        <Button size="sm" onClick={() => handleManageEpisodes('anime', anime.id)}>
-                          <Edit className="w-4 h-4 mr-2" />
-                          Copy ID & Manage
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                  {data?.anime.map((anime) => renderContentCard(anime, 'anime'))}
                 </div>
               )}
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Detail Analysis Modal */}
+      <Dialog open={!!selectedItem} onOpenChange={(open) => { if (!open) setSelectedItem(null); }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          {detailLoading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <RefreshCw className="w-8 h-8 animate-spin mb-4 text-primary" />
+              <p className="text-muted-foreground">Fetching detailed analysis from TMDB...</p>
+            </div>
+          ) : detailData ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-xl">{detailData.title}</DialogTitle>
+                <DialogDescription>
+                  Detailed per-season episode analysis
+                </DialogDescription>
+              </DialogHeader>
+
+              {/* Content Header */}
+              <div className="flex gap-4 mt-2">
+                <img
+                  src={detailData.posterUrl}
+                  alt={detailData.title}
+                  className="w-24 h-36 object-cover rounded-lg shadow-lg"
+                />
+                <div className="flex-1 space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    {detailData.year && <Badge variant="outline">{detailData.year}</Badge>}
+                    {detailData.rating && <Badge variant="outline">{detailData.rating}</Badge>}
+                    {detailData.imdbRating && <Badge variant="secondary">⭐ {detailData.imdbRating}</Badge>}
+                    {detailData.tmdbStatus && (
+                      <Badge variant={detailData.tmdbStatus === 'Ended' || detailData.tmdbStatus === 'Canceled' ? 'destructive' : 'default'}>
+                        {detailData.tmdbStatus}
+                      </Badge>
+                    )}
+                  </div>
+                  {detailData.genres && (
+                    <p className="text-sm text-muted-foreground">{detailData.genres}</p>
+                  )}
+
+                  {/* Overall Stats — use list data as fallback when TMDB API fails */}
+                  {(() => {
+                    const tmdbEps = detailData.totalTmdbEpisodes ?? selectedItem?.tmdbEpisodes ?? null;
+                    const localEps = detailData.totalLocalEpisodes ?? selectedItem?.localEpisodes ?? 0;
+                    const completion = tmdbEps ? Math.round((localEps / tmdbEps) * 100) : (detailData.overallCompletion ?? null);
+                    return (
+                      <>
+                        <div className="grid grid-cols-3 gap-3 mt-3">
+                          <div className="bg-muted/50 rounded-lg p-3 text-center">
+                            <p className="text-2xl font-bold">{localEps}</p>
+                            <p className="text-[11px] text-muted-foreground">Local Episodes</p>
+                          </div>
+                          <div className="bg-muted/50 rounded-lg p-3 text-center">
+                            <p className="text-2xl font-bold">{tmdbEps ?? '—'}</p>
+                            <p className="text-[11px] text-muted-foreground">TMDB Episodes</p>
+                          </div>
+                          <div className="bg-muted/50 rounded-lg p-3 text-center">
+                            <p className={`text-2xl font-bold ${completion === 100 ? 'text-green-500' :
+                              completion && completion >= 50 ? 'text-orange-500' : 'text-red-500'
+                              }`}>
+                              {completion !== null ? `${completion}%` : '—'}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">Completion</p>
+                          </div>
+                        </div>
+
+                        {/* Overall progress bar */}
+                        {completion !== null && (
+                          <div className="mt-2">
+                            <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${completion === 100 ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
+                                  completion >= 50 ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
+                                    'bg-gradient-to-r from-orange-500 to-red-500'
+                                  }`}
+                                style={{ width: `${Math.min(100, completion)}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              <Separator className="my-4" />
+
+              {/* Per-Season Analysis */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Season-by-Season Breakdown</h4>
+                {detailData.seasonAnalysis.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">No season data available.</p>
+                ) : (
+                  detailData.seasonAnalysis.map((season: any) => (
+                    <div
+                      key={season.season}
+                      className={`border rounded-lg p-4 ${season.status === 'complete' ? 'border-green-500/30 bg-green-500/5' :
+                        season.status === 'empty' ? 'border-red-500/30 bg-red-500/5' :
+                          season.status === 'incomplete' ? 'border-orange-500/30 bg-orange-500/5' :
+                            'border-muted'
+                        }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <h5 className="font-semibold">Season {season.season}</h5>
+                          {season.airDate && (
+                            <span className="text-xs text-muted-foreground">({season.airDate})</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">
+                            {season.localEpisodeCount}/{season.tmdbEpisodeCount ?? '?'}
+                          </span>
+                          <Badge
+                            variant={season.status === 'complete' ? 'default' : 'destructive'}
+                            className={
+                              season.status === 'complete' ? 'bg-green-600 hover:bg-green-700' :
+                                season.status === 'empty' ? '' :
+                                  'bg-orange-600 hover:bg-orange-700'
+                            }
+                          >
+                            {season.status === 'complete' ? '✓ Complete' :
+                              season.status === 'empty' ? '✗ Empty' :
+                                season.status === 'incomplete' ? `${season.completionPercent}%` :
+                                  'Unknown'}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* Season progress bar */}
+                      {season.tmdbEpisodeCount && (
+                        <div className="w-full bg-muted rounded-full h-2 overflow-hidden mb-2">
+                          <div
+                            className={`h-full rounded-full transition-all ${season.status === 'complete' ? 'bg-green-500' :
+                              season.status === 'empty' ? 'bg-red-500' :
+                                'bg-orange-500'
+                              }`}
+                            style={{ width: `${Math.min(100, season.completionPercent || 0)}%` }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Missing episodes */}
+                      {season.missingEpisodes.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-xs font-medium text-destructive mb-1.5">
+                            Missing episodes ({season.missingEpisodes.length}):
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {season.missingEpisodes.map((ep: number) => (
+                              <span
+                                key={ep}
+                                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-destructive/15 text-destructive border border-destructive/20"
+                              >
+                                E{ep}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Available episodes (compact) */}
+                      {season.localEpisodes.length > 0 && season.status !== 'complete' && (
+                        <div className="mt-2">
+                          <p className="text-xs font-medium text-green-600 mb-1.5">
+                            Available ({season.localEpisodes.length}):
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {season.localEpisodes.slice(0, 20).map((ep: number) => (
+                              <span
+                                key={ep}
+                                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-green-500/15 text-green-600 border border-green-500/20"
+                              >
+                                E{ep}
+                              </span>
+                            ))}
+                            {season.localEpisodes.length > 20 && (
+                              <span className="text-xs text-muted-foreground">+{season.localEpisodes.length - 20} more</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 mt-4 pt-4 border-t">
+                <Button
+                  onClick={() => { if (selectedItem) handleManageEpisodes(selectedItem.type, selectedItem.id); }}
+                  className="flex-1"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Copy ID & Manage Episodes
+                </Button>
+                <Button variant="outline" onClick={() => setSelectedItem(null)}>
+                  Close
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="p-8 text-center">
+              <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-destructive opacity-50" />
+              <p className="text-destructive">Failed to load content details</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
