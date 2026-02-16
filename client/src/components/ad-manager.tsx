@@ -17,18 +17,25 @@ const AdContext = createContext<AdContextType>({
 export const useAds = () => useContext(AdContext);
 
 export function AdProvider({ children }: { children: React.ReactNode }) {
-    const [adEnabled, setAdEnabled] = useState(true);
-    const { user } = useAuth();
-
-    // Initialize preference from localStorage
-    useEffect(() => {
+    // Initialize ad preference SYNCHRONOUSLY from localStorage
+    // This prevents the timing race where ad scripts load before we read the stored preference
+    const [adEnabled, setAdEnabled] = useState(() => {
+        if (typeof window === 'undefined') return true;
         const stored = localStorage.getItem("ad_preference");
-        if (stored !== null) {
-            setAdEnabled(stored === "true");
-        }
-    }, []);
+        return stored !== null ? stored === "true" : true;
+    });
+    const { user, isLoading: isUserLoading } = useAuth();
 
     const isSubscribed = !!(user?.adFreeUntil && new Date(user.adFreeUntil) > new Date());
+
+    // Guard: if user data loads and they're NOT subscribed, force ads back on
+    // This handles expired subscriptions where localStorage still has ad-free preference
+    useEffect(() => {
+        if (!isUserLoading && user !== null && !isSubscribed && !adEnabled) {
+            setAdEnabled(true);
+            localStorage.setItem("ad_preference", "true");
+        }
+    }, [isUserLoading, user, isSubscribed, adEnabled]);
 
     const toggleAds = () => {
         // Only block turning ad-free ON if not subscribed
@@ -44,11 +51,11 @@ export function AdProvider({ children }: { children: React.ReactNode }) {
     };
 
     // Determine if ads should be shown
-    // adEnabled=true means "ads are enabled" (default state)
-    // Switch in header: checked={!adEnabled} → switch ON = ad-free active = adEnabled=false
-    // Show ads on ad domain UNLESS user is subscribed AND has toggled ad-free ON (adEnabled=false)
+    // CRITICAL: If adEnabled is false (user chose ad-free), keep showAds=false
+    // even while user data is loading. This prevents the script loading race.
+    // Once user data loads, the guard effect above will re-enable if not subscribed.
     const isAdDomain = typeof window !== 'undefined' && (window.location.hostname.includes("streamvault.in") || window.location.hostname === 'localhost');
-    const showAds = isAdDomain && !(isSubscribed && !adEnabled);
+    const showAds = isAdDomain && adEnabled;
 
     return (
         <AdContext.Provider value={{ adEnabled, toggleAds, showAds }}>
@@ -153,28 +160,35 @@ function GlobalAds({ showAds }: { showAds: boolean }) {
                 return null;
             };
 
-            // 3) Inject CSS that targets ONLY known ad elements (not all body-level divs)
+            // 3) Inject CSS that hides ad elements — targets body-level non-app elements
+            // NOTE: Radix portals have [data-radix-portal], so :not() correctly skips them
+            // We do NOT use z-index catch-all rules — those break dropdowns inside portals
             const adBlockStyle = document.createElement('style');
             adBlockStyle.id = 'streamvault-adblocker-css';
-            // Build domain-specific CSS selectors
-            const domainSelectors = AD_DOMAINS.map(d => [
-                `iframe[src*="${d}"]`,
-                `script[src*="${d}"]`,
-                `a[href*="${d}"]`,
-            ]).flat().join(',\n');
             adBlockStyle.textContent = `
-                /* Hide iframes/scripts/links from known ad networks */
-                ${domainSelectors} {
+                /* Hide body-level divs that are NOT part of our app */
+                body > div:not(#root):not([data-radix-portal]):not([data-radix-focus-guard]):not(.toaster):not([data-streamvault]):not([data-sonner-toaster]):not([data-radix-popper-content-wrapper]) {
+                    display: none !important;
+                    visibility: hidden !important;
+                    width: 0 !important;
+                    height: 0 !important;
+                    overflow: hidden !important;
+                }
+                /* Hide body-level iframes not from our app */
+                body > iframe:not([data-app-iframe]) {
                     display: none !important;
                     visibility: hidden !important;
                     width: 0 !important;
                     height: 0 !important;
                 }
-                /* Hide common ad containers */
-                body > ins,
+                /* Hide ad containers */
+                body > ins, body > span:not([data-radix-focus-guard]) {
+                    display: none !important;
+                    visibility: hidden !important;
+                }
+                /* Known ad patterns */
                 [data-ad-script],
                 [data-zone],
-                div[id*="ad-container"],
                 div[class*="adsterra"],
                 div[class*="adsbox"],
                 div[class*="ad-banner"] {
@@ -327,7 +341,14 @@ const AD_DOMAINS = [
     'clickadu',
     'evadav',
     'galaksion',
-    'monetag'
+    'monetag',
+    // Social bar redirect domains
+    'kettledroopingcontinuation.com',
+    'disgustfirerestaurant.com',
+    'lanloginrecede.com',
+    'greasypencilcase.com',
+    'crookedconfidenceground.com',
+    'surrenderterrain.com',
 ];
 
 // Whitelist check — returns true if element belongs to our app
@@ -355,7 +376,7 @@ function isWhitelisted(el: HTMLElement): boolean {
 }
 
 // Check if a DOM element is an ad-injected element
-// TARGETED approach — only flags elements with positive evidence of being ads
+// Uses whitelist to protect Radix portals, toasters, and app elements
 function isAdElement(el: HTMLElement): boolean {
     // Never remove whitelisted elements
     if (isWhitelisted(el)) return false;
@@ -375,11 +396,20 @@ function isAdElement(el: HTMLElement): boolean {
     if (tag === 'IFRAME') {
         const src = el.getAttribute('src') || '';
         if (AD_DOMAINS.some(d => src.includes(d))) return true;
-        // Body-level iframes without our data attribute are likely ads
         if (el.parentElement === document.body && !el.getAttribute('data-app-iframe')) return true;
     }
 
-    // Elements that contain ad network references in their content
+    // Body-level fixed-position elements (social bar uses this)
+    if (el.parentElement === document.body) {
+        try {
+            const computedStyle = window.getComputedStyle(el);
+            if (computedStyle.position === 'fixed' || computedStyle.position === 'absolute') {
+                return true;
+            }
+        } catch { /* ignore */ }
+    }
+
+    // Elements that contain ad network references
     if (tag === 'DIV' || tag === 'SPAN' || tag === 'A') {
         const innerHTML = el.innerHTML || '';
         if (AD_DOMAINS.some(d => innerHTML.includes(d)) && el.parentElement === document.body) return true;
@@ -400,12 +430,17 @@ function isAdElement(el: HTMLElement): boolean {
     // Elements with data-zone or similar ad attributes
     if (el.hasAttribute('data-zone')) return true;
 
+    // Any body-level div that isn't whitelisted (whitelist already checked above)
+    if (tag === 'DIV' && el.parentElement === document.body) {
+        return true;
+    }
+
     return false;
 }
 
-// Remove Adsterra-injected DOM elements — TARGETED, not nuclear
+// Remove ad-injected DOM elements — body-level cleanup with whitelist protection
 function cleanupAllAdElements() {
-    // 1) Remove all scripts from ad network domains
+    // 1) Remove all scripts/iframes/links from ad network domains
     AD_DOMAINS.forEach(domain => {
         document.querySelectorAll(`script[src*="${domain}"]`).forEach(el => el.remove());
         document.querySelectorAll(`iframe[src*="${domain}"]`).forEach(el => {
@@ -415,7 +450,6 @@ function cleanupAllAdElements() {
                 el.remove();
             }
         });
-        // Links pointing to ad networks
         document.querySelectorAll(`a[href*="${domain}"]`).forEach(el => {
             if (el.parentElement === document.body) el.remove();
             else if (el.parentElement && !el.closest('#root')) el.parentElement.remove();
@@ -423,11 +457,12 @@ function cleanupAllAdElements() {
     });
     document.querySelectorAll('script[data-ad-script]').forEach(el => el.remove());
 
-    // 2) Remove ad-related divs by known patterns
+    // 2) Remove known ad containers
     document.querySelectorAll('div[class*="adsterra"], div[class*="adsbox"], div[class*="ad-banner"]').forEach(el => el.remove());
     document.querySelectorAll('[data-zone]').forEach(el => el.remove());
+    document.querySelectorAll('body > ins').forEach(el => el.remove());
 
-    // 3) Remove body-level iframes without our data attribute
+    // 3) Remove body-level iframes not from our app
     document.querySelectorAll('body > iframe').forEach(el => {
         const iframe = el as HTMLIFrameElement;
         if (!iframe.getAttribute('data-app-iframe')) {
@@ -435,25 +470,31 @@ function cleanupAllAdElements() {
         }
     });
 
-    // 4) Remove <ins> elements (ad containers)
-    document.querySelectorAll('body > ins').forEach(el => el.remove());
-
-    // 5) Scan body-level elements for ad content (targeted, not blanket)
+    // 4) Remove all non-whitelisted body-level elements
+    // Social bar injects divs/spans/anchors directly on body
+    // Whitelist protects: #root, Radix portals, toasters, [data-streamvault]
     Array.from(document.body.children).forEach(child => {
         const el = child as HTMLElement;
         if (!el.tagName) return;
-        if (isWhitelisted(el)) return;
-        if (el.tagName === 'STYLE' || el.tagName === 'LINK' || el.tagName === 'NOSCRIPT' || el.tagName === 'SCRIPT') return;
         if (el.id === 'root') return;
+        if (isWhitelisted(el)) return;
 
-        // Only remove if we have positive evidence it's an ad
-        const innerHTML = el.innerHTML || '';
-        const hasAdContent = AD_DOMAINS.some(d => innerHTML.includes(d));
-        const hasAdClass = el.className?.toString().match(/adsterra|adsbox|ad-banner|textads/i);
-        const hasAdAttr = el.hasAttribute('data-zone') || el.hasAttribute('data-ad-script');
+        // Keep style, link, noscript tags
+        if (el.tagName === 'STYLE' || el.tagName === 'LINK' || el.tagName === 'NOSCRIPT') return;
 
-        if (hasAdContent || hasAdClass || hasAdAttr) {
+        // Keep scripts that are part of our app
+        if (el.tagName === 'SCRIPT') {
+            const src = el.getAttribute('src') || '';
+            if (AD_DOMAINS.some(d => src.includes(d)) || el.hasAttribute('data-ad-script')) {
+                el.remove();
+            }
+            return; // Keep all other scripts
+        }
+
+        // Remove any non-whitelisted divs/iframes/ins/spans/anchors/imgs on body
+        if (['DIV', 'IFRAME', 'INS', 'SPAN', 'A', 'IMG'].includes(el.tagName)) {
             el.remove();
+            return;
         }
     });
 }
