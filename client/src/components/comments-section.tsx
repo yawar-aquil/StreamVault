@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { MessageCircle, Send, ThumbsUp, ThumbsDown, ChevronDown, MoreVertical, Smile, Image, X, Search } from "lucide-react";
 import type { Comment, CommentWithBadges } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
-import EmojiPicker, { Theme } from "emoji-picker-react";
+import EmojiPicker, { Theme, SkinTonePickerLocation } from "emoji-picker-react";
 
 interface CommentsSectionProps {
   episodeId?: string;
@@ -714,8 +714,9 @@ export function CommentsSection({ episodeId, movieId, blogPostId }: CommentsSect
                         width={350}
                         height={400}
                         searchPlaceHolder="Search emoji..."
-                        skinTonesDisabled
+
                         previewConfig={{ showPreview: false }}
+                        skinTonePickerLocation={SkinTonePickerLocation.PREVIEW}
                       />
                     </div>
                   )}

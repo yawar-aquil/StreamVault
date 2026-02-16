@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/auth-context';
 import { useNotifications } from '@/contexts/notifications-context';
 import { formatDistanceToNow, differenceInMinutes } from 'date-fns';
-import EmojiPicker, { Theme } from 'emoji-picker-react';
+import EmojiPicker, { Theme, SuggestionMode, SkinTonePickerLocation } from 'emoji-picker-react';
 import { useSocialSocket } from '@/hooks/use-social-socket';
 import { useVoiceCall } from '@/hooks/use-voice-call';
 import {
@@ -64,6 +64,55 @@ interface TenorGif {
     };
 }
 
+// Compact link preview for reply context
+function ReplyLinkPreview({ url, isMe }: { url: string; isMe: boolean }) {
+    const [preview, setPreview] = useState<{ title?: string; image?: string; siteName?: string } | null>(null);
+
+    useEffect(() => {
+        let mounted = true;
+        fetch('/api/preview-link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url }),
+        })
+            .then(r => r.json())
+            .then(data => { if (mounted) setPreview(data); })
+            .catch(() => { });
+        return () => { mounted = false; };
+    }, [url]);
+
+    const domain = (() => {
+        try { return new URL(url).hostname.replace('www.', ''); } catch { return url; }
+    })();
+
+    if (!preview || (!preview.title && !preview.image)) {
+        return <span className="opacity-75">🔗 {domain}</span>;
+    }
+
+    return (
+        <div className="flex items-center gap-2 mt-0.5">
+            {preview.image && (
+                <img
+                    src={preview.image}
+                    alt=""
+                    className="w-10 h-10 rounded object-cover flex-shrink-0"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+            )}
+            <div className="min-w-0 flex-1">
+                {preview.title && (
+                    <p className={`text-[11px] font-medium truncate ${isMe ? 'text-primary-foreground/90' : 'text-foreground/80'}`}>
+                        {preview.title}
+                    </p>
+                )}
+                <p className={`text-[10px] truncate ${isMe ? 'text-primary-foreground/60' : 'text-muted-foreground'}`}>
+                    🔗 {preview.siteName || domain}
+                </p>
+            </div>
+        </div>
+    );
+}
+
 export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
     const { user } = useAuth();
     const { fetchNotifications } = useNotifications();
@@ -79,6 +128,8 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
     const [gifSearch, setGifSearch] = useState('');
     const [gifs, setGifs] = useState<TenorGif[]>([]);
     const [isSearchingGifs, setIsSearchingGifs] = useState(false);
+    const gifNextPosRef = useRef<string | null>(null);
+    const [isLoadingMoreGifs, setIsLoadingMoreGifs] = useState(false);
     const [replyingTo, setReplyingTo] = useState<DirectMessage | null>(null);
 
     // Voice recording states
@@ -199,24 +250,37 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
     }, [onDMReaction]);
 
     // Search GIFs with Tenor API
-    const searchGifs = useCallback(async (query: string) => {
+    const searchGifs = useCallback(async (query: string, loadMore = false) => {
         if (!query.trim()) {
             setGifs([]);
+            gifNextPosRef.current = null;
             return;
         }
 
-        setIsSearchingGifs(true);
+        if (loadMore) {
+            setIsLoadingMoreGifs(true);
+        } else {
+            setIsSearchingGifs(true);
+        }
         try {
-            // Using Tenor API (free tier)
-            const response = await fetch(
-                `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ&limit=20&media_filter=gif,tinygif`
-            );
+            const endpoint = query === 'trending' ? 'featured' : 'search';
+            let url = `https://tenor.googleapis.com/v2/${endpoint}?q=${encodeURIComponent(query)}&key=AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ&limit=30&media_filter=gif,tinygif`;
+            if (loadMore && gifNextPosRef.current) {
+                url += `&pos=${gifNextPosRef.current}`;
+            }
+            const response = await fetch(url);
             const data = await response.json();
-            setGifs(data.results || []);
+            if (loadMore) {
+                setGifs(prev => [...prev, ...(data.results || [])]);
+            } else {
+                setGifs(data.results || []);
+            }
+            gifNextPosRef.current = data.next || null;
         } catch (error) {
             console.error('Failed to search GIFs:', error);
         } finally {
             setIsSearchingGifs(false);
+            setIsLoadingMoreGifs(false);
         }
     }, []);
 
@@ -236,6 +300,13 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
             searchGifs('trending');
         }
     }, [showGifPicker, gifSearch, searchGifs]);
+
+    // Load more GIFs handler for infinite scroll
+    const loadMoreGifs = useCallback(() => {
+        if (isLoadingMoreGifs || !gifNextPosRef.current) return;
+        const query = gifSearch || 'trending';
+        searchGifs(query, true);
+    }, [gifSearch, searchGifs, isLoadingMoreGifs]);
 
     // Voice recording functions
     // Voice recording functions
@@ -819,6 +890,10 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
                             // Find replied message
                             const replyMessage = msg.replyToId ? messages.find(m => m.id === msg.replyToId) : null;
 
+                            // Emoji-only messages should not have a bubble (including replies)
+                            const isEmojiOnly = !msg.attachmentType && msg.message &&
+                                /^[\p{Extended_Pictographic}\u200d\ufe0f\s]+$/u.test(msg.message);
+
                             return (
                                 <div
                                     key={msg.id}
@@ -842,63 +917,127 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
                                             </div>
                                         )}
 
-                                        <div
-                                            className={`px-4 py-2 shadow-sm relative group-hover/msg:shadow-md transition-shadow ${borderRadiusClass} ${isMe
-                                                ? 'bg-primary text-primary-foreground'
-                                                : 'bg-muted'
-                                                } ${msg.attachmentType ? 'p-2' : ''} min-w-[80px] select-none`}
-                                            onDoubleClick={() => handleReply(msg)}
-                                        >
-                                            {/* Reply Context */}
+                                        <div className="flex flex-col relative">
+                                            {/* "X replied to Y" label — Instagram style, OUTSIDE bubble */}
                                             {msg.replyToId && (
-                                                <div
-                                                    className={`mb-2 rounded px-2 py-1 text-xs border-l-2 cursor-pointer opacity-80 hover:opacity-100 transition-opacity ${isMe
-                                                        ? 'bg-primary-foreground/10 border-primary-foreground/50'
-                                                        : 'bg-background/50 border-primary/50'
-                                                        }`}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation(); // Prevent double click trigger
-                                                        const el = document.getElementById(`msg-${msg.replyToId}`);
-                                                        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                                        el?.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
-                                                        setTimeout(() => el?.classList.remove('ring-2', 'ring-primary', 'ring-offset-2'), 2000);
-                                                    }}
-                                                >
-                                                    <div className="font-medium mb-0.5">
-                                                        {replyMessage ? (replyMessage.fromUserId === user?.id ? 'You' : friend?.username) : 'Message'}
-                                                    </div>
-                                                    <div className="truncate opacity-90">
-                                                        {replyMessage
-                                                            ? (replyMessage.message || `[${replyMessage.attachmentType}]`)
-                                                            : 'Message deleted or unavailable'
-                                                        }
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {msg.message && (
-                                                <>
-                                                    <p className={`${/^[\p{Extended_Pictographic}\u200d\ufe0f\s]+$/u.test(msg.message) && msg.message.length < 10
-                                                        ? 'text-4xl leading-normal'
-                                                        : 'text-sm leading-relaxed' // Standard size
-                                                        } break-words whitespace-pre-wrap`}>
-                                                        {msg.message}
-                                                    </p>
+                                                <p className={`text-[11px] mb-1 ${isMe ? 'text-right' : 'text-left'} text-muted-foreground`}>
                                                     {(() => {
-                                                        const urlMatch = msg.message.match(/(https?:\/\/[^\s]+)/);
-                                                        return urlMatch ? <LinkPreview url={urlMatch[0]} /> : null;
+                                                        const senderName = isMe ? 'You' : friend?.username;
+                                                        if (!replyMessage) return `${senderName} replied to a message`;
+                                                        const isSelfReply = msg.fromUserId === replyMessage.fromUserId;
+                                                        if (isSelfReply) {
+                                                            return `${isMe ? 'You' : friend?.username} replied to ${isMe ? 'yourself' : 'themself'}`;
+                                                        }
+                                                        const repliedToName = replyMessage.fromUserId === user?.id ? 'you' : friend?.username;
+                                                        return `${senderName} replied to ${repliedToName}`;
                                                     })()}
-                                                </>
+                                                </p>
                                             )}
-                                            {renderAttachment(msg)}
 
-                                            {/* Reactions Display */}
+                                            <div
+                                                className={`${isEmojiOnly
+                                                    ? 'select-none'
+                                                    : `px-4 py-2 shadow-sm relative group-hover/msg:shadow-md transition-shadow ${borderRadiusClass} ${isMe
+                                                        ? 'bg-primary text-primary-foreground'
+                                                        : 'bg-muted'
+                                                    } ${msg.attachmentType ? 'p-2' : ''} min-w-[80px] select-none`
+                                                    }`}
+                                                onDoubleClick={() => handleReaction(msg.id, '❤️')}
+                                            >
+                                                {/* Replied message preview — INSIDE bubble, Instagram style */}
+                                                {msg.replyToId && (
+                                                    <div
+                                                        className="mb-1.5 cursor-pointer"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const el = document.getElementById(`msg-${msg.replyToId}`);
+                                                            el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                            el?.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+                                                            setTimeout(() => el?.classList.remove('ring-2', 'ring-primary', 'ring-offset-2'), 2000);
+                                                        }}
+                                                    >
+                                                        <div className={`rounded-lg px-2.5 py-1.5 text-xs overflow-hidden ${isMe ? 'bg-primary-foreground/10' : 'bg-background/30'}`}>
+                                                            {replyMessage ? (
+                                                                <>
+                                                                    {/* Attachment preview in reply */}
+                                                                    {replyMessage.attachmentType && (
+                                                                        <div className="mb-1">
+                                                                            {replyMessage.attachmentType === 'image' && replyMessage.attachmentUrl && (
+                                                                                <img src={replyMessage.attachmentUrl} alt="Photo" className="w-full max-w-[180px] max-h-[100px] rounded object-cover" />
+                                                                            )}
+                                                                            {replyMessage.attachmentType === 'gif' && replyMessage.attachmentUrl && (
+                                                                                <img src={replyMessage.attachmentUrl} alt="GIF" className="w-full max-w-[180px] max-h-[80px] rounded object-cover" />
+                                                                            )}
+                                                                            {replyMessage.attachmentType === 'video' && (
+                                                                                <div className="flex items-center gap-1.5 opacity-75">
+                                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                                                                                    <span>Video</span>
+                                                                                </div>
+                                                                            )}
+                                                                            {replyMessage.attachmentType === 'audio' && replyMessage.attachmentUrl && (
+                                                                                <div className="mt-0.5">
+                                                                                    <VoiceMessage
+                                                                                        src={replyMessage.attachmentUrl}
+                                                                                        duration={replyMessage.audioDuration}
+                                                                                        isMe={isMe}
+                                                                                    />
+                                                                                </div>
+                                                                            )}
+                                                                            {replyMessage.attachmentType === 'file' && (
+                                                                                <div className="flex items-center gap-1.5 opacity-75">
+                                                                                    <FileText className="h-3.5 w-3.5" />
+                                                                                    <span className="truncate">{replyMessage.attachmentFilename || 'File'}</span>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                    {/* Text preview */}
+                                                                    {replyMessage.message && (
+                                                                        /^https?:\/\//i.test(replyMessage.message.trim())
+                                                                            ? <ReplyLinkPreview url={replyMessage.message.trim()} isMe={isMe} />
+                                                                            : <p className="truncate opacity-75 max-w-[200px]">{replyMessage.message}</p>
+                                                                    )}
+                                                                    {/* If no message and no attachment preview rendered */}
+                                                                    {!replyMessage.message && !replyMessage.attachmentType && (
+                                                                        <p className="truncate opacity-75">Message</p>
+                                                                    )}
+                                                                </>
+                                                            ) : (
+                                                                <p className="truncate opacity-75">Message deleted or unavailable</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {msg.message && (
+                                                    <>
+                                                        <p className={`${/^[\p{Extended_Pictographic}\u200d\ufe0f\s]+$/u.test(msg.message) && msg.message.length < 10
+                                                            ? 'text-4xl leading-normal'
+                                                            : 'text-sm leading-relaxed'
+                                                            } break-words whitespace-pre-wrap`}>
+                                                            {msg.message}
+                                                        </p>
+                                                        {(() => {
+                                                            const urlMatch = msg.message.match(/(https?:\/\/[^\s]+)/);
+                                                            return urlMatch ? <LinkPreview url={urlMatch[0]} /> : null;
+                                                        })()}
+                                                    </>
+                                                )}
+                                                {renderAttachment(msg)}
+                                            </div>
+
+                                            {/* Reactions Display - Instagram-style pill overlapping bubble */}
                                             {msg.reactions && msg.reactions.length > 0 && (
-                                                <div className="absolute -bottom-2 right-0 flex gap-1 z-10 translate-y-1/2">
-                                                    <div className="bg-background/80 backdrop-blur-sm border rounded-full px-1.5 py-0.5 text-[10px] shadow-sm flex items-center gap-1 cursor-pointer hover:bg-background transition-colors">
+                                                <div className={`flex ${isMe ? 'justify-end pr-1' : 'justify-start pl-1'} -mt-2.5 relative z-10`}>
+                                                    <div
+                                                        className="flex items-center gap-0.5 bg-[#1c1c1e] rounded-full px-1.5 py-[3px] shadow-lg border border-white/[0.08] cursor-pointer"
+                                                        style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}
+                                                    >
                                                         {Array.from(new Set(msg.reactions.map(r => r.emoji))).slice(0, 3).map(emoji => (
-                                                            <span key={emoji}>{emoji}</span>
+                                                            <span key={emoji} className="text-[13px] leading-none hover:scale-125 transition-transform" onClick={() => handleReaction(msg.id, emoji)}>{emoji}</span>
                                                         ))}
-                                                        {msg.reactions.length > 1 && <span className="text-muted-foreground ml-0.5">{msg.reactions.length}</span>}
+                                                        {msg.reactions.length > 1 && (
+                                                            <span className="text-[11px] text-white/60 ml-0.5 leading-none">{msg.reactions.length}</span>
+                                                        )}
                                                     </div>
                                                 </div>
                                             )}
@@ -940,6 +1079,8 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
                                                                 theme={Theme.DARK}
                                                                 emojiStyle="native"
                                                                 lazyLoadEmojis={true}
+                                                                suggestedEmojisMode={SuggestionMode.RECENT}
+                                                                previewConfig={{ showPreview: false } as any}
                                                             />
                                                         </PopoverContent>
                                                     </Popover>
@@ -977,88 +1118,117 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
                         })
                     )}
 
-                    {/* Typing Indicator Bubble */}
+                    {/* Typing Indicator Bubble — Instagram Style */}
                     {typingFriends.has(friendId) && (
-                        <div className="flex gap-3 justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
-                            <div className="w-8 h-8 flex-shrink-0 flex flex-col justify-end">
-                                <div className="w-8 h-8 rounded-full bg-primary/10 overflow-hidden ring-1 ring-border">
-                                    {friend?.avatarUrl ? (
-                                        <img src={friend.avatarUrl} alt={friend.username} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <span className="w-full h-full flex items-center justify-center text-xs font-medium">
-                                            {friend?.username?.slice(0, 2).toUpperCase()}
-                                        </span>
-                                    )}
-                                </div>
+                        <div className="flex gap-2.5 items-end justify-start animate-in fade-in slide-in-from-bottom-2 duration-300 mb-1">
+                            <div className="w-7 h-7 flex-shrink-0 rounded-full bg-primary/10 overflow-hidden ring-1 ring-border/50">
+                                {friend?.avatarUrl ? (
+                                    <img src={friend.avatarUrl} alt={friend.username} className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="w-full h-full flex items-center justify-center text-[10px] font-semibold">
+                                        {friend?.username?.slice(0, 2).toUpperCase()}
+                                    </span>
+                                )}
                             </div>
-                            <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1 shadow-sm">
-                                <div className="w-1.5 h-1.5 bg-foreground/40 rounded-full animate-bounce [animation-delay:-0.32s]" />
-                                <div className="w-1.5 h-1.5 bg-foreground/40 rounded-full animate-bounce [animation-delay:-0.16s]" />
-                                <div className="w-1.5 h-1.5 bg-foreground/40 rounded-full animate-bounce" />
+                            <div className="bg-[#2a2a2d] rounded-2xl rounded-bl-sm px-5 py-3 flex items-center gap-[5px] shadow-md">
+                                <div className="w-[7px] h-[7px] bg-[#8e8e93] rounded-full" style={{ animation: 'typingDot 1.4s infinite ease-in-out', animationDelay: '0s' }} />
+                                <div className="w-[7px] h-[7px] bg-[#8e8e93] rounded-full" style={{ animation: 'typingDot 1.4s infinite ease-in-out', animationDelay: '0.2s' }} />
+                                <div className="w-[7px] h-[7px] bg-[#8e8e93] rounded-full" style={{ animation: 'typingDot 1.4s infinite ease-in-out', animationDelay: '0.4s' }} />
                             </div>
+                            <style>{`
+                                @keyframes typingDot {
+                                    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+                                    30% { transform: translateY(-4px); opacity: 1; }
+                                }
+                            `}</style>
                         </div>
                     )}
 
                     <div ref={messagesEndRef} />
                 </div>
 
-                {/* Emoji Picker */}
+                {/* Emoji Picker — Inside modal with arrow */}
                 {showEmojiPicker && (
-                    <div className="absolute bottom-[80px] left-4 z-20 shadow-2xl rounded-xl overflow-hidden border animate-in zoom-in-95 duration-200">
-                        <EmojiPicker
-                            theme={Theme.DARK}
-                            onEmojiClick={(emoji) => {
-                                setNewMessage(prev => prev + emoji.emoji);
-                                setShowEmojiPicker(false);
-                            }}
-                            width={300}
-                            height={350}
-                            lazyLoadEmojis
-                        />
+                    <div className="relative border-t bg-card z-10" style={{ overflow: 'visible' }}>
+                        {/* Arrow pointing down to emoji button */}
+                        <div className="absolute" style={{ borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderBottom: 'none', borderTop: '8px solid hsl(var(--card))', bottom: '-8px', left: '28px', zIndex: 52 }} />
+                        <div className="p-0 animate-in slide-in-from-bottom-2 duration-200">
+                            <EmojiPicker
+                                theme={Theme.DARK}
+                                onEmojiClick={(emoji) => {
+                                    setNewMessage(prev => prev + emoji.emoji);
+                                }}
+                                width="100%"
+                                height={320}
+                                lazyLoadEmojis
+                                searchPlaceholder="Search emoji"
+                                skinTonePickerLocation={SkinTonePickerLocation.PREVIEW}
+                                previewConfig={{ showPreview: false } as any}
+                            />
+                        </div>
                     </div>
                 )}
 
-                {/* GIF Picker */}
+                {/* GIF Picker — Inside modal with arrow */}
                 {showGifPicker && (
-                    <div className="absolute bottom-[80px] left-4 right-4 z-20 bg-card border rounded-xl shadow-2xl p-3 h-[320px] max-w-[400px] flex flex-col animate-in slide-in-from-bottom-4 zoom-in-95 duration-200">
-                        <Input
-                            placeholder="Search GIFs..."
-                            value={gifSearch}
-                            onChange={(e) => setGifSearch(e.target.value)}
-                            className="mb-2"
-                            autoFocus
-                        />
-                        <div className="flex-1 overflow-y-auto pr-1">
-                            {isSearchingGifs ? (
-                                <div className="flex items-center justify-center h-full">
-                                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-2 gap-2">
-                                    {gifs.map((gif) => (
-                                        <div key={gif.id} className="aspect-video relative group overflow-hidden rounded-md bg-muted">
-                                            <img
-                                                src={gif.media_formats.tinygif.url}
-                                                alt={gif.title}
-                                                className="w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-110"
-                                                onClick={() => sendGif(gif)}
-                                                loading="lazy"
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                        <div className="flex justify-between items-center mt-2 border-t pt-2">
-                            <span className="text-xs text-muted-foreground">Powered by Tenor</span>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-xs"
-                                onClick={() => setShowGifPicker(false)}
+                    <div className="relative border-t bg-card z-10" style={{ overflow: 'visible' }}>
+                        {/* Arrow pointing down to GIF button */}
+                        <div className="absolute" style={{ borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderBottom: 'none', borderTop: '8px solid hsl(var(--card))', bottom: '-8px', left: '100px', zIndex: 52 }} />
+                        <div className="p-3 h-[300px] flex flex-col animate-in slide-in-from-bottom-2 duration-200">
+                            <Input
+                                placeholder="Search GIFs..."
+                                value={gifSearch}
+                                onChange={(e) => setGifSearch(e.target.value)}
+                                className="mb-2 bg-muted/50 border-border/50"
+                                autoFocus
+                            />
+                            <div
+                                className="flex-1 overflow-y-auto pr-1"
+                                onScroll={(e) => {
+                                    const el = e.currentTarget;
+                                    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
+                                        loadMoreGifs();
+                                    }
+                                }}
                             >
-                                Close
-                            </Button>
+                                {isSearchingGifs ? (
+                                    <div className="flex items-center justify-center h-full">
+                                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div style={{ columns: 2, columnGap: '8px' }}>
+                                            {gifs.map((gif) => (
+                                                <div key={gif.id} className="relative group overflow-hidden rounded-lg bg-muted mb-2" style={{ breakInside: 'avoid' }}>
+                                                    <img
+                                                        src={gif.media_formats.tinygif.url}
+                                                        alt={gif.title}
+                                                        className="w-full h-auto object-contain cursor-pointer transition-transform group-hover:scale-105 rounded-lg"
+                                                        onClick={() => sendGif(gif)}
+                                                        loading="lazy"
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {isLoadingMoreGifs && (
+                                            <div className="flex items-center justify-center py-3">
+                                                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                            <div className="flex justify-between items-center mt-2 pt-2 border-t border-border/30">
+                                <span className="text-[10px] text-muted-foreground">Powered by Tenor</span>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 text-[10px] px-2"
+                                    onClick={() => setShowGifPicker(false)}
+                                >
+                                    Close
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -1154,7 +1324,7 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
                 )}
 
                 {/* Input Area */}
-                <div className="p-3 bg-background border-t mt-0">
+                <div className="p-3 bg-background border-t mt-0 relative z-0">
                     <div className="flex items-end gap-2 bg-muted/50 rounded-2xl p-1.5 transition-colors focus-within:bg-muted focus-within:ring-1 focus-within:ring-primary/20">
                         {/* Attach buttons */}
                         <div className="flex items-center gap-0.5 pb-1">

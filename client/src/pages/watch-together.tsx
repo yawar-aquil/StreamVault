@@ -48,7 +48,7 @@ import { useWatchTogether, WatchTogetherProvider } from '@/contexts/watch-togeth
 import { UserProfileModal } from '@/components/user-profile-modal';
 import { useAuth } from '@/contexts/auth-context';
 import { useVoiceChat } from '@/hooks/use-voice-chat';
-import EmojiPicker, { Theme } from 'emoji-picker-react';
+import EmojiPicker, { Theme, SkinTonePickerLocation } from 'emoji-picker-react';
 import { VideoPlayer, VideoPlayerRef } from '@/components/video-player';
 import { RoomPolls } from '@/components/room-polls';
 import { useFriends } from '@/contexts/friends-context';
@@ -216,6 +216,8 @@ function WatchTogetherContent() {
     const [gifSearch, setGifSearch] = useState('');
     const [gifs, setGifs] = useState<any[]>([]);
     const [isLoadingGifs, setIsLoadingGifs] = useState(false);
+    const gifNextPosRef = useRef<string | null>(null);
+    const [isLoadingMoreGifs, setIsLoadingMoreGifs] = useState(false);
     const [selectedGif, setSelectedGif] = useState<string | null>(null);
     const [attachment, setAttachment] = useState<{ file: File; preview: string; type: 'image' | 'video' | 'audio' } | null>(null);
     const [isPortrait, setIsPortrait] = useState(false);
@@ -481,23 +483,44 @@ function WatchTogetherContent() {
     };
 
     // Search GIFs from Tenor API
-    const searchGifs = async (query: string) => {
+    const searchGifs = async (query: string, loadMore = false) => {
         if (!query.trim()) {
             setGifs([]);
+            gifNextPosRef.current = null;
             return;
         }
-        setIsLoadingGifs(true);
+        if (loadMore) {
+            setIsLoadingMoreGifs(true);
+        } else {
+            setIsLoadingGifs(true);
+        }
         try {
-            const response = await fetch(
-                `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ&client_key=streamvault&limit=20`
-            );
+            const endpoint = query === 'trending' ? 'featured' : 'search';
+            let url = `https://tenor.googleapis.com/v2/${endpoint}?q=${encodeURIComponent(query)}&key=AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ&client_key=streamvault&limit=30&media_filter=gif,tinygif`;
+            if (loadMore && gifNextPosRef.current) {
+                url += `&pos=${gifNextPosRef.current}`;
+            }
+            const response = await fetch(url);
             const data = await response.json();
-            setGifs(data.results || []);
+            if (loadMore) {
+                setGifs(prev => [...prev, ...(data.results || [])]);
+            } else {
+                setGifs(data.results || []);
+            }
+            gifNextPosRef.current = data.next || null;
         } catch (error) {
             console.error('GIF search error:', error);
-            setGifs([]);
+            if (!loadMore) setGifs([]);
         }
         setIsLoadingGifs(false);
+        setIsLoadingMoreGifs(false);
+    };
+
+    // Load more GIFs handler for infinite scroll
+    const loadMoreGifs = () => {
+        if (isLoadingMoreGifs || !gifNextPosRef.current) return;
+        const query = gifSearch || 'trending';
+        searchGifs(query, true);
     };
 
     // Load trending GIFs when GIF picker opens
@@ -2028,6 +2051,107 @@ function WatchTogetherContent() {
                                             <div ref={chatEndRef} />
                                         </div>
 
+                                        {/* Emoji Picker — Inside chat container, DM style */}
+                                        {showEmojiPicker && (
+                                            <div className="border-t border-border bg-card">
+                                                <EmojiPicker
+                                                    onEmojiClick={(emojiData) => {
+                                                        setChatMessage(prev => prev + emojiData.emoji);
+                                                    }}
+                                                    theme={Theme.DARK}
+                                                    width="100%"
+                                                    height={280}
+                                                    searchPlaceHolder="Search emoji..."
+
+                                                    previewConfig={{ showPreview: false }}
+                                                    skinTonePickerLocation={SkinTonePickerLocation.PREVIEW}
+                                                />
+                                            </div>
+                                        )}
+
+                                        {/* GIF Picker — Inside chat container, DM style */}
+                                        {showGifPicker && (
+                                            <div className="border-t border-border bg-card">
+                                                <div className="p-3 h-[280px] flex flex-col animate-in slide-in-from-bottom-2 duration-200">
+                                                    <div className="relative mb-2">
+                                                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                                        <Input
+                                                            type="text"
+                                                            placeholder="Search GIFs..."
+                                                            value={gifSearch}
+                                                            onChange={(e) => {
+                                                                setGifSearch(e.target.value);
+                                                                if (e.target.value) {
+                                                                    searchGifs(e.target.value);
+                                                                } else {
+                                                                    searchGifs('trending');
+                                                                }
+                                                            }}
+                                                            className="pl-8 h-8 text-sm bg-muted/50 border-border/50"
+                                                            autoFocus
+                                                        />
+                                                    </div>
+                                                    <div
+                                                        className="flex-1 overflow-y-auto pr-1"
+                                                        onScroll={(e) => {
+                                                            const el = e.currentTarget;
+                                                            if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
+                                                                loadMoreGifs();
+                                                            }
+                                                        }}
+                                                    >
+                                                        {isLoadingGifs ? (
+                                                            <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Loading...</div>
+                                                        ) : gifs.length > 0 ? (
+                                                            <>
+                                                                <div style={{ columns: 2, columnGap: '8px' }}>
+                                                                    {gifs.map((gif: any) => (
+                                                                        <div key={gif.id} className="relative group overflow-hidden rounded-lg bg-muted mb-2" style={{ breakInside: 'avoid' }}>
+                                                                            <img
+                                                                                src={gif.media_formats?.tinygif?.url || gif.media_formats?.nanogif?.url}
+                                                                                alt={gif.content_description}
+                                                                                className="w-full h-auto object-contain cursor-pointer transition-transform group-hover:scale-105 rounded-lg"
+                                                                                onClick={() => {
+                                                                                    const gifUrl = gif.media_formats?.gif?.url || gif.media_formats?.tinygif?.url;
+                                                                                    if (gifUrl) {
+                                                                                        setSelectedGif(gifUrl);
+                                                                                    }
+                                                                                    setShowGifPicker(false);
+                                                                                    setGifSearch('');
+                                                                                }}
+                                                                                loading="lazy"
+                                                                            />
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                                {isLoadingMoreGifs && (
+                                                                    <div className="flex items-center justify-center py-3">
+                                                                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                                                                    </div>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                                                                {gifSearch ? 'No GIFs found' : 'Search for GIFs'}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-border/30">
+                                                        <span className="text-[10px] text-muted-foreground">Powered by Tenor</span>
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-6 text-[10px] px-2"
+                                                            onClick={() => setShowGifPicker(false)}
+                                                        >
+                                                            Close
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {/* Chat Input */}
                                         <form onSubmit={handleSendMessage} className="p-4 border-t border-border">
                                             {/* Hidden file input */}
@@ -2145,102 +2269,26 @@ function WatchTogetherContent() {
 
                                             <div className="flex gap-1 items-center">
                                                 {/* Emoji Button */}
-                                                <div className="relative">
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                                                        className={`h-8 w-8 p-0 ${showEmojiPicker ? 'bg-muted' : ''}`}
-                                                    >
-                                                        <Smile className="h-4 w-4" />
-                                                    </Button>
-                                                    {showEmojiPicker && (
-                                                        <div className="absolute bottom-12 left-0 z-50">
-                                                            <EmojiPicker
-                                                                onEmojiClick={(emojiData) => {
-                                                                    setChatMessage(prev => prev + emojiData.emoji);
-                                                                    setShowEmojiPicker(false);
-                                                                }}
-                                                                theme={Theme.DARK}
-                                                                width={300}
-                                                                height={350}
-                                                                searchPlaceHolder="Search emoji..."
-                                                                skinTonesDisabled
-                                                                previewConfig={{ showPreview: false }}
-                                                            />
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => { setShowEmojiPicker(!showEmojiPicker); setShowGifPicker(false); }}
+                                                    className={`h-8 w-8 p-0 ${showEmojiPicker ? 'bg-muted' : ''}`}
+                                                >
+                                                    <Smile className="h-4 w-4" />
+                                                </Button>
 
                                                 {/* GIF Button */}
-                                                <div className="relative">
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => setShowGifPicker(!showGifPicker)}
-                                                        className={`h-8 w-8 p-0 ${showGifPicker ? 'bg-muted' : ''}`}
-                                                    >
-                                                        <span className="text-[10px] font-bold">GIF</span>
-                                                    </Button>
-                                                    {showGifPicker && (
-                                                        <div className="absolute bottom-12 right-0 z-50 w-[280px] max-w-[calc(100vw-2rem)] bg-card border border-border rounded-lg shadow-xl">
-                                                            <div className="p-2 border-b border-border">
-                                                                <div className="relative">
-                                                                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                                                    <Input
-                                                                        type="text"
-                                                                        placeholder="Search GIFs..."
-                                                                        value={gifSearch}
-                                                                        onChange={(e) => {
-                                                                            setGifSearch(e.target.value);
-                                                                            searchGifs(e.target.value);
-                                                                        }}
-                                                                        className="pl-8 h-8 text-sm"
-                                                                    />
-                                                                </div>
-                                                            </div>
-                                                            <div className="h-[250px] overflow-y-auto p-2">
-                                                                {isLoadingGifs ? (
-                                                                    <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Loading...</div>
-                                                                ) : gifs.length > 0 ? (
-                                                                    <div className="grid grid-cols-2 gap-1">
-                                                                        {gifs.map((gif: any) => (
-                                                                            <button
-                                                                                key={gif.id}
-                                                                                type="button"
-                                                                                onClick={() => {
-                                                                                    const gifUrl = gif.media_formats?.gif?.url || gif.media_formats?.tinygif?.url;
-                                                                                    if (gifUrl) {
-                                                                                        setSelectedGif(gifUrl);
-                                                                                    }
-                                                                                    setShowGifPicker(false);
-                                                                                    setGifSearch('');
-                                                                                }}
-                                                                                className="aspect-video rounded overflow-hidden hover:ring-2 ring-primary"
-                                                                            >
-                                                                                <img
-                                                                                    src={gif.media_formats?.tinygif?.url || gif.media_formats?.nanogif?.url}
-                                                                                    alt={gif.content_description}
-                                                                                    className="w-full h-full object-cover"
-                                                                                    loading="lazy"
-                                                                                />
-                                                                            </button>
-                                                                        ))}
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-                                                                        {gifSearch ? 'No GIFs found' : 'Search for GIFs'}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                            <div className="p-1 border-t border-border text-center">
-                                                                <span className="text-xs text-muted-foreground">Powered by Tenor</span>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => { setShowGifPicker(!showGifPicker); setShowEmojiPicker(false); }}
+                                                    className={`h-8 w-8 p-0 ${showGifPicker ? 'bg-muted' : ''}`}
+                                                >
+                                                    <span className="text-[10px] font-bold">GIF</span>
+                                                </Button>
 
                                                 {/* Attachment Button */}
                                                 <Button
