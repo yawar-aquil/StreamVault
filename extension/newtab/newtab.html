@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamVault — New Tab</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="newtab.css">
+</head>
+
+<body>
+    <div class="backdrop"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo-section">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" fill="white" />
+                    </svg>
+                </div>
+                <span class="logo-text">StreamVault</span>
+            </div>
+
+            <div class="search-bar">
+                <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#666"
+                    stroke-width="2">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="M21 21l-4.35-4.35" />
+                </svg>
+                <input type="text" id="searchInput" placeholder="Search movies, shows, anime..." autocomplete="off">
+            </div>
+
+            <div class="user-section" id="userSection">
+                <div class="user-avatar" id="userAvatar">?</div>
+            </div>
+        </header>
+
+        <!-- Search Results (hidden by default) -->
+        <div id="searchOverlay" class="search-overlay" style="display:none;">
+            <div class="search-results-container">
+                <div id="searchResults" class="search-results"></div>
+            </div>
+        </div>
+
+        <!-- Greeting -->
+        <div class="greeting" id="greeting">
+            <h1>Good evening</h1>
+            <p class="date" id="currentDate"></p>
+        </div>
+
+        <!-- Quick Access -->
+        <div class="quick-access">
+            <button class="qa-btn" data-path="/">
+                <div class="qa-icon home-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                    </svg>
+                </div>
+                <span>Home</span>
+            </button>
+            <button class="qa-btn" data-path="/movies">
+                <div class="qa-icon movies-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" />
+                        <line x1="7" y1="2" x2="7" y2="22" />
+                        <line x1="17" y1="2" x2="17" y2="22" />
+                        <line x1="2" y1="12" x2="22" y2="12" />
+                    </svg>
+                </div>
+                <span>Movies</span>
+            </button>
+            <button class="qa-btn" data-path="/shows">
+                <div class="qa-icon shows-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="7" width="20" height="15" rx="2" ry="2" />
+                        <polyline points="17 2 12 7 7 2" />
+                    </svg>
+                </div>
+                <span>Shows</span>
+            </button>
+            <button class="qa-btn" data-path="/anime">
+                <div class="qa-icon anime-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon
+                            points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                </div>
+                <span>Anime</span>
+            </button>
+            <button class="qa-btn" data-path="/messages">
+                <div class="qa-icon msgs-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                </div>
+                <span>Messages</span>
+            </button>
+            <button class="qa-btn" data-path="/downloads">
+                <div class="qa-icon dl-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                </div>
+                <span>Downloads</span>
+            </button>
+        </div>
+
+        <!-- Content Sections -->
+        <div class="content-grid">
+            <!-- Trending -->
+            <section class="content-section trending-section">
+                <div class="section-header">
+                    <h2>🔥 Trending Now</h2>
+                    <button class="see-all" data-path="/">See All</button>
+                </div>
+                <div class="card-row" id="trendingRow">
+                    <div class="card-skeleton"></div>
+                    <div class="card-skeleton"></div>
+                    <div class="card-skeleton"></div>
+                    <div class="card-skeleton"></div>
+                    <div class="card-skeleton"></div>
+                    <div class="card-skeleton"></div>
+                </div>
+            </section>
+
+            <!-- Friends Online -->
+            <section class="content-section friends-section">
+                <div class="section-header">
+                    <h2>👥 Friends Online</h2>
+                </div>
+                <div id="friendsOnline" class="friends-online">
+                    <div class="loading-text">Loading...</div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="newtab.js"></script>
+</body>
+
+</html>
