@@ -1053,6 +1053,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       setAuthCookie(res, token);
 
+      // Fetch full badge details
+      const userBadges = await storage.getUserBadges(user.id);
+      const protocol = req.protocol === 'https' ? 'https' : 'http';
+      const host = req.get('host')?.replace('0.0.0.0', 'localhost') || 'localhost:5000';
+      const baseUrl = process.env.BASE_URL || `${protocol}://${host}`;
+
+      const toAbsoluteUrl = (url: string) => {
+        if (!url) return url;
+        if (url.startsWith('http')) return url;
+        return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+      };
+
+      const enrichedBadges = userBadges.map(ub => ({
+        id: ub.badge.id,
+        name: ub.badge.name,
+        imageUrl: toAbsoluteUrl(ub.badge.imageUrl),
+        equipped: ub.equipped,
+        category: ub.badge.category,
+        equippedAt: ub.equippedAt
+      }));
+
       res.json({
         user: {
           id: user.id,
@@ -1063,6 +1084,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           referredBy: user.referredBy,
           referralCount: user.referralCount,
           coins: user.coins,
+          badges: enrichedBadges,
+          adFreeUntil: user.adFreeUntil || null,
+          subscriptionType: user.subscriptionType || null,
+          isSubscribed: user.adFreeUntil && new Date(user.adFreeUntil) > new Date()
         },
       });
     } catch (error) {
@@ -1168,8 +1193,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
 
-      // Get equipped badge
+      // Get equipped badge (Keeping for backward compatibility if needed, but 'badges' array is better)
       const equippedBadge = await storage.getEquippedBadge(user.id);
+
+      // Fetch full badge details
+      const userBadges = await storage.getUserBadges(user.id);
+      const protocol = req.protocol === 'https' ? 'https' : 'http';
+      const host = req.get('host')?.replace('0.0.0.0', 'localhost') || 'localhost:5000';
+      const baseUrl = process.env.BASE_URL || `${protocol}://${host}`;
+
+      // Helper to ensure absolute URL
+      const toAbsoluteUrl = (url: string) => {
+        if (!url) return url;
+        if (url.startsWith('http')) return url;
+        return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+      };
+
+      const enrichedBadges = userBadges.map(ub => ({
+        id: ub.badge.id,
+        name: ub.badge.name,
+        imageUrl: toAbsoluteUrl(ub.badge.imageUrl),
+        equipped: ub.equipped,
+        category: ub.badge.category,
+        description: ub.badge.description,
+        icon: ub.badge.icon,
+        equippedAt: ub.equippedAt
+      }));
+
+      console.log("BADGE DEBUG:", JSON.stringify(enrichedBadges, null, 2));
 
       res.json({
         user: {
@@ -1184,14 +1235,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           favorites,
           xp: user.xp,
           level: user.level,
-          badges: user.badges,
+          badges: enrichedBadges, // Return enriched badges structure
           equippedBadge: equippedBadge,
           coins: user.coins,
           adFreeUntil: user.adFreeUntil || null,
-          subscriptionAutoRenew: user.subscriptionAutoRenew || false,
           subscriptionType: user.subscriptionType || null,
+          subscriptionAutoRenew: user.subscriptionAutoRenew || false,
+          isSubscribed: user.adFreeUntil && new Date(user.adFreeUntil) > new Date()
         },
       });
+
     } catch (error) {
       console.error("Get user error:", error);
       res.status(500).json({ error: "Failed to get user" });
@@ -2973,6 +3026,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================
   // API KEY ROUTES
   // ============================================
+
+  // External Availability API (for extension/integrations)
+  app.get("/api/external/availability", requireApiKey, async (req, res) => {
+    try {
+      const { title, year, type } = req.query;
+
+      if (!title) {
+        return res.status(400).json({ error: "Title is required" });
+      }
+
+      const cleanTitle = (title as string).toLowerCase().trim();
+      const targetYear = year ? parseInt(year as string) : null;
+
+      let match = null;
+      let url = "";
+
+      // Search logic...
+      if (!type || type === 'movie') {
+        const movies = await storage.getAllMovies();
+        match = movies.find(m =>
+          m.title.toLowerCase().includes(cleanTitle) &&
+          (!targetYear || Math.abs(m.year - targetYear) <= 1)
+        );
+        if (match) url = `https://streamvault.live/movie/${match.slug}`;
+      }
+
+      if (!match && (!type || type === 'show')) {
+        const shows = await storage.getAllShows();
+        match = shows.find(s =>
+          s.title.toLowerCase().includes(cleanTitle) &&
+          (!targetYear || Math.abs(s.year - targetYear) <= 1)
+        );
+        if (match) url = `https://streamvault.live/show/${match.slug}`;
+      }
+
+      if (!match && (!type || type === 'anime')) {
+        const animeList = await storage.getAllAnime();
+        match = animeList.find(a =>
+          a.title.toLowerCase().includes(cleanTitle) &&
+          (!targetYear || Math.abs(a.year - targetYear) <= 1)
+        );
+        if (match) url = `https://streamvault.live/anime/${match.slug}`;
+      }
+
+      if (match) {
+        res.json({
+          available: true,
+          title: (match as any).title,
+          year: (match as any).year,
+          type: (match as any).totalSeasons ? 'show' : 'movie',
+          url: url,
+          poster: (match as any).posterUrl
+        });
+      } else {
+        res.json({ available: false });
+      }
+
+    } catch (error) {
+      console.error("[External API] Error checking availability:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
 
   // Get user's API keys
   app.get("/api/keys", async (req, res) => {

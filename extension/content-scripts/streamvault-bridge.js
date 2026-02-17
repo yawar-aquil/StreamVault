@@ -169,8 +169,49 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         showNotification(`Connected to room: ${message.roomCode}`, 'success');
     }
 
+    // ── Ad Blocker Sync: Extension → Website ──
+    // When extension toggles ad blocker, update website's localStorage
+    if (message.type === 'AD_BLOCK_TOGGLE') {
+        // Extension enabled = ads blocked, so website ad_preference should be "false" (ad-free ON)
+        // Extension disabled = ads not blocked, so website ad_preference should be "true" (ads ON)
+        const websiteAdEnabled = message.enabled ? 'false' : 'true';
+        const currentPref = localStorage.getItem('ad_preference');
+
+        if (currentPref !== websiteAdEnabled) {
+            localStorage.setItem('ad_preference', websiteAdEnabled);
+            // Dispatch storage event so React picks up the change
+            window.dispatchEvent(new StorageEvent('storage', {
+                key: 'ad_preference',
+                newValue: websiteAdEnabled,
+                oldValue: currentPref,
+                storageArea: localStorage
+            }));
+            console.log('[StreamVault Bridge] Synced ad preference from extension:', websiteAdEnabled);
+        }
+        sendResponse({ success: true });
+    }
+
     return true;
 });
+
+// ── Ad Blocker Sync: Website → Extension ──
+// When user toggles ad-free on the website, sync to extension
+let lastAdPref = localStorage.getItem('ad_preference');
+
+setInterval(() => {
+    const currentPref = localStorage.getItem('ad_preference');
+    if (currentPref !== lastAdPref) {
+        lastAdPref = currentPref;
+        // ad_preference "false" = user wants ad-free (extension should block)
+        // ad_preference "true" = user wants ads (extension should not block)
+        const extensionShouldBlock = currentPref === 'false';
+        chrome.runtime.sendMessage({
+            type: 'SET_AD_BLOCK',
+            enabled: extensionShouldBlock
+        }).catch(() => { });
+        console.log('[StreamVault Bridge] Website ad pref changed, synced to extension:', extensionShouldBlock);
+    }
+}, 1000);
 
 // Get room code from URL
 function getRoomCode() {

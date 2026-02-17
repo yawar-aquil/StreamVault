@@ -1,12 +1,13 @@
 {
     "manifest_version": 3,
     "name": "StreamVault",
-    "description": "Ad blocker, quick search, dashboard & more for StreamVault",
+    "description": "Ad blocker, video chat & Watch Together for StreamVault",
     "version": "2.0.0",
     "permissions": [
         "storage",
         "activeTab",
         "tabs",
+        "cookies",
         "declarativeNetRequest",
         "notifications",
         "alarms"
@@ -20,6 +21,8 @@
         "https://streamvault.in/*",
         "https://www.streamvault.in/*",
         "http://localhost:5000/*",
+        "http://localhost:3000/*",
+        "http://localhost:5173/*",
         "https://www.imdb.com/*",
         "https://www.themoviedb.org/*",
         "https://myanimelist.net/*"
@@ -31,7 +34,9 @@
                 "https://www.streamvault.live/*",
                 "https://streamvault.in/*",
                 "https://www.streamvault.in/*",
-                "http://localhost:5000/*"
+                "http://localhost:5000/*",
+                "http://localhost:3000/*",
+                "http://localhost:5173/*"
             ],
             "js": [
                 "content-scripts/ad-blocker.js",
@@ -44,10 +49,12 @@
                 "https://www.imdb.com/title/*",
                 "https://www.themoviedb.org/movie/*",
                 "https://www.themoviedb.org/tv/*",
-                "https://myanimelist.net/anime/*"
+                "https://myanimelist.net/anime/*",
+                "https://www.google.com/search*",
+                "https://www.google.co.in/search*"
             ],
             "js": [
-                "content-scripts/imdb-detector.js"
+                "content-scripts/external-integrations.js"
             ],
             "run_at": "document_idle"
         }
@@ -68,9 +75,6 @@
         "48": "icons/icon48.png",
         "128": "icons/icon128.png"
     },
-    "chrome_url_overrides": {
-        "newtab": "newtab/newtab.html"
-    },
     "commands": {
         "quick-search": {
             "suggested_key": {
@@ -78,12 +82,6 @@
                 "mac": "Command+Shift+S"
             },
             "description": "Quick search StreamVault"
-        },
-        "open-dms": {
-            "suggested_key": {
-                "default": "Ctrl+Shift+D"
-            },
-            "description": "Open DMs"
         },
         "open-watchlist": {
             "suggested_key": {

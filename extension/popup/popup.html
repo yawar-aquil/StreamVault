@@ -20,29 +20,22 @@
                 </div>
                 <div>
                     <div class="brand">StreamVault</div>
-                    <div class="user-info" id="userInfo">Not logged in</div>
+                    <div class="user-info" id="userInfo">Loading...</div>
                 </div>
             </div>
             <div class="header-right">
-                <div class="status-dot" id="statusDot"></div>
+                <div class="status-dot offline" id="statusDot"></div>
             </div>
         </div>
 
         <!-- Tab Navigation -->
         <div class="tabs">
-            <button class="tab active" data-tab="search">
+            <button class="tab active" data-tab="watchroom">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="M21 21l-4.35-4.35" />
+                    <path d="M15.6 11.6L22 7v10l-6.4-4.6z" />
+                    <rect x="2" y="6" width="14" height="12" rx="2" />
                 </svg>
-                Search
-            </button>
-            <button class="tab" data-tab="watching">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="2" y="7" width="20" height="15" rx="2" ry="2" />
-                    <polyline points="17 2 12 7 7 2" />
-                </svg>
-                Activity
+                Watch Room
             </button>
             <button class="tab" data-tab="settings">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -54,90 +47,152 @@
             </button>
         </div>
 
-        <!-- Search Tab -->
-        <div class="tab-content active" id="tab-search">
-            <div class="search-box">
-                <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888"
-                    stroke-width="2">
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="M21 21l-4.35-4.35" />
-                </svg>
-                <input type="text" id="searchInput" placeholder="Search movies, shows, anime..." autocomplete="off">
+        <!-- Watch Room Tab -->
+        <div class="tab-content active" id="tab-watchroom">
+            <!-- Not in a room state -->
+            <div id="noRoom" class="state-panel">
+                <div class="state-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#52525b" stroke-width="1.5">
+                        <path d="M15.6 11.6L22 7v10l-6.4-4.6z" />
+                        <rect x="2" y="6" width="14" height="12" rx="2" />
+                    </svg>
+                </div>
+                <div class="state-title">No Active Watch Room</div>
+                <div class="state-desc">Join a Watch Together room on StreamVault or enter a room code below</div>
+                <div class="room-join-form">
+                    <input type="text" id="roomCodeInput" placeholder="Enter room code" maxlength="6" autocomplete="off"
+                        spellcheck="false">
+                    <button class="btn-join" id="joinRoomBtn">Join</button>
+                </div>
+                <div class="join-error" id="joinError" style="display:none;"></div>
+                <div class="join-divider"><span>or</span></div>
+                <button class="btn-secondary" id="openWatchTogether">Open StreamVault</button>
             </div>
-            <div id="searchResults" class="results"></div>
-            <div id="quickLinks" class="quick-links">
-                <div class="section-title">Quick Links</div>
-                <button class="quick-link" data-path="/">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                    </svg>
-                    Home
-                </button>
-                <button class="quick-link" data-path="/movies">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" />
-                        <line x1="7" y1="2" x2="7" y2="22" />
-                        <line x1="17" y1="2" x2="17" y2="22" />
-                        <line x1="2" y1="12" x2="22" y2="12" />
-                        <line x1="2" y1="7" x2="7" y2="7" />
-                        <line x1="2" y1="17" x2="7" y2="17" />
-                        <line x1="17" y1="7" x2="22" y2="7" />
-                        <line x1="17" y1="17" x2="22" y2="17" />
-                    </svg>
-                    Movies
-                </button>
-                <button class="quick-link" data-path="/shows">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="2" y="7" width="20" height="15" rx="2" ry="2" />
-                        <polyline points="17 2 12 7 7 2" />
-                    </svg>
-                    Shows
-                </button>
-                <button class="quick-link" data-path="/anime">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polygon
-                            points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                    </svg>
-                    Anime
-                </button>
-                <button class="quick-link" data-path="/messages">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                    </svg>
-                    Messages
-                </button>
-                <button class="quick-link" data-path="/profile">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                        <circle cx="12" cy="7" r="4" />
-                    </svg>
-                    Profile
-                </button>
-            </div>
-        </div>
 
-        <!-- Activity Tab -->
-        <div class="tab-content" id="tab-watching">
-            <div class="section-title">Online Friends</div>
-            <div id="friendsList" class="friends-list">
-                <div class="empty-state">Loading...</div>
+            <!-- In a room state -->
+            <div id="inRoom" class="state-panel" style="display:none;">
+                <div class="room-header">
+                    <div class="room-badge">
+                        <div class="room-badge-dot"></div>
+                        <span>Room: <strong id="roomCode">—</strong></span>
+                    </div>
+                    <span class="room-role" id="roomRole">Viewer</span>
+                </div>
+
+                <!-- Video Chat Area -->
+                <div class="video-chat">
+                    <div class="video-grid" id="videoGrid">
+                        <!-- Local video -->
+                        <div class="video-tile local" id="localTile">
+                            <video id="localVideo" autoplay muted playsinline></video>
+                            <div class="video-label">You</div>
+                            <div class="video-off" id="localVideoOff">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#71717a"
+                                    stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                    <circle cx="9" cy="7" r="4" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Controls -->
+                    <div class="video-controls">
+                        <button class="ctrl-btn" id="toggleMic" title="Toggle Microphone">
+                            <svg class="icon-on" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                                <line x1="12" y1="19" x2="12" y2="23" />
+                                <line x1="8" y1="23" x2="16" y2="23" />
+                            </svg>
+                            <svg class="icon-off" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" style="display:none">
+                                <line x1="1" y1="1" x2="23" y2="23" />
+                                <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+                                <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .76-.13 1.49-.35 2.17" />
+                                <line x1="12" y1="19" x2="12" y2="23" />
+                                <line x1="8" y1="23" x2="16" y2="23" />
+                            </svg>
+                        </button>
+                        <button class="ctrl-btn" id="toggleCam" title="Toggle Camera">
+                            <svg class="icon-on" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <path d="M15.6 11.6L22 7v10l-6.4-4.6z" />
+                                <rect x="2" y="6" width="14" height="12" rx="2" />
+                            </svg>
+                            <svg class="icon-off" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" style="display:none">
+                                <line x1="1" y1="1" x2="23" y2="23" />
+                                <path
+                                    d="M21 21H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3m3-3h6l2 3h4a2 2 0 0 1 2 2v9.34m-7.72-2.06a4 4 0 1 1-5.56-5.56" />
+                            </svg>
+                        </button>
+                        <button class="ctrl-btn btn-danger" id="leaveRoom" title="Leave Room">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path
+                                    d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91" />
+                                <line x1="1" y1="1" x2="23" y2="23" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div id="mediaStatus" class="media-status" style="display:none"></div>
+                </div>
+
+                <div class="room-info-text">
+                    <span id="peerCount">0</span> <span id="peerLabel">people in room</span>
+                </div>
             </div>
         </div>
 
         <!-- Settings Tab -->
         <div class="tab-content" id="tab-settings">
             <div class="settings-list">
-                <div class="setting-item">
+                <!-- Ad Blocker -->
+                <div class="setting-item" id="adBlockSetting">
                     <div class="setting-info">
                         <div class="setting-label">Ad Blocker</div>
-                        <div class="setting-desc">Block ads at network level</div>
+                        <div class="setting-desc" id="adBlockDesc">Block ads at network level</div>
                     </div>
                     <label class="switch">
-                        <input type="checkbox" id="adBlockToggle" checked>
+                        <input type="checkbox" id="adBlockToggle">
                         <span class="slider"></span>
                     </label>
                 </div>
 
+                <!-- API Key -->
+                <div class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+                    <div class="setting-info" style="width: 100%;">
+                        <div class="setting-label">API Key</div>
+                        <div class="setting-desc">Required for IMDb/Google integration</div>
+                    </div>
+                    <div style="display: flex; gap: 6px; width: 100%;">
+                        <input type="password" id="apiKeyInput" placeholder="Paste API Key here"
+                            style="flex: 1; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 6px 8px; border-radius: 6px; font-size: 11px; font-family: monospace;">
+                        <button id="saveKeyBtn"
+                            style="padding: 6px 10px; background: #27272a; border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 6px; cursor: pointer; font-size: 10px;">Save</button>
+                    </div>
+                    <div id="keyStatus" style="font-size: 10px; color: #22c55e; display: none;">Saved!</div>
+                </div>
+
+                <!-- Server URL -->
+                <div class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+                    <div class="setting-info" style="width: 100%;">
+                        <div class="setting-label">Server URL</div>
+                        <div class="setting-desc">Default: https://streamvault.live</div>
+                    </div>
+                    <div style="display: flex; gap: 6px; width: 100%;">
+                        <input type="text" id="serverUrlInput" placeholder="http://localhost:5000"
+                            style="flex: 1; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 6px 8px; border-radius: 6px; font-size: 11px; font-family: monospace;">
+                        <button id="saveUrlBtn"
+                            style="padding: 6px 10px; background: #27272a; border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 6px; cursor: pointer; font-size: 10px;">Save</button>
+                    </div>
+                    <div id="urlStatus" style="font-size: 10px; color: #22c55e; display: none;">Saved!</div>
+                </div>
+
+                <!-- Notifications -->
                 <div class="setting-item">
                     <div class="setting-info">
                         <div class="setting-label">Notifications</div>
@@ -147,18 +202,6 @@
                         <input type="checkbox" id="notifToggle" checked>
                         <span class="slider"></span>
                     </label>
-                </div>
-
-                <div class="setting-item">
-                    <div class="setting-info">
-                        <div class="setting-label">Theme</div>
-                        <div class="setting-desc">Switch StreamVault theme</div>
-                    </div>
-                    <select id="themeSelect" class="theme-select">
-                        <option value="dark">Dark</option>
-                        <option value="light">Light</option>
-                        <option value="system">System</option>
-                    </select>
                 </div>
             </div>
 
@@ -171,28 +214,20 @@
                     <kbd>Ctrl+Shift+S</kbd>
                 </div>
                 <div class="shortcut-item">
-                    <span>Open DMs</span>
-                    <kbd>Ctrl+Shift+D</kbd>
-                </div>
-                <div class="shortcut-item">
                     <span>Watchlist</span>
                     <kbd>Ctrl+Shift+W</kbd>
                 </div>
             </div>
 
             <div class="setting-divider"></div>
-
-            <div class="version-info">
-                StreamVault Extension v2.0.0
-            </div>
+            <div class="version-info">StreamVault Extension v2.0.0</div>
         </div>
 
         <!-- Footer -->
         <div class="footer">
-            <a href="#" id="openSV">streamvault.live</a>
+            <a href="#" id="openSV">Open StreamVault</a>
         </div>
     </div>
-
     <script src="popup.js"></script>
 </body>
 

@@ -172,7 +172,7 @@
             });
 
             // Remove known ad containers
-            document.querySelectorAll('[data-zone], [data-ad-script], body > ins').forEach(el => {
+            document.querySelectorAll('[data-zone], [data-ad-container], [data-ad-script], body > ins').forEach(el => {
                 try { el.remove(); } catch { }
             });
         }

@@ -538,7 +538,7 @@ export function NativeBanner() {
     if (!showAds) return null;
 
     return (
-        <div className="flex justify-center my-4 w-full">
+        <div className="flex justify-center my-4 w-full" data-ad-container="true">
             <div id="container-2fe64366cad801afa603d926d7c7d413"></div>
         </div>
     );

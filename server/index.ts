@@ -45,6 +45,21 @@ const limiter = rateLimit({
 // Apply rate limiting to all API routes
 app.use("/api", limiter);
 
+// CORS for Extension
+app.use("/api/external", (req, res, next) => {
+  const origin = req.headers.origin;
+  // Allow extensions and localhost
+  if (origin && (origin.startsWith('chrome-extension://') || origin.includes('localhost'))) {
+    res.header("Access-Control-Allow-Origin", origin);
+    res.header("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, X-API-Key, Authorization");
+  }
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 // Serve uploads folder statically (for avatars, etc.)
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
