@@ -23,6 +23,8 @@
         "http://localhost:5000/*",
         "http://localhost:3000/*",
         "http://localhost:5173/*",
+        "http://13.205.136.45/*",
+        "http://13.205.136.45:5000/*",
         "https://www.imdb.com/*",
         "https://www.themoviedb.org/*",
         "https://myanimelist.net/*"
@@ -36,7 +38,9 @@
                 "https://www.streamvault.in/*",
                 "http://localhost:5000/*",
                 "http://localhost:3000/*",
-                "http://localhost:5173/*"
+                "http://localhost:5173/*",
+                "http://13.205.136.45/*",
+                "http://13.205.136.45:5000/*"
             ],
             "js": [
                 "content-scripts/ad-blocker.js",
@@ -98,5 +102,15 @@
                 "path": "rules/ad-rules.json"
             }
         ]
-    }
+    },
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "icons/streamvault-logo.png"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
+        }
+    ]
 }

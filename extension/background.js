@@ -44,25 +44,22 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 // ─── Cookie-based Auth ───────────────────────────────────────────────
 // ─── Cookie-based Auth ───────────────────────────────────────────────
 async function getAuthData() {
-    // Check production domains
-    const domains = ['streamvault.live', 'www.streamvault.live', 'streamvault.in', 'www.streamvault.in'];
+    // Check domains (Prioritize Dev/VPS over Prod)
+    const domains = [
+        '13.205.136.45:5000', '13.205.136.45',
+        'localhost:5000', 'localhost:3000',
+        'streamvault.live', 'www.streamvault.live',
+        'streamvault.in', 'www.streamvault.in'
+    ];
     for (const d of domains) {
         try {
-            const url = `https://${d}`;
+            const url = d.includes(':') || d.match(/^\d/) ? `http://${d}` : `https://${d}`;
             const cookie = await chrome.cookies.get({ url, name: 'authToken' });
             if (cookie?.value) return { token: cookie.value, apiBase: url };
         } catch { }
     }
 
-    // Check localhost ports
-    const localPorts = [5000, 3000, 5173];
-    for (const port of localPorts) {
-        try {
-            const url = `http://localhost:${port}`;
-            const cookie = await chrome.cookies.get({ url, name: 'authToken' });
-            if (cookie?.value) return { token: cookie.value, apiBase: 'http://localhost:5000' }; // API usually on 5000 even if FE is 3000
-        } catch { }
-    }
+    // Check localhost ports logic removed as it's now in the main list or handled above
 
     return null;
 }
@@ -248,24 +245,58 @@ async function handleMessage(message, sender, sendResponse) {
                     headers['X-API-Key'] = store.apiKey;
                 } else if (auth?.token) {
                     headers['Authorization'] = `Bearer ${auth.token}`;
-                } else {
-                    sendResponse({ error: 'No API Key or login session found' });
-                    return;
                 }
+                // Don't return early - try public access or just let API fail with 401 if needed
+                // But generally we need some auth.
 
-                const base = auth?.apiBase || store.baseUrl || 'https://streamvault.live';
+
+                const base = auth?.apiBase || store.baseUrl || 'http://13.205.136.45:5000'; // Fallback to VPS if no other
                 const query = new URLSearchParams({ title, year: year || '', type: type || '' }).toString();
+
+                console.log(`[StreamVault] Checking availability on: ${base}`);
 
                 try {
                     const resp = await fetch(`${base}/api/external/availability?${query}`, { headers });
                     if (resp.ok) {
-                        const data = await resp.json();
+                        // Attach debug info
+                        if (data.url && !data.url.startsWith('http')) {
+                            data.url = new URL(data.url, base).href;
+                        }
+                        data._debug = { usedBase: base, authMethod: headers['X-API-Key'] ? 'ApiKey' : (headers['Authorization'] ? 'Bearer' : 'None') };
                         sendResponse(data);
+                    } else if (resp.status === 401) {
+                        // 401 means we reached the server but need auth. This confirms connectivity.
+                        sendResponse({ error: 'Auth required', _debug: { usedBase: base, status: 401 } });
                     } else {
-                        sendResponse({ error: `API Error: ${resp.status}` });
+                        sendResponse({ error: `API Error: ${resp.status}`, _debug: { usedBase: base } });
                     }
                 } catch (e) {
-                    sendResponse({ error: 'Network error' });
+                    console.log('[StreamVault] Primary fetch failed, trying fallback to HTTPS domain...');
+
+                    // Fallback to main domain (port 443) if IP:5000 fails (likely firewall)
+                    const fallbackBase = 'https://streamvault.live';
+
+                    if (base !== fallbackBase && base !== 'https://www.streamvault.live') {
+                        try {
+                            const resp = await fetch(`${fallbackBase}/api/external/availability?${query}`, { headers });
+                            if (resp.ok) {
+                                const data = await resp.json();
+                                if (data.url && !data.url.startsWith('http')) {
+                                    data.url = new URL(data.url, fallbackBase).href;
+                                }
+                                data._debug = { usedBase: fallbackBase, originalError: e.message, fellBack: true };
+                                sendResponse(data);
+                                return;
+                            } else if (resp.status === 401) {
+                                sendResponse({ error: 'Auth required (Fallback)', _debug: { usedBase: fallbackBase, status: 401 } });
+                                return;
+                            }
+                        } catch (e2) {
+                            sendResponse({ error: 'Network error (Fallback failed)', _debug: { usedBase: fallbackBase, details: e2.message } });
+                            return;
+                        }
+                    }
+                    sendResponse({ error: 'Network error', _debug: { usedBase: base, details: e.message } });
                 }
                 break;
             }
