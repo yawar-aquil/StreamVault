@@ -11,8 +11,9 @@
         :root {
             --bg-color: #030712;
             --card-bg: rgba(17, 24, 39, 0.7);
-            --primary: #8b5cf6;
-            --secondary: #ec4899;
+            --primary: #e50914;
+            /* Netflix Red */
+            --secondary: #b20710;
             --text-main: #f9fafb;
             --text-muted: #9ca3af;
         }
@@ -40,7 +41,7 @@
             position: absolute;
             width: 600px;
             height: 600px;
-            background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, rgba(3, 7, 18, 0) 70%);
+            background: radial-gradient(circle, rgba(229, 9, 20, 0.15) 0%, rgba(3, 7, 18, 0) 70%);
             border-radius: 50%;
             top: 50%;
             left: 50%;
@@ -53,7 +54,7 @@
             position: absolute;
             width: 400px;
             height: 400px;
-            background: radial-gradient(circle, rgba(236, 72, 153, 0.1) 0%, rgba(3, 7, 18, 0) 70%);
+            background: radial-gradient(circle, rgba(178, 7, 16, 0.1) 0%, rgba(3, 7, 18, 0) 70%);
             border-radius: 50%;
             top: 20%;
             left: 80%;
@@ -127,21 +128,22 @@
         }
 
         .icon-wrapper {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1));
+            width: 100px;
+            height: 100px;
+            /* background: linear-gradient(135deg, rgba(229, 9, 20, 0.1), rgba(0, 0, 0, 0.2)); */
             border-radius: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 2rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            /* border: 1px solid rgba(255, 255, 255, 0.1); */
         }
 
-        .icon {
-            width: 40px;
-            height: 40px;
-            color: var(--primary);
+        .logo-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 0 10px rgba(229, 9, 20, 0.5));
         }
 
         h1 {
@@ -149,7 +151,7 @@
             font-weight: 800;
             margin-bottom: 1rem;
             letter-spacing: -0.02em;
-            background: linear-gradient(to right, #fff, #a5b4fc);
+            background: linear-gradient(to right, #fff, #fee2e2);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
@@ -174,12 +176,12 @@
             transition: all 0.3s ease;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            box-shadow: 0 10px 15px -3px rgba(139, 92, 246, 0.3);
+            box-shadow: 0 10px 15px -3px rgba(229, 9, 20, 0.3);
         }
 
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 20px 25px -5px rgba(139, 92, 246, 0.4);
+            box-shadow: 0 20px 25px -5px rgba(229, 9, 20, 0.4);
             filter: brightness(1.1);
         }
 
@@ -192,13 +194,6 @@
             font-size: 0.875rem;
             color: rgba(255, 255, 255, 0.2);
         }
-
-        /* SVG Icon */
-        svg {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
     </style>
 </head>
 
@@ -208,10 +203,9 @@
 
     <div class="card">
         <div class="icon-wrapper">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-            </svg>
+            <!-- Using Raw GitHub URL for the logo to avoid Nginx static file config issues -->
+            <img src="https://raw.githubusercontent.com/shakirali78690/StreamVault/main/client/public/streamvault-logo.png"
+                alt="StreamVault Logo" class="logo-img" onerror="this.style.display='none'">
         </div>
 
         <h1>System Update</h1>
