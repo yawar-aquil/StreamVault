@@ -4,14 +4,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StreamVault - Under Maintenance</title>
+    <title>StreamVault - System Maintenance</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+
         :root {
-            --background: #09090b;
-            --foreground: #fafafa;
+            --bg-color: #030712;
+            --card-bg: rgba(17, 24, 39, 0.7);
             --primary: #8b5cf6;
             --secondary: #ec4899;
-            --accent: #f97316;
+            --text-main: #f9fafb;
+            --text-muted: #9ca3af;
         }
 
         * {
@@ -21,10 +24,10 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: var(--background);
-            color: var(--foreground);
-            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -32,154 +35,199 @@
             position: relative;
         }
 
-        /* Abstract Background Animation */
-        .bg-pattern {
+        /* Ambient Background Glow */
+        .glow {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, rgba(3, 7, 18, 0) 70%);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             z-index: -1;
-            opacity: 0.15;
-            background:
-                radial-gradient(circle at 15% 50%, var(--primary), transparent 25%),
-                radial-gradient(circle at 85% 30%, var(--secondary), transparent 25%);
-            animation: pulse 10s ease-in-out infinite alternate;
+            animation: pulse 8s ease-in-out infinite alternate;
+        }
+
+        .glow-2 {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(236, 72, 153, 0.1) 0%, rgba(3, 7, 18, 0) 70%);
+            border-radius: 50%;
+            top: 20%;
+            left: 80%;
+            transform: translate(-50%, -50%);
+            z-index: -1;
+            animation: float 10s ease-in-out infinite;
         }
 
         @keyframes pulse {
             0% {
-                transform: scale(1);
-                opacity: 0.15;
+                opacity: 0.5;
+                transform: translate(-50%, -50%) scale(0.9);
             }
 
             100% {
-                transform: scale(1.1);
-                opacity: 0.2;
+                opacity: 0.8;
+                transform: translate(-50%, -50%) scale(1.1);
             }
         }
 
-        .container {
-            text-align: center;
-            padding: 2rem;
-            max-width: 600px;
-            z-index: 10;
-        }
-
-        .logo {
-            font-size: 3rem;
-            font-weight: 800;
-            margin-bottom: 1.5rem;
-            letter-spacing: -0.05em;
-            background: linear-gradient(to right, var(--primary), var(--secondary), var(--accent));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            display: inline-block;
-        }
-
-        h1 {
-            font-size: 2rem;
-            margin-bottom: 1rem;
-            font-weight: 700;
-        }
-
-        p {
-            font-size: 1.125rem;
-            line-height: 1.6;
-            color: #a1a1aa;
-            /* zinc-400 */
-            margin-bottom: 2rem;
-        }
-
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.5rem 1rem;
-            background: rgba(236, 72, 153, 0.1);
-            border: 1px solid rgba(236, 72, 153, 0.2);
-            border-radius: 9999px;
-            color: var(--secondary);
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: 2rem;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background-color: var(--secondary);
-            border-radius: 50%;
-            margin-right: 0.5rem;
-            animation: blink 2s infinite;
-        }
-
-        @keyframes blink {
-
-            0%,
-            100% {
-                opacity: 1;
+        @keyframes float {
+            0% {
+                transform: translate(-50%, -50%) translateY(0px);
             }
 
             50% {
-                opacity: 0.5;
+                transform: translate(-50%, -50%) translateY(-20px);
+            }
+
+            100% {
+                transform: translate(-50%, -50%) translateY(0px);
             }
         }
 
-        .refresh-btn {
-            background: linear-gradient(to right, var(--primary), var(--secondary));
+        /* Glass Card */
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 4rem 3rem;
+            border-radius: 24px;
+            text-align: center;
+            max-width: 480px;
+            width: 90%;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Animated border line at top */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), var(--secondary), transparent);
+            animation: shunt 3s linear infinite;
+        }
+
+        @keyframes shunt {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        .icon-wrapper {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1));
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .icon {
+            width: 40px;
+            height: 40px;
+            color: var(--primary);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+            background: linear-gradient(to right, #fff, #a5b4fc);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
             border: none;
-            padding: 0.75rem 2rem;
+            padding: 1rem 2.5rem;
             font-size: 1rem;
             font-weight: 600;
-            border-radius: 0.5rem;
+            border-radius: 12px;
             cursor: pointer;
-            transition: opacity 0.2s;
-            text-decoration: none;
-            display: inline-block;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            box-shadow: 0 10px 15px -3px rgba(139, 92, 246, 0.3);
         }
 
-        .refresh-btn:hover {
-            opacity: 0.9;
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(139, 92, 246, 0.4);
+            filter: brightness(1.1);
         }
 
-        .error-code {
-            margin-top: 3rem;
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .footer {
+            margin-top: 2rem;
             font-size: 0.875rem;
-            color: #52525b;
-            /* zinc-600 */
-            font-family: monospace;
+            color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* SVG Icon */
+        svg {
+            display: block;
+            width: 100%;
+            height: 100%;
         }
     </style>
 </head>
 
 <body>
-    <div class="bg-pattern"></div>
+    <div class="glow"></div>
+    <div class="glow-2"></div>
 
-    <div class="container">
-        <div class="logo">StreamVault</div>
-
-        <br>
-
-        <div class="status-badge">
-            <span class="status-dot"></span>
-            System Maintenance
+    <div class="card">
+        <div class="icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+            </svg>
         </div>
 
-        <h1>We'll be right back.</h1>
+        <h1>System Update</h1>
 
         <p>
-            StreamVault is currently undergoing scheduled maintenance or experiencing high traffic.
-            Don't worry, your watchlist is safe! We're working hard to restore service as quickly as possible.
+            StreamVault is currently enhancing your experience. We're installing upgrades to improve performance and
+            stability.<br><br>
+            We'll be back online in just a few moments.
         </p>
 
-        <button onclick="window.location.reload()" class="refresh-btn">
-            Try Again
+        <button onclick="window.location.reload()" class="btn">
+            Refresh Status
         </button>
 
-        <div class="error-code">
-            Error Code: 502 Bad Gateway / 503 Service Unavailable
+        <div class="footer">
+            Error Code: 503 • Service Unavailable
         </div>
     </div>
 </body>
