@@ -47,13 +47,11 @@ app.use("/api", limiter);
 
 // CORS for Extension
 app.use("/api/external", (req, res, next) => {
-  const origin = req.headers.origin;
-  // Allow extensions and localhost
-  if (origin && (origin.startsWith('chrome-extension://') || origin.includes('localhost'))) {
-    res.header("Access-Control-Allow-Origin", origin);
-    res.header("Access-Control-Allow-Methods", "GET, OPTIONS");
-    res.header("Access-Control-Allow-Headers", "Content-Type, X-API-Key, Authorization");
-  }
+  // Allow all extensions and direct calls
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, X-API-Key, Authorization");
+
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
