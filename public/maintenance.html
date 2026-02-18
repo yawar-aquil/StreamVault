@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamVault - Under Maintenance</title>
+    <style>
+        :root {
+            --background: #09090b;
+            --foreground: #fafafa;
+            --primary: #8b5cf6;
+            --secondary: #ec4899;
+            --accent: #f97316;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--background);
+            color: var(--foreground);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Abstract Background Animation */
+        .bg-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.15;
+            background:
+                radial-gradient(circle at 15% 50%, var(--primary), transparent 25%),
+                radial-gradient(circle at 85% 30%, var(--secondary), transparent 25%);
+            animation: pulse 10s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 0.15;
+            }
+
+            100% {
+                transform: scale(1.1);
+                opacity: 0.2;
+            }
+        }
+
+        .container {
+            text-align: center;
+            padding: 2rem;
+            max-width: 600px;
+            z-index: 10;
+        }
+
+        .logo {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.05em;
+            background: linear-gradient(to right, var(--primary), var(--secondary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            display: inline-block;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        p {
+            font-size: 1.125rem;
+            line-height: 1.6;
+            color: #a1a1aa;
+            /* zinc-400 */
+            margin-bottom: 2rem;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            background: rgba(236, 72, 153, 0.1);
+            border: 1px solid rgba(236, 72, 153, 0.2);
+            border-radius: 9999px;
+            color: var(--secondary);
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--secondary);
+            border-radius: 50%;
+            margin-right: 0.5rem;
+            animation: blink 2s infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .refresh-btn {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .refresh-btn:hover {
+            opacity: 0.9;
+        }
+
+        .error-code {
+            margin-top: 3rem;
+            font-size: 0.875rem;
+            color: #52525b;
+            /* zinc-600 */
+            font-family: monospace;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-pattern"></div>
+
+    <div class="container">
+        <div class="logo">StreamVault</div>
+
+        <br>
+
+        <div class="status-badge">
+            <span class="status-dot"></span>
+            System Maintenance
+        </div>
+
+        <h1>We'll be right back.</h1>
+
+        <p>
+            StreamVault is currently undergoing scheduled maintenance or experiencing high traffic.
+            Don't worry, your watchlist is safe! We're working hard to restore service as quickly as possible.
+        </p>
+
+        <button onclick="window.location.reload()" class="refresh-btn">
+            Try Again
+        </button>
+
+        <div class="error-code">
+            Error Code: 502 Bad Gateway / 503 Service Unavailable
+        </div>
+    </div>
+</body>
+
+</html>
