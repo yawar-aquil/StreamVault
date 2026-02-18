@@ -116,6 +116,85 @@ async function requireApiKey(req: any, res: any, next: any) {
 export async function registerRoutes(app: Express): Promise<Server> {
   const SUBSCRIBERS_FILE = path.join(__dirname, "..", "data", "subscribers.json");
 
+  // External Availability API for Extension
+  app.get("/api/external/availability", async (req, res) => {
+    try {
+      // 1. Auth Check (API Key OR Bearer Token)
+      let isAuthenticated = false;
+      const apiKey = req.headers['x-api-key'];
+      const authHeader = req.headers.authorization;
+
+      if (apiKey) {
+        if (typeof apiKey === 'string') {
+          const keyData = await storage.getApiKeyByKey(apiKey);
+          if (keyData) {
+            await storage.updateApiKeyUsage(keyData.id);
+            isAuthenticated = true;
+          }
+        }
+      } else if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.replace('Bearer ', '');
+        try {
+          const payload = verifyToken(token);
+          if (payload) isAuthenticated = true;
+        } catch { }
+      }
+
+      if (!isAuthenticated) {
+        return res.status(401).json({ error: "Unauthorized: API Key or Login required" });
+      }
+
+      // 2. Search Logic
+      const title = req.query.title as string;
+      const year = req.query.year as string;
+      // const type = req.query.type as string; // 'movie' | 'show' | 'anime'
+
+      if (!title) {
+        return res.status(400).json({ error: "Title required" });
+      }
+
+      const cleanTitle = title.toLowerCase().trim();
+
+      // Helper to normalize string for comparison
+      const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const target = normalize(cleanTitle);
+
+      let match: any = null;
+      let url = "";
+
+      // Check Movies
+      if (!match) {
+        const movies = await storage.getAllMovies();
+        match = movies.find(m => normalize(m.title) === target || normalize(m.title).includes(target) && target.length > 5);
+        if (match) url = `/movie/${match.slug}`;
+      }
+
+      // Check Shows
+      if (!match) {
+        const shows = await storage.getAllShows();
+        match = shows.find(s => normalize(s.title) === target || normalize(s.title).includes(target) && target.length > 5);
+        if (match) url = `/show/${match.slug}`;
+      }
+
+      // Check Anime
+      if (!match) {
+        const anime = await storage.getAllAnime();
+        match = anime.find(a => normalize(a.title) === target || normalize(a.title).includes(target) && target.length > 5);
+        if (match) url = `/anime/${match.slug}`;
+      }
+
+      if (match) {
+        res.json({ available: true, title: match.title, url, id: match.id, type: match.active ? 'active' : 'inactive' });
+      } else {
+        res.json({ available: false });
+      }
+
+    } catch (error) {
+      console.error("External availability check error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Setup dynamic sitemaps
   setupSitemaps(app, storage);
 
