@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLocation, Link } from 'wouter';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { useTheme } from '@/components/theme-provider';
 import { apiRequest } from '@/lib/queryClient';
+import { CloudflareTurnstile } from '@/components/cloudflare-turnstile';
 import { ReferralSection } from '@/components/referral-section';
 import { THEME_MAPPING, THEME_PREVIEWS, DISPLAY_THEMES } from '@/lib/theme-data';
 import { PreloadedImage } from '@/components/preloaded-image';
@@ -112,6 +113,10 @@ export default function SettingsPage() {
     // Upgrade state
     const [upgradeKey, setUpgradeKey] = useState<ApiKey | null>(null);
     const [isUpgrading, setIsUpgrading] = useState(false);
+    const [upgradeTurnstileToken, setUpgradeTurnstileToken] = useState('');
+
+    const handleUpgradeTurnstileVerify = useCallback((token: string) => setUpgradeTurnstileToken(token), []);
+    const handleUpgradeTurnstileExpire = useCallback(() => setUpgradeTurnstileToken(''), []);
 
 
     // PWA App Icon state
@@ -939,7 +944,7 @@ export default function SettingsPage() {
                 </Card>
 
                 {/* Upgrade Dialog */}
-                <Dialog open={!!upgradeKey} onOpenChange={(open) => !open && setUpgradeKey(null)}>
+                <Dialog open={!!upgradeKey} onOpenChange={(open) => { if (!open) { setUpgradeKey(null); setUpgradeTurnstileToken(''); } }}>
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                             <DialogTitle>Upgrade API Plan</DialogTitle>
@@ -969,7 +974,7 @@ export default function SettingsPage() {
                                     <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> 600 requests / minute</li>
                                 </ul>
                                 {(!upgradeKey?.tier || upgradeKey?.tier === 'free') && (
-                                    <Button className="w-full mt-4" onClick={() => confirmUpgrade('pro')} disabled={isUpgrading}>
+                                    <Button className="w-full mt-4" onClick={() => confirmUpgrade('pro')} disabled={isUpgrading || !upgradeTurnstileToken}>
                                         {isUpgrading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Purchase Pro"}
                                     </Button>
                                 )}
@@ -995,11 +1000,17 @@ export default function SettingsPage() {
                                     <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> 6,000 requests / minute</li>
                                 </ul>
                                 {upgradeKey?.tier !== 'enterprise' && (
-                                    <Button className="w-full mt-4" onClick={() => confirmUpgrade('enterprise')} disabled={isUpgrading}>
+                                    <Button className="w-full mt-4" onClick={() => confirmUpgrade('enterprise')} disabled={isUpgrading || !upgradeTurnstileToken}>
                                         {isUpgrading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Purchase Enterprise"}
                                     </Button>
                                 )}
                             </div>
+
+                            <CloudflareTurnstile
+                                onVerify={handleUpgradeTurnstileVerify}
+                                onExpire={handleUpgradeTurnstileExpire}
+                                theme="auto"
+                            />
                         </div>
 
                         <DialogFooter className="sm:justify-between text-xs text-muted-foreground">

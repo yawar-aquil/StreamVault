@@ -932,6 +932,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============================================
+  // CLOUDFLARE TURNSTILE VERIFICATION
+  // ============================================
+
+  app.post("/api/turnstile/verify", async (req, res) => {
+    try {
+      const { token } = req.body;
+      if (!token) {
+        return res.status(400).json({ success: false, error: "Token is required" });
+      }
+
+      // Cloudflare's official test secret - always passes, use when no real key is set
+      const TEST_SECRET = "1x0000000000000000000000000000000AA";
+      const secret = process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY || TEST_SECRET;
+
+      const formData = new URLSearchParams();
+      formData.append("secret", secret);
+      formData.append("response", token);
+      formData.append("remoteip", req.ip || "");
+
+      const response = await fetch(
+        "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: formData.toString(),
+        }
+      );
+
+      const data = await response.json() as { success: boolean; "error-codes"?: string[] };
+      return res.json({ success: data.success, errorCodes: data["error-codes"] });
+    } catch (error) {
+      console.error("Turnstile verify error:", error);
+      return res.status(500).json({ success: false, error: "Verification failed" });
+    }
+  });
+
+  // ============================================
   // AUTHENTICATION ROUTES
   // ============================================
 
@@ -4465,7 +4502,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin login
   app.post("/api/admin/login", async (req, res) => {
     try {
-      const { username, password } = req.body;
+      const { username, password, turnstileToken } = req.body;
+
+      // Verify Turnstile token
+      const TEST_SECRET = "1x0000000000000000000000000000000AA";
+      const secret = process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY || TEST_SECRET;
+      if (turnstileToken) {
+        const formData = new URLSearchParams();
+        formData.append("secret", secret);
+        formData.append("response", turnstileToken);
+        formData.append("remoteip", req.ip || "");
+        const tsRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: formData.toString(),
+        });
+        const tsData = await tsRes.json() as { success: boolean };
+        if (!tsData.success) {
+          return res.status(400).json({ success: false, error: "Security verification failed" });
+        }
+      }
 
       if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
         // Generate a simple token (in production, use JWT or similar)

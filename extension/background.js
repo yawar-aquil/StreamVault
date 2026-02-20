@@ -258,7 +258,7 @@ async function handleMessage(message, sender, sendResponse) {
                 try {
                     const resp = await fetch(`${base}/api/external/availability?${query}`, { headers });
                     if (resp.ok) {
-                        // Attach debug info
+                        const data = await resp.json();
                         if (data.url && !data.url.startsWith('http')) {
                             data.url = new URL(data.url, base).href;
                         }

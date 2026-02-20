@@ -150,92 +150,40 @@ setInterval(() => {
         }
     });
 
-    // 2. Watch Action Bar (Carousel)
-    const actionContainers = findAllWatchActionContainers();
-    actionContainers.forEach(container => {
-        if (!container.querySelector('.sv-injected-button')) {
-            console.log('[StreamVault] Re-injecting into Watch Action (Global Scan)...');
-            injectWatchAction(lastResult, container);
-        }
-    });
+    // 2. Watch Action — re-inject if our button disappeared (e.g. Google re-rendered)
+    if (!document.querySelector('.sv-injected-button')) {
+        injectWatchAction(lastResult);
+    }
 
 }, 1500);
 
 // Helper to find all valid "Where to watch" list containers currently in the DOM
 function findAllWhereToWatchContainers() {
-    const containers = [];
-    // Text-based search for headers
-    const headers = Array.from(document.querySelectorAll('div, h2, h3'));
-
-    headers.forEach(h => {
-        if (h.innerText === 'Where to watch' || h.innerText === 'Ways to watch') {
-            // Look for the list container relative to header
-            const list = h.closest('div').parentElement.querySelector('div[class*="list"]'); // Generic guess
-            // Or adjacent sibling
-            const sibling = h.nextElementSibling || h.closest('div').nextElementSibling;
-
-            if (sibling && sibling.innerText.includes('Netflix')) {
-                containers.push(sibling);
-            } else {
-                // Try finding a known service link nearby
-                const nearbyLink = h.closest('div').parentElement.querySelector('a[href*="netflix"], a[href*="hulu"]');
-                if (nearbyLink) {
-                    // The container is the parent of the row that contains the link
-                    // Usually link -> div (row) -> div (list)
-                    // If we want to inject a ROW, we need the LIST container.
-                    // The nearbyLink is likely inside the row.
-                    let row = nearbyLink;
-                    while (row && row.tagName !== 'DIV') row = row.parentElement;
-                    if (row && row.parentElement) containers.push(row.parentElement);
-                }
-            }
-        }
+    // Find the "Where to watch" header element (exact text, leaf node)
+    const allEls = Array.from(document.querySelectorAll('*'));
+    const header = allEls.find(el => {
+        const txt = (el.innerText || el.textContent || '').trim();
+        return (txt === 'Where to watch' || txt === 'Ways to watch') && el.children.length === 0;
     });
+    if (!header) return [];
 
-    // Fallback: Just find any container with Netflix/Hulu links that isn't injected yet
-    const serviceLinks = document.querySelectorAll('a[href*="netflix.com"], a[href*="hulu.com"], a[href*="primevideo.com"]');
-    serviceLinks.forEach(link => {
-        // Walk up to find the common list parent
-        // Usually the structure is List -> Item -> Link
-        let parent = link.parentElement;
-        // detailed check: if parent has multiple children which look like items
-        // or if parent.parent has multiple children
-        if (parent && parent.parentElement) {
-            // Check if this parent already in list
-            if (!containers.includes(parent.parentElement) && !containers.includes(parent)) {
-                // Heuristic: The container should have vertical stacking (block or flex-col)
-                // or be a grid.
-                containers.push(parent.parentElement);
-            }
+    // Walk up from header to find a container that has child items with LINKS (not just text)
+    let scope = header.parentElement;
+    for (let i = 0; i < 8 && scope && scope !== document.body; i++) {
+        // A valid "Where to watch" container has children that contain <a> tags
+        const childLinks = Array.from(scope.children).filter(c => c.querySelector('a') || c.tagName === 'A');
+        if (childLinks.length >= 1) {
+            // Verify it's a streaming container (has an img in the items)
+            const hasImg = childLinks.some(c => c.querySelector('img'));
+            if (hasImg) return [scope];
         }
-    });
-
-    return [...new Set(containers)]; // Unique
+        scope = scope.parentElement;
+    }
+    return [];
 }
 
 function findAllWatchActionContainers() {
-    const containers = [];
-    const headers = Array.from(document.querySelectorAll('h2, h3, div'));
-    const wtwHeader = headers.find(h => h.textContent === 'Watch show' || h.textContent === 'Watch movie');
-
-    if (wtwHeader) {
-        // Look for the action bar container below it
-        const container = wtwHeader.closest('div').parentElement.querySelector('g-scrolling-carousel') ||
-            wtwHeader.closest('div').parentElement.querySelector('div[role="list"]');
-        if (container) containers.push(container);
-    }
-
-    // Fallback: Find "Watch now" button and get its parent
-    const watchBtns = document.querySelectorAll('a[href*="netflix"], div[role="button"]');
-    watchBtns.forEach(btn => {
-        if (btn.innerText.includes('Watch now') || btn.innerText.includes('Already watched')) {
-            if (btn.parentElement && !containers.includes(btn.parentElement)) {
-                containers.push(btn.parentElement);
-            }
-        }
-    });
-
-    return [...new Set(containers)];
+    return []; // Not used anymore - injectWatchAction handles finding directly
 }
 
 
@@ -278,22 +226,26 @@ async function handleGoogle() {
         let injectedCount = 0;
 
         searchResults.forEach(h3 => {
-            // Avoid injecting into "People also ask" or other widgets
-            if (h3.closest('.kno-kp')) return; // Skip if inside Knowledge Panel
+            // Only inject into blue title links — h3 must be inside an <a> tag (the clickable title)
+            if (!h3.closest('a')) return;
+            // Skip Knowledge Panel, featured snippets, People also search for
+            if (h3.closest('.kno-kp')) return;
+            if (h3.closest('.g-blk')) return;
+            if (h3.closest('[data-q]')) return; // People also search for cards
+            if (h3.closest('.kp-wholepage')) return;
+            // Skip if already injected
+            if (h3.querySelector('.sv-badge-mini')) return;
 
-            const text = h3.textContent.toLowerCase();
+            const text = h3.textContent.trim();
+            // Must have spaces (real titles, not site names)
+            if (!text.includes(' ')) return;
+
             const targetTitle = result.title.toLowerCase();
-
-            if (text.includes(targetTitle)) {
-                // Check if already injected
-                if (h3.querySelector('.sv-badge-mini')) return;
-
+            if (text.toLowerCase().includes(targetTitle)) {
                 const mini = createMiniBadge(result.url, miniBadgeTitle);
-
-                // Ensure proper layout for the h3
-                h3.style.display = 'flex';
+                h3.style.display = 'inline-flex';
                 h3.style.alignItems = 'center';
-                h3.style.flexWrap = 'wrap'; // Handle long titles
+                h3.style.gap = '4px';
                 h3.appendChild(mini);
                 injectedCount++;
             }
@@ -306,234 +258,193 @@ async function handleGoogle() {
 
 // Update inject functions to accept optional container
 function injectWhereToWatch(result, specificContainer = null) {
-    let container = specificContainer;
-    let templateLink = null;
+    // Use strict header-based container finding to avoid injecting into ratings sections
+    const containers = findAllWhereToWatchContainers();
+    const container = specificContainer || (containers.length > 0 ? containers[0] : null);
 
-    if (!container) {
-        // Fallback to finding one if not provided
-        const links = Array.from(document.querySelectorAll('a'));
-        templateLink = links.find(a =>
-            (a.href.includes('netflix') || a.href.includes('hulu') || a.href.includes('amazon')) &&
-            a.textContent.length > 0
-        );
-        if (templateLink) {
-            // logic to find container from link
-            if (templateLink.parentNode.tagName === 'DIV' && templateLink.parentNode.parentElement.childElementCount > 1) {
-                container = templateLink.parentNode.parentElement; // Parent of the item div is the list
-            } else {
-                container = templateLink.parentElement;
-            }
-        }
-    } else {
-        // If container provided, try to find a template link inside it to clone
-        templateLink = container.querySelector('a');
+    if (!container) return;
+    if (container.querySelector('.sv-injected-item')) return;
+
+    // Find a template link item inside the container (a child that has an <a> and <img>)
+    const templateLink = Array.from(container.children).find(c =>
+        (c.querySelector('a') || c.tagName === 'A') && c.querySelector('img')
+    ) || container.querySelector('a');
+
+    if (!templateLink) return;
+
+    // The item wrapper is the direct child of container
+    let itemWrapper = templateLink;
+    while (itemWrapper.parentElement && itemWrapper.parentElement !== container) {
+        itemWrapper = itemWrapper.parentElement;
     }
 
-    if (container && templateLink) {
-        // Perform Clone & Inject of ONE item
-        // We need to identify the "Item" wrapper. 
-        // If templateLink is the 'a', the item wrapper is likely its parent div.
-        let itemWrapper = templateLink;
-        if (itemWrapper.parentNode.tagName === 'DIV' && itemWrapper.parentNode !== container) {
-            itemWrapper = itemWrapper.parentNode;
-        }
+    const logoUrl = chrome.runtime.getURL('icons/streamvault-logo.png');
+    const clone = itemWrapper.cloneNode(true);
+    clone.classList.add('sv-injected-item');
 
-        const clone = itemWrapper.cloneNode(true);
-        clone.classList.add('sv-injected-item'); // MARK IT
+    // Fix the link inside clone
+    const cloneLink = clone.tagName === 'A' ? clone : clone.querySelector('a');
+    if (cloneLink) {
+        cloneLink.href = result.url;
+        cloneLink.target = '_blank';
+        cloneLink.removeAttribute('data-ved');
+        cloneLink.removeAttribute('jsaction');
+        cloneLink.removeAttribute('ping');
+    }
 
-        const link = clone.tagName === 'A' ? clone : clone.querySelector('a');
-        if (link) {
-            link.href = result.url;
-            link.removeAttribute('data-ved');
-            link.removeAttribute('jsaction');
+    // Replace logo image
+    const img = clone.querySelector('img');
+    if (img) {
+        img.src = logoUrl;
+        img.srcset = '';
+        img.removeAttribute('data-src');
+        img.style.objectFit = 'contain';
+        img.style.background = '#000';
+        img.style.borderRadius = '12px';
+        img.style.flexShrink = '0';
+    }
 
-            // Replace Logo
-            const img = clone.querySelector('img');
-            if (img) {
-                img.src = chrome.runtime.getURL('icons/streamvault-logo.png');
-                img.srcset = '';
-                img.style.objectFit = 'contain';
-                img.style.backgroundColor = '#000';
-                // img.style.borderRadius = '4px';
-            }
-
-            // Replace Text
-            const walker = document.createTreeWalker(clone, NodeFilter.SHOW_TEXT, null, false);
-            let node;
-            while (node = walker.nextNode()) {
-                const txt = node.textContent.trim();
-                if (['Netflix', 'Hulu', 'Amazon', 'Apple', 'Disney', 'HBO'].some(p => txt.includes(p))) {
-                    node.textContent = 'StreamVault';
+    // Fix text cutoff: find the text container div (sibling of img) and remove overflow/width constraints
+    const imgEl = clone.querySelector('img');
+    if (imgEl) {
+        // The text container is usually a sibling div next to the img
+        const imgParent = imgEl.parentElement;
+        if (imgParent) {
+            Array.from(imgParent.children).forEach(child => {
+                if (child !== imgEl) {
+                    child.style.overflow = 'visible';
+                    child.style.maxWidth = 'none';
+                    child.style.width = 'auto';
+                    child.style.whiteSpace = 'nowrap';
+                    // Also fix grandchildren (the actual text spans)
+                    Array.from(child.querySelectorAll('*')).forEach(el => {
+                        el.style.overflow = 'visible';
+                        el.style.maxWidth = 'none';
+                        el.style.width = 'auto';
+                        el.style.whiteSpace = 'nowrap';
+                    });
                 }
-                if (['Subscription', 'Rent', 'Buy', 'Free'].some(t => txt.includes(t))) {
-                    node.textContent = 'Free';
-                }
-            }
-
-            // Insert
-            container.insertBefore(clone, container.firstChild);
-            clone.style.display = '';
-
-            // Mobile Fix
-            if (window.innerWidth <= 768) {
-                clone.style.display = 'inline-flex';
-                clone.style.width = 'auto';
-                clone.style.marginRight = '8px';
-                // Try to force container layout if needed
-                // container.style.display = 'flex'; 
-            }
+            });
         }
     }
+    clone.style.overflow = 'visible';
+    clone.style.width = 'auto';
+    clone.style.maxWidth = 'none';
+
+    // Replace all text nodes: service name → StreamVault, price type → Free
+    const walker = document.createTreeWalker(clone, NodeFilter.SHOW_TEXT, null, false);
+    let node;
+    while (node = walker.nextNode()) {
+        const txt = node.textContent.trim();
+        if (!txt) continue;
+        if (['Netflix', 'Hulu', 'Amazon', 'Apple', 'Disney', 'HBO', 'Max', 'Peacock', 'Paramount', 'Hotstar', 'JioHotstar', 'Jio', 'Prime', 'Sony', 'Zee', 'Voot', 'MX'].some(s => txt.includes(s))) {
+            node.textContent = 'StreamVault';
+        } else if (['Subscription', 'Rent', 'Buy', 'Purchase'].some(s => txt.includes(s))) {
+            node.textContent = 'Free';
+        }
+    }
+
+    container.insertBefore(clone, container.firstChild);
 }
 
 function injectWatchAction(result, specificContainer = null) {
-    let container = specificContainer;
-    // Look for "Watch show" or "Watch now" buttons in the action bar
-    // Common selector for these action buttons: g-raised-button or specific role="button"
-    // Heuristic: Find a button with text "Watch" or "Netflix" in the specific "Watch show" section
+    // Skip if already injected anywhere on page
+    if (document.querySelector('.sv-injected-button')) return;
 
-    if (!container) {
-        // First, find the "Watch show" header or section
-        // Can be h2, h3, or div with specific text
-        const headers = Array.from(document.querySelectorAll('h2, h3, div[role="heading"], div'));
-        const wtwSection = headers.find(h => {
-            const t = h.textContent.trim();
-            return t === 'Watch show' || t === 'Watch movie' || t === 'Ways to watch' || t === 'Watch';
-        });
+    // Positive identification: find the streaming link in the Watch show section
+    // The Watch show row ALWAYS has "Already watched" and "Want to watch" as siblings
+    // So find a streaming link whose ancestor container also contains those texts
+    const streamingDomains = ['netflix.com/watch', 'hotstar.com', 'primevideo.com', 'jiocinema', 'sonyliv', 'zee5', 'voot', 'hulu.com', 'disneyplus.com'];
+    const allLinks = Array.from(document.querySelectorAll('a[href]'));
+    let nfLink = null;
+    let netflixItem = null;
 
-        if (wtwSection) {
-            // Look for the action bar container below it
-            container = wtwSection.closest('div').parentElement.querySelector('g-scrolling-carousel') ||
-                wtwSection.closest('div').parentElement.querySelector('div[role="list"]');
+    for (const a of allLinks) {
+        const href = a.href || '';
+        if (!streamingDomains.some(d => href.includes(d))) continue;
+        if (href.includes('google.com')) continue;
+
+        // Walk up from this link to find a container with 3+ children
+        let el = a;
+        for (let i = 0; i < 10 && el.parentElement && el.parentElement !== document.body; i++) {
+            if (el.parentElement.childElementCount >= 3 && el.querySelector('img')) {
+                // Check if siblings contain "Already watched" text — unique to Watch show section
+                const siblingText = el.parentElement.innerText || '';
+                if (siblingText.includes('Already watched') || siblingText.includes('Want to watch')) {
+                    nfLink = a;
+                    netflixItem = el;
+                    break;
+                }
+            }
+            el = el.parentElement;
+        }
+        if (nfLink) break;
+    }
+
+    if (!nfLink || !netflixItem) return;
+
+    const logoUrl = chrome.runtime.getURL('icons/streamvault-logo.png');
+    const clone = netflixItem.cloneNode(true);
+    clone.classList.add('sv-injected-button');
+
+    // Fix link inside clone
+    const cloneLink = clone.tagName === 'A' ? clone : clone.querySelector('a');
+    if (cloneLink) {
+        cloneLink.href = result.url;
+        cloneLink.target = '_blank';
+        cloneLink.removeAttribute('data-ved');
+        cloneLink.removeAttribute('jsaction');
+        cloneLink.removeAttribute('ping');
+    }
+
+    _updateWatchActionClone(clone, logoUrl);
+    // Insert BEFORE Netflix — same row, to the left
+    netflixItem.parentElement.insertBefore(clone, netflixItem);
+}
+
+function _updateWatchActionClone(clone, logoUrl) {
+    // Replace circular icon image
+    const img = clone.querySelector('img');
+    if (img) {
+        img.src = logoUrl;
+        img.srcset = '';
+        img.removeAttribute('data-src');
+        img.style.objectFit = 'contain';
+        img.style.background = '#000';
+        img.style.borderRadius = '50%';
+        // Preserve original dimensions so it matches Netflix button size
+        const naturalW = img.offsetWidth || img.width || 48;
+        const naturalH = img.offsetHeight || img.height || 48;
+        img.style.width = naturalW + 'px';
+        img.style.height = naturalH + 'px';
+    } else {
+        // Replace SVG with img
+        const svg = clone.querySelector('svg');
+        if (svg) {
+            const newImg = document.createElement('img');
+            newImg.src = logoUrl;
+            const sz = svg.getBoundingClientRect();
+            newImg.width = sz.width || 48;
+            newImg.height = sz.height || 48;
+            newImg.style.borderRadius = '50%';
+            newImg.style.objectFit = 'contain';
+            newImg.style.background = '#000';
+            svg.replaceWith(newImg);
         }
     }
 
-    if (container) {
-        console.log('[StreamVault] Found Watch Action container:', container);
-
-        // Find template button
-        const buttons = Array.from(container.querySelectorAll('div[role="button"], a'));
-        const templateBtn = buttons.find(b => b.textContent.includes('Watch') || b.textContent.includes('Subscription') || b.textContent.includes('Already'));
-
-        if (templateBtn) {
-            const clone = templateBtn.cloneNode(true);
-            clone.classList.add('sv-injected-button'); // MARK IT
-
-            let link = clone.tagName === 'A' ? clone : clone.closest('a');
-            if (!link) {
-                // Wrap if div
-                const wrapper = document.createElement('a');
-                wrapper.href = result.url;
-                wrapper.target = '_blank';
-                wrapper.style.textDecoration = 'none';
-                wrapper.className = clone.className;
-                wrapper.innerHTML = clone.innerHTML;
-                clone.replaceWith(wrapper);
-                link = wrapper;
-            } else {
-                // Determine if we need to clone the link or just the button
-                if (link.contains(templateBtn) && link !== templateBtn) {
-                    // The link wraps the button. We should have cloned the Link.
-                    // But we cloned the button? 
-                    // Let's restart. Clone the LINK if valid.
-                    const linkClone = link.cloneNode(true);
-                    linkClone.classList.add('sv-injected-button');
-                    // use this instead
-                    // ...
-                }
-                link.href = result.url;
-            }
-
-            link.removeAttribute('jsaction');
-            link.removeAttribute('data-ved');
-
-            // Visuals (Img/Text) - Reuse logic
-            const img = link.querySelector('img');
-            if (img) {
-                img.src = chrome.runtime.getURL('icons/streamvault-logo.png');
-                img.srcset = '';
-                img.style.borderRadius = '8px'; // Ensure rounded corners
-            } else {
-                // Fallback if no image found (sometimes it's a background or svg)
-                // Try finding the icon container
-                const iconContainer = link.querySelector('div[class*="icon"]');
-                if (iconContainer) {
-                    iconContainer.innerHTML = SV_LOGO;
-                }
-            }
-
-            // Text replacement
-            const walker = document.createTreeWalker(link, NodeFilter.SHOW_TEXT, null, false);
-            let node;
-            while (node = walker.nextNode()) {
-                const txt = node.textContent.trim();
-                if (txt.includes('Watch') || txt.includes('Netflix') || txt.includes('Disney')) {
-                    node.textContent = 'Watch Free';
-                }
-                if (txt.includes('Subscription') || txt.includes('Buy') || txt.includes('Rent')) {
-                    node.textContent = 'StreamVault';
-                }
-            }
-
-            // Insert
-            container.insertBefore(link, container.firstChild);
-        } else {
-            // If no "Watch" button, try finding "Already watched" to insert before
-            const alreadyWatchedBtn = buttons.find(b => b.textContent.includes('Already watched') || b.textContent.includes('Want to watch'));
-            if (alreadyWatchedBtn) {
-                console.log('[StreamVault] creating Watch button from Already Watched template');
-                const clone = alreadyWatchedBtn.cloneNode(true);
-                clone.classList.add('sv-injected-button');
-
-                // Reuse wrapper logic
-                let link = clone.tagName === 'A' ? clone : clone.closest('a');
-
-                if (!link) {
-                    const wrapper = document.createElement('a');
-                    wrapper.href = result.url;
-                    wrapper.target = '_blank';
-                    wrapper.style.textDecoration = 'none';
-                    wrapper.className = clone.className;
-                    wrapper.innerHTML = clone.innerHTML;
-                    clone.replaceWith(wrapper);
-                    link = wrapper;
-                } else {
-                    link.href = result.url;
-                    // Ensure we are not modifying the original if it was a reference loop
-                    // But cloneNode(true) is safe.
-                }
-
-                link.removeAttribute('jsaction');
-                link.removeAttribute('data-ved');
-
-                // Icon update attempts
-                const svg = link.querySelector('svg');
-                if (svg) {
-                    // Replace SVG with our IMG
-                    const img = document.createElement('img');
-                    img.src = chrome.runtime.getURL('icons/streamvault-logo.png');
-                    img.width = 16;
-                    img.height = 16;
-                    img.style.borderRadius = '4px';
-                    svg.replaceWith(img);
-                } else {
-                    // Try generic icon container
-                    const iconDiv = link.querySelector('div[class*="icon"]');
-                    if (iconDiv) iconDiv.innerHTML = SV_LOGO;
-                }
-
-                // Text update
-                const walker = document.createTreeWalker(link, NodeFilter.SHOW_TEXT, null, false);
-                let node;
-                while (node = walker.nextNode()) {
-                    if (node.textContent.trim().length > 0) {
-                        node.textContent = 'Watch Free';
-                        break; // Just replace the first main text
-                    }
-                }
-
-                container.insertBefore(link, container.firstChild);
-            }
+    // Replace text nodes: main label → 'Watch now', subtitle → 'Free'
+    const walker = document.createTreeWalker(clone, NodeFilter.SHOW_TEXT, null, false);
+    let node;
+    let firstTextReplaced = false;
+    while (node = walker.nextNode()) {
+        const txt = node.textContent.trim();
+        if (!txt) continue;
+        if (!firstTextReplaced && (txt.includes('Watch') || txt.includes('Netflix') || txt.includes('Hotstar') || txt.includes('Prime'))) {
+            node.textContent = 'Watch now';
+            firstTextReplaced = true;
+        } else if (['Subscription', 'Rent', 'Buy', 'Free', 'now'].some(s => txt.includes(s))) {
+            node.textContent = 'Free';
         }
     }
 }

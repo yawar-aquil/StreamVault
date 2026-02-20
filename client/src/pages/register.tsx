@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Link } from 'wouter';
 import { Loader2, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { CloudflareTurnstile } from '@/components/cloudflare-turnstile';
 
 export default function RegisterPage() {
     const [, navigate] = useLocation();
@@ -21,6 +22,15 @@ export default function RegisterPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const [turnstileToken, setTurnstileToken] = useState('');
+
+    const handleTurnstileVerify = useCallback((token: string) => {
+        setTurnstileToken(token);
+    }, []);
+
+    const handleTurnstileExpire = useCallback(() => {
+        setTurnstileToken('');
+    }, []);
 
     // Redirect if already logged in and verified
     if (isAuthenticated && user?.emailVerified) {
@@ -31,6 +41,11 @@ export default function RegisterPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+
+        if (!turnstileToken) {
+            setError('Please complete the human verification challenge.');
+            return;
+        }
 
         if (password !== confirmPassword) {
             setError('Passwords do not match');
@@ -161,10 +176,16 @@ export default function RegisterPage() {
                                 />
                             </div>
                         </div>
+                        <CloudflareTurnstile
+                            onVerify={handleTurnstileVerify}
+                            onExpire={handleTurnstileExpire}
+                            theme="auto"
+                            className="mt-2"
+                        />
                     </CardContent>
 
                     <CardFooter className="flex flex-col space-y-4">
-                        <Button type="submit" className="w-full" disabled={isLoading}>
+                        <Button type="submit" className="w-full" disabled={isLoading || !turnstileToken}>
                             {isLoading ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

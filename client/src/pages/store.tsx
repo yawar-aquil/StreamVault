@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { ShoppingBag, Gift, Crown, Heart, Star, Sparkles, AlertCircle, Check, ArrowLeft, Search, Zap, Package } from 'lucide-react';
+import { CloudflareTurnstile } from '@/components/cloudflare-turnstile';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge as UIBadge } from '@/components/ui/badge';
@@ -44,6 +45,15 @@ export default function StorePage() {
     const [selectedProduct, setSelectedProduct] = useState<Badge | null>(null);
     const [showPurchaseModal, setShowPurchaseModal] = useState(false);
     const [showGiftModal, setShowGiftModal] = useState(false);
+
+    // Turnstile tokens for purchase/gift modals
+    const [purchaseTurnstileToken, setPurchaseTurnstileToken] = useState('');
+    const [giftTurnstileToken, setGiftTurnstileToken] = useState('');
+
+    const handlePurchaseTurnstileVerify = useCallback((token: string) => setPurchaseTurnstileToken(token), []);
+    const handlePurchaseTurnstileExpire = useCallback(() => setPurchaseTurnstileToken(''), []);
+    const handleGiftTurnstileVerify = useCallback((token: string) => setGiftTurnstileToken(token), []);
+    const handleGiftTurnstileExpire = useCallback(() => setGiftTurnstileToken(''), []);
 
     // Multi-user gifting state
     const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
@@ -718,7 +728,7 @@ export default function StorePage() {
             </div>
 
             {/* Purchase Modal */}
-            <Dialog open={showPurchaseModal} onOpenChange={setShowPurchaseModal}>
+            <Dialog open={showPurchaseModal} onOpenChange={(open) => { setShowPurchaseModal(open); if (!open) setPurchaseTurnstileToken(''); }}>
                 <DialogContent className="sm:max-w-md bg-card/95 backdrop-blur-xl border-white/10 max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-xl">
@@ -827,6 +837,13 @@ export default function StorePage() {
                                     once delivered.
                                 </p>
                             </div>
+
+                            <CloudflareTurnstile
+                                onVerify={handlePurchaseTurnstileVerify}
+                                onExpire={handlePurchaseTurnstileExpire}
+                                theme="auto"
+                                className="mt-4"
+                            />
                         </div>
                     )}
 
@@ -836,7 +853,7 @@ export default function StorePage() {
                         </Button>
                         <Button
                             onClick={handlePurchase}
-                            disabled={purchaseMutation.isPending}
+                            disabled={purchaseMutation.isPending || !purchaseTurnstileToken}
                             className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20"
                         >
                             {purchaseMutation.isPending ? (
@@ -853,7 +870,7 @@ export default function StorePage() {
             </Dialog>
 
             {/* Gift Modal */}
-            <Dialog open={showGiftModal} onOpenChange={setShowGiftModal}>
+            <Dialog open={showGiftModal} onOpenChange={(open) => { setShowGiftModal(open); if (!open) setGiftTurnstileToken(''); }}>
                 <DialogContent className="sm:max-w-md bg-card/95 backdrop-blur-xl border-white/10">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-xl">
@@ -993,6 +1010,13 @@ export default function StorePage() {
                                     />
                                 </div>
                             </div>
+
+                            <CloudflareTurnstile
+                                onVerify={handleGiftTurnstileVerify}
+                                onExpire={handleGiftTurnstileExpire}
+                                theme="auto"
+                                className="mt-2"
+                            />
                         </div>
                     )}
 
@@ -1007,7 +1031,7 @@ export default function StorePage() {
                         </Button>
                         <Button
                             onClick={handleGift}
-                            disabled={giftMutation.isPending || selectedUsers.length === 0}
+                            disabled={giftMutation.isPending || selectedUsers.length === 0 || !giftTurnstileToken}
                             className="bg-pink-600 hover:bg-pink-700 text-white shadow-lg shadow-pink-600/20"
                         >
                             {giftMutation.isPending ? (
