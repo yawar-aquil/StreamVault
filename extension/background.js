@@ -19,9 +19,10 @@ const SV_TAB_URLS = [
 ];
 
 // ─── URL Helpers ─────────────────────────────────────────────────────
-// Production domains — ensure HTTPS and resolve API targets
+// Production domains behind Cloudflare — need VPS IP bypass for API calls
 const PRODUCTION_DOMAINS = ['streamvault.live', 'www.streamvault.live', 'streamvault.in', 'www.streamvault.in'];
-const DEFAULT_API_BASE = 'https://streamvault.in';
+const VPS_API_BASE = 'http://13.205.136.45:5000'; // Direct Express, bypasses Cloudflare
+const DEFAULT_API_BASE = VPS_API_BASE;
 
 /**
  * Normalize a base URL: ensure HTTPS for production domains, strip trailing slash
@@ -42,11 +43,19 @@ function normalizeBaseUrl(url) {
 
 /**
  * Resolve the actual API base to use for fetch requests.
- * Normalizes production domains to HTTPS. Localhost stays as-is.
+ * Cloudflare-protected domains → VPS IP (bypasses Cloudflare bot protection).
+ * Localhost / direct IP → use as-is.
  */
 function resolveApiBase(url) {
-    if (!url) return DEFAULT_API_BASE;
-    return normalizeBaseUrl(url);
+    if (!url) return VPS_API_BASE;
+    try {
+        const u = new URL(url);
+        if (PRODUCTION_DOMAINS.includes(u.hostname)) {
+            console.log(`[StreamVault] Routing API through VPS IP (bypassing Cloudflare) for ${u.hostname}`);
+            return VPS_API_BASE;
+        }
+    } catch { }
+    return url;
 }
 
 // ─── Installation / Update ───────────────────────────────────────────

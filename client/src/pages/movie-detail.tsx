@@ -10,6 +10,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { Movie, BlogPost } from "@shared/schema";
 import { ReviewsSection } from "@/components/reviews-section";
 import { AdContainer } from "@/components/ad-manager";
+import { HeroTrailer, extractTrailerFromBlogPost } from "@/components/hero-trailer";
 
 export default function MovieDetail() {
   const [, params] = useRoute("/movie/:slug");
@@ -231,26 +232,13 @@ export default function MovieDetail() {
         </script>
       </Helmet>
 
-      {/* Hero Section - Poster on mobile, Backdrop on desktop */}
+      {/* Hero Section - Poster on mobile, Trailer/Backdrop on desktop */}
       <div className="relative h-[60vh] overflow-hidden">
-        {/* Poster for mobile */}
-        <div
-          className="absolute inset-0 bg-cover bg-center md:hidden"
-          style={{
-            backgroundImage: `url(${movie.posterUrl})`,
-          }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
-        </div>
-        {/* Backdrop for desktop */}
-        <div
-          className="absolute inset-0 bg-cover bg-center hidden md:block"
-          style={{
-            backgroundImage: `url(${movie.backdropUrl})`,
-          }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
-        </div>
+        <HeroTrailer
+          youtubeId={extractTrailerFromBlogPost(blogPost)}
+          backdropUrl={movie.backdropUrl}
+          posterUrl={movie.posterUrl}
+        />
 
         {/* Back Button - Overlaid on image */}
         <div className="absolute top-4 left-4 z-10">

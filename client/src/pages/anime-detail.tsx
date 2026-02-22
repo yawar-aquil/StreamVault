@@ -14,6 +14,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ReviewsSection } from "@/components/reviews-section";
 import { AdContainer } from "@/components/ad-manager";
+import { HeroTrailer, extractTrailerFromBlogPost } from "@/components/hero-trailer";
 
 // Extract Google Drive ID from URL and generate thumbnail
 const getEpisodeThumbnail = (episode: AnimeEpisode, animeBackdrop?: string) => {
@@ -260,23 +261,13 @@ export default function AnimeDetail() {
                 </script>
             </Helmet>
 
-            {/* Hero Section - Poster on mobile, Backdrop on desktop */}
+            {/* Hero Section - Poster on mobile, Trailer/Backdrop on desktop */}
             <div className="relative w-full h-96 md:h-[500px] overflow-hidden">
-                {/* Poster for mobile */}
-                <div
-                    className="absolute inset-0 bg-cover bg-center md:hidden"
-                    style={{ backgroundImage: `url(${anime.posterUrl})` }}
-                >
-                    <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/40" />
-                </div>
-                {/* Backdrop for desktop */}
-                <div
-                    className="absolute inset-0 bg-cover bg-center hidden md:block"
-                    style={{ backgroundImage: `url(${anime.backdropUrl})` }}
-                >
-                    <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/40" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-background via-background/60 to-transparent" />
-                </div>
+                <HeroTrailer
+                    youtubeId={extractTrailerFromBlogPost(blogPost)}
+                    backdropUrl={anime.backdropUrl}
+                    posterUrl={anime.posterUrl}
+                />
 
                 {/* Back Button - Overlaid on image */}
                 <div className="absolute top-4 left-4 z-10">
@@ -745,6 +736,6 @@ export default function AnimeDetail() {
                     </TabsContent>
                 </Tabs>
             </div>
-        </div>
+        </div >
     );
 }
