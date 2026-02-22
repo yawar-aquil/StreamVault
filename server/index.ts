@@ -58,6 +58,18 @@ app.use("/api/external", (req, res, next) => {
   next();
 });
 
+// CORS for Extension — auth endpoint
+app.use("/api/auth/me", (req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 // Serve uploads folder statically (for avatars, etc.)
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 

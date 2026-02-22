@@ -18,6 +18,37 @@ const SV_TAB_URLS = [
     '*://localhost:5000/*', '*://localhost:3000/*', '*://localhost:5173/*'
 ];
 
+// ─── URL Helpers ─────────────────────────────────────────────────────
+// Production domains — ensure HTTPS and resolve API targets
+const PRODUCTION_DOMAINS = ['streamvault.live', 'www.streamvault.live', 'streamvault.in', 'www.streamvault.in'];
+const DEFAULT_API_BASE = 'https://streamvault.in';
+
+/**
+ * Normalize a base URL: ensure HTTPS for production domains, strip trailing slash
+ */
+function normalizeBaseUrl(url) {
+    if (!url) return url;
+    url = url.trim().replace(/\/+$/, '');
+
+    // Force HTTPS for production domains (HTTP causes redirect → CORS preflight failure)
+    for (const domain of PRODUCTION_DOMAINS) {
+        if (url === `http://${domain}` || url.startsWith(`http://${domain}/`)) {
+            url = url.replace('http://', 'https://');
+            break;
+        }
+    }
+    return url;
+}
+
+/**
+ * Resolve the actual API base to use for fetch requests.
+ * Normalizes production domains to HTTPS. Localhost stays as-is.
+ */
+function resolveApiBase(url) {
+    if (!url) return DEFAULT_API_BASE;
+    return normalizeBaseUrl(url);
+}
+
 // ─── Installation / Update ───────────────────────────────────────────
 chrome.runtime.onInstalled.addListener(async (details) => {
     console.log('[StreamVault] Extension installed/updated:', details.reason);
@@ -41,20 +72,31 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     await fetchAndCacheUser();
 });
 
+
 // ─── Cookie-based Auth ───────────────────────────────────────────────
 async function getAuthData() {
-    // Phase 1: Check specific domains by URL
-    const domainUrls = [
+    // First check stored base URL for cookie (user-configured, most important)
+    const stored = await chrome.storage.local.get(['baseUrl']);
+    const domainUrls = [];
+
+    // Prioritize stored base URL
+    if (stored.baseUrl) domainUrls.push(stored.baseUrl);
+
+    // Then check common domains
+    const defaults = [
+        'https://streamvault.in',
+        'https://www.streamvault.in',
+        'https://streamvault.live',
+        'https://www.streamvault.live',
         'http://localhost:5000',
         'http://localhost:3000',
         'http://localhost:5173',
-        'https://streamvault.live',
-        'https://www.streamvault.live',
-        'https://streamvault.in',
-        'https://www.streamvault.in',
         'http://13.205.136.45:5000',
         'http://13.205.136.45'
     ];
+    for (const d of defaults) {
+        if (!domainUrls.includes(d)) domainUrls.push(d);
+    }
 
     for (const url of domainUrls) {
         try {
@@ -66,12 +108,10 @@ async function getAuthData() {
         } catch { }
     }
 
-    // Phase 2: Fallback — search ALL cookies for authToken
-    // This catches cases where the domain/URL format doesn't match exactly
+    // Fallback — search ALL cookies for authToken
     try {
         const allCookies = await chrome.cookies.getAll({ name: 'authToken' });
         if (allCookies.length > 0) {
-            // Pick the most relevant cookie (prefer streamvault domains, then localhost)
             const svCookie = allCookies.find(c =>
                 c.domain.includes('streamvault')
             ) || allCookies.find(c =>
@@ -94,36 +134,44 @@ async function getAuthData() {
     return null;
 }
 
-async function authedFetch(path, opts = {}) {
-    const auth = await getAuthData();
-    if (!auth) throw new Error('Not authenticated');
-
-    // Use the domain where found, or fallback to storage, or default
-    const stored = await chrome.storage.local.get(['baseUrl']);
-    // If we found a token on a specific domain, prefer that domain for API calls
-    // (Exception: localhost FE -> localhost:5000 API assumed above)
-    const base = auth.apiBase || stored.baseUrl || 'https://streamvault.live';
-
-    const resp = await fetch(`${base}${path}`, {
-        ...opts,
-        headers: {
-            ...(opts.headers || {}),
-            'Authorization': `Bearer ${auth.token}`,
-            'Content-Type': 'application/json'
-        }
-    });
-
-    if (!resp.ok) throw new Error(`API ${resp.status}`);
-    return resp.json();
-}
-
 // ─── User Fetching & Caching ─────────────────────────────────────────
 async function fetchAndCacheUser() {
+    // Step 1: Find an auth token (cookie)
+    const auth = await getAuthData();
+
+    if (!auth?.token) {
+        console.log('[StreamVault] No auth token found, user not logged in');
+        await chrome.storage.local.set({ cachedUser: null });
+        chrome.action.setBadgeText({ text: '' });
+        return null;
+    }
+
+    // Step 2: Determine where to send the API request
+    // If cookie came from a Cloudflare domain → use VPS IP directly
+    // If cookie came from localhost → use localhost
+    const apiBase = resolveApiBase(auth.apiBase);
+    const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${auth.token}`
+    };
+
+    console.log(`[StreamVault] Fetching user from: ${apiBase} (token from: ${auth.apiBase})`);
+
     try {
-        const json = await authedFetch('/api/auth/me');
+        const resp = await fetch(`${apiBase}/api/auth/me`, { headers });
+
+        if (!resp.ok) {
+            console.log(`[StreamVault] ${apiBase}/api/auth/me returned ${resp.status}`);
+            await chrome.storage.local.set({ cachedUser: null });
+            chrome.action.setBadgeText({ text: '' });
+            return null;
+        }
+
+        const json = await resp.json();
         const user = json.user;
 
         if (!user) {
+            console.log(`[StreamVault] ${apiBase}/api/auth/me returned no user`);
             await chrome.storage.local.set({ cachedUser: null });
             return null;
         }
@@ -152,9 +200,10 @@ async function fetchAndCacheUser() {
         }
 
         chrome.action.setBadgeText({ text: '' });
+        console.log('[StreamVault] User cached successfully:', cached.username);
         return cached;
     } catch (e) {
-        console.log('[StreamVault] User fetch failed:', e.message);
+        console.log(`[StreamVault] User fetch from ${apiBase} failed:`, e.message);
         await chrome.storage.local.set({ cachedUser: null });
         chrome.action.setBadgeText({ text: '' });
         return null;
@@ -267,66 +316,52 @@ async function handleMessage(message, sender, sendResponse) {
             case 'CHECK_AVAILABILITY': {
                 const { title, year, type } = message.payload;
                 const store = await chrome.storage.local.get(['apiKey', 'baseUrl']);
-                const auth = await getAuthData();
 
-                // Use API Key if available, otherwise fall back to Auth Cookie
-                const headers = {};
-                if (store.apiKey) {
-                    headers['X-API-Key'] = store.apiKey;
-                } else if (auth?.token) {
-                    headers['Authorization'] = `Bearer ${auth.token}`;
-                }
-                // Don't return early - try public access or just let API fail with 401 if needed
-                // But generally we need some auth.
-
-
-                const base = auth?.apiBase || store.baseUrl || 'http://13.205.136.45:5000'; // Fallback to VPS if no other
+                // Normalize & resolve — Cloudflare domains → VPS IP
+                const configuredBase = normalizeBaseUrl(store.baseUrl) || 'https://streamvault.in';
+                const apiBase = resolveApiBase(configuredBase);
                 const query = new URLSearchParams({ title, year: year || '', type: type || '' }).toString();
 
-                console.log(`[StreamVault] Checking availability on: ${base}`);
+                // Build auth headers — API key preferred, then Bearer token
+                const reqHeaders = {};
+                if (store.apiKey) {
+                    reqHeaders['X-API-Key'] = store.apiKey;
+                } else {
+                    // Try cookie for the configured domain (not the resolved VPS IP)
+                    try {
+                        const cookie = await chrome.cookies.get({ url: configuredBase, name: 'authToken' });
+                        if (cookie?.value) {
+                            reqHeaders['Authorization'] = `Bearer ${cookie.value}`;
+                        }
+                    } catch { }
+
+                    // If no cookie, try global auth
+                    if (!reqHeaders['Authorization']) {
+                        const auth = await getAuthData();
+                        if (auth?.token) {
+                            reqHeaders['Authorization'] = `Bearer ${auth.token}`;
+                        }
+                    }
+                }
+
+                console.log(`[StreamVault] Checking availability on: ${apiBase} (configured: ${configuredBase}, auth: ${reqHeaders['X-API-Key'] ? 'ApiKey' : reqHeaders['Authorization'] ? 'Bearer' : 'None'})`);
 
                 try {
-                    const resp = await fetch(`${base}/api/external/availability?${query}`, { headers });
+                    const resp = await fetch(`${apiBase}/api/external/availability?${query}`, { headers: reqHeaders });
+
                     if (resp.ok) {
                         const data = await resp.json();
                         if (data.url && !data.url.startsWith('http')) {
-                            data.url = new URL(data.url, base).href;
+                            // Use the configured base (not VPS IP) for user-facing URLs
+                            data.url = new URL(data.url, configuredBase).href;
                         }
-                        data._debug = { usedBase: base, authMethod: headers['X-API-Key'] ? 'ApiKey' : (headers['Authorization'] ? 'Bearer' : 'None') };
+                        data._debug = { usedBase: apiBase, configuredBase, authMethod: reqHeaders['X-API-Key'] ? 'ApiKey' : (reqHeaders['Authorization'] ? 'Bearer' : 'None') };
                         sendResponse(data);
-                    } else if (resp.status === 401) {
-                        // 401 means we reached the server but need auth. This confirms connectivity.
-                        sendResponse({ error: 'Auth required', _debug: { usedBase: base, status: 401 } });
                     } else {
-                        sendResponse({ error: `API Error: ${resp.status}`, _debug: { usedBase: base } });
+                        sendResponse({ error: `API Error: ${resp.status}`, _debug: { usedBase: apiBase, configuredBase, status: resp.status } });
                     }
                 } catch (e) {
-                    console.log('[StreamVault] Primary fetch failed, trying fallback to HTTPS domain...');
-
-                    // Fallback to main domain (port 443) if IP:5000 fails (likely firewall)
-                    const fallbackBase = 'https://streamvault.live';
-
-                    if (base !== fallbackBase && base !== 'https://www.streamvault.live') {
-                        try {
-                            const resp = await fetch(`${fallbackBase}/api/external/availability?${query}`, { headers });
-                            if (resp.ok) {
-                                const data = await resp.json();
-                                if (data.url && !data.url.startsWith('http')) {
-                                    data.url = new URL(data.url, fallbackBase).href;
-                                }
-                                data._debug = { usedBase: fallbackBase, originalError: e.message, fellBack: true };
-                                sendResponse(data);
-                                return;
-                            } else if (resp.status === 401) {
-                                sendResponse({ error: 'Auth required (Fallback)', _debug: { usedBase: fallbackBase, status: 401 } });
-                                return;
-                            }
-                        } catch (e2) {
-                            sendResponse({ error: 'Network error (Fallback failed)', _debug: { usedBase: fallbackBase, details: e2.message } });
-                            return;
-                        }
-                    }
-                    sendResponse({ error: 'Network error', _debug: { usedBase: base, details: e.message } });
+                    sendResponse({ error: 'Network error', _debug: { usedBase: apiBase, configuredBase, details: e.message } });
                 }
                 break;
             }
