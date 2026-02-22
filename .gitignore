@@ -120,3 +120,6 @@ uploads/
 
 # Local Development Utils
 dev-utils/
+
+# AI Agent skills & config
+.agent/

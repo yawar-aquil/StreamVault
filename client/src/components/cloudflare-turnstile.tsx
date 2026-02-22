@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, type MutableRefObject } from 'react';
 
 declare global {
     interface Window {
@@ -47,21 +47,34 @@ export function CloudflareTurnstile({
     const containerRef = useRef<HTMLDivElement>(null);
     const widgetIdRef = useRef<string | null>(null);
 
+    // Store callbacks in refs to avoid re-rendering the widget when callback identity changes.
+    // This fixes the flickering issue where inline callbacks (e.g. in admin-login) cause
+    // the widget to be destroyed and recreated on every parent render.
+    const onVerifyRef = useRef(onVerify);
+    const onExpireRef = useRef(onExpire);
+    const onErrorRef = useRef(onError);
+
+    useEffect(() => {
+        onVerifyRef.current = onVerify;
+        onExpireRef.current = onExpire;
+        onErrorRef.current = onError;
+    });
+
     const renderWidget = useCallback(() => {
         if (!containerRef.current || !window.turnstile) return;
         if (widgetIdRef.current) {
-            try { window.turnstile.remove(widgetIdRef.current); } catch {}
+            try { window.turnstile.remove(widgetIdRef.current); } catch { }
             widgetIdRef.current = null;
         }
         widgetIdRef.current = window.turnstile.render(containerRef.current, {
             sitekey: SITE_KEY,
-            callback: onVerify,
-            'expired-callback': onExpire,
-            'error-callback': onError,
+            callback: (token: string) => onVerifyRef.current(token),
+            'expired-callback': () => onExpireRef.current?.(),
+            'error-callback': () => onErrorRef.current?.(),
             theme,
             size,
         });
-    }, [onVerify, onExpire, onError, theme, size]);
+    }, [theme, size]);
 
     useEffect(() => {
         if (window.turnstile) {
@@ -75,7 +88,7 @@ export function CloudflareTurnstile({
         }
         return () => {
             if (widgetIdRef.current) {
-                try { window.turnstile.remove(widgetIdRef.current); } catch {}
+                try { window.turnstile.remove(widgetIdRef.current); } catch { }
                 widgetIdRef.current = null;
             }
         };

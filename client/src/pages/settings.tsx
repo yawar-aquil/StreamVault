@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, Link } from 'wouter';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Settings, Bot, Bell, Volume2, Palette, Shield, Trash2, Key, Copy, Plus, Lock, Check, BarChart3, Smartphone, Zap, ArrowUpCircle } from 'lucide-react';
+import { Loader2, Settings, Bot, Bell, Volume2, Palette, Shield, Trash2, Key, Copy, Plus, Lock, Check, BarChart3, Smartphone, Zap, ArrowUpCircle, Gift } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
     Dialog,
@@ -84,6 +84,44 @@ export default function SettingsPage() {
     const { toast } = useToast();
     const { theme, setTheme } = useTheme();
     const [, setLocation] = useLocation();
+    const [activeSection, setActiveSection] = useState('appearance');
+
+    // Sidebar nav items
+    const NAV_ITEMS = [
+        { id: 'appearance', label: 'Appearance', icon: Palette },
+        { id: 'features', label: 'Features', icon: Bot },
+        { id: 'playback', label: 'Playback', icon: Volume2 },
+        { id: 'notifications', label: 'Notifications', icon: Bell },
+        { id: 'privacy', label: 'Privacy', icon: Shield },
+        { id: 'referrals', label: 'Referrals', icon: Gift },
+        { id: 'api-keys', label: 'API Keys', icon: Key },
+        { id: 'danger-zone', label: 'Danger Zone', icon: Trash2 },
+    ];
+
+    // IntersectionObserver to track which section is visible
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                for (const entry of entries) {
+                    if (entry.isIntersecting) {
+                        setActiveSection(entry.target.id);
+                        break;
+                    }
+                }
+            },
+            { rootMargin: '-80px 0px -60% 0px', threshold: 0.1 }
+        );
+        NAV_ITEMS.forEach(({ id }) => {
+            const el = document.getElementById(id);
+            if (el) observer.observe(el);
+        });
+        return () => observer.disconnect();
+    }, []);
+
+    const scrollToSection = (id: string) => {
+        const el = document.getElementById(id);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
 
     // Fetch User Badges to check ownership
     const { data: userBadges = [] } = useQuery<any[]>({
@@ -394,7 +432,7 @@ export default function SettingsPage() {
     };
 
     return (
-        <div className="container mx-auto py-8 px-4 max-w-3xl">
+        <div className="container mx-auto py-8 px-4 max-w-6xl">
             <div className="mb-8">
                 <h1 className="text-3xl font-bold flex items-center gap-3">
                     <Settings className="h-8 w-8" />
@@ -403,642 +441,683 @@ export default function SettingsPage() {
                 <p className="text-muted-foreground mt-2">Customize your StreamVault experience</p>
             </div>
 
-            <div className="space-y-6">
-                {/* Appearance */}
-                {/* Appearance */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Palette className="h-5 w-5" />
-                            Appearance
-                        </CardTitle>
-                        <CardDescription>Customize the look and feel of StreamVault</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="space-y-4">
-                            <Label className="text-base">System Theme</Label>
-                            <div className="flex flex-wrap gap-4">
-                                <Button
-                                    variant={theme === 'light' ? 'default' : 'outline'}
-                                    className="w-24"
-                                    onClick={() => setTheme('light')}
-                                >
-                                    Light
-                                </Button>
-                                <Button
-                                    variant={theme === 'dark' ? 'default' : 'outline'}
-                                    className="w-24"
-                                    onClick={() => setTheme('dark')}
-                                >
-                                    Dark
-                                </Button>
-                                <Button
-                                    variant={theme === 'system' ? 'default' : 'outline'}
-                                    className="w-24"
-                                    onClick={() => setTheme('system')}
-                                >
-                                    System
-                                </Button>
-                            </div>
-                        </div>
+            {/* Mobile: horizontal scrollable tabs */}
+            <div className="flex lg:hidden gap-2 overflow-x-auto pb-4 mb-6 scrollbar-hide -mx-4 px-4">
+                {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
+                    <button
+                        key={id}
+                        onClick={() => scrollToSection(id)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all border ${activeSection === id
+                            ? 'bg-red-600/15 text-red-400 border-red-500/30'
+                            : 'bg-card/50 text-muted-foreground border-white/5 hover:text-foreground hover:border-white/10'
+                            }`}
+                    >
+                        <Icon className="h-4 w-4" />
+                        {label}
+                    </button>
+                ))}
+            </div>
 
-                        <Separator />
+            <div className="flex gap-8">
+                {/* Sidebar nav — desktop only */}
+                <aside className="hidden lg:block w-56 shrink-0">
+                    <div className="sticky top-24 space-y-1">
+                        {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
+                            <button
+                                key={id}
+                                onClick={() => scrollToSection(id)}
+                                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all text-left ${activeSection === id
+                                    ? 'bg-red-600/15 text-red-400 border border-red-500/20 shadow-sm shadow-red-500/5'
+                                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent'
+                                    }`}
+                            >
+                                <Icon className={`h-4 w-4 ${activeSection === id ? 'text-red-400' : ''}`} />
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                </aside>
 
-                        <div className="space-y-4">
-                            <Label className="text-base">App Themes</Label>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                {DISPLAY_THEMES.map(({ name, id }) => {
-                                    // Check if user owns ANY badge that maps to this theme ID
-                                    // This ensures old "Neon" or "Neon Skin" owners can still use "Neon Theme" if we map them together,
-                                    // OR gives us flexibility. But here, we specifically want to see if they own the badge corresponding to the theme.
-                                    // Adjusted Logic: Check if they own a badge with the exact name OR if they own a badge that maps to the same ID?
-                                    // Let's check for the Name specifically first, or map their badges.
-
-                                    const owned = userBadges.some((ub: any) => {
-                                        const badgeName = ub.badge?.name || ub.badgeId;
-                                        // Specific check: DOES this user's badge map to the CURRENT theme ID we are showing?
-                                        // e.g. "Neon" maps to "neon-theme". "Neon Theme" (displayed) is "neon-theme". Match!
-                                        return THEME_MAPPING[badgeName] === id;
-                                    });
-
-                                    // Find product to get dynamic image
-                                    const product = products.find((p: any) => p.name === name);
-                                    const imageUrl = product?.imageUrl || THEME_PREVIEWS[id];
-
-                                    return (
-                                        <ThemeCard
-                                            key={id}
-                                            id={id}
-                                            name={name}
-                                            imageUrl={imageUrl} // Pass dynamic image
-                                            active={theme === id}
-                                            locked={!owned}
-                                            setTheme={(t) => setTheme(t as any)}
-                                            setLocation={setLocation}
-                                        />
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* App Icon - Only visible in installed PWA */}
-                {isPWA && (
-                    <Card>
+                {/* Main content */}
+                <div className="flex-1 min-w-0 space-y-6">
+                    {/* Appearance */}
+                    {/* Appearance */}
+                    <Card id="appearance">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <Smartphone className="h-5 w-5" />
-                                App Icon
+                                <Palette className="h-5 w-5" />
+                                Appearance
                             </CardTitle>
-                            <CardDescription>Change your app icon on the home screen</CardDescription>
+                            <CardDescription>Customize the look and feel of StreamVault</CardDescription>
                         </CardHeader>
-                        <CardContent>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                {/* Default Icon */}
-                                <button
-                                    onClick={() => handleIconChange('default')}
-                                    className={`relative flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all duration-200 ${selectedIcon === 'default'
-                                        ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20'
-                                        : 'border-muted hover:border-muted-foreground/30 hover:bg-muted/50'
-                                        }`}
-                                >
-                                    <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-md">
-                                        <img src="/icons/icon.svg" alt="Default" className="w-full h-full object-cover bg-[#0a0a0a]" />
-                                    </div>
-                                    <span className="text-sm font-medium">Default</span>
-                                    {selectedIcon === 'default' && (
-                                        <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                                            <Check className="w-3 h-3 text-primary-foreground" />
-                                        </div>
-                                    )}
-                                </button>
-
-                                {/* Alternate Icon - Red S */}
-                                <button
-                                    onClick={() => handleIconChange('alt')}
-                                    className={`relative flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all duration-200 ${selectedIcon === 'alt'
-                                        ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20'
-                                        : 'border-muted hover:border-muted-foreground/30 hover:bg-muted/50'
-                                        }`}
-                                >
-                                    <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-md">
-                                        <img src="/icons/icon-alt.png" alt="Red S" className="w-full h-full object-cover" />
-                                    </div>
-                                    <span className="text-sm font-medium">Red S</span>
-                                    {selectedIcon === 'alt' && (
-                                        <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                                            <Check className="w-3 h-3 text-primary-foreground" />
-                                        </div>
-                                    )}
-                                </button>
+                        <CardContent className="space-y-6">
+                            <div className="space-y-4">
+                                <Label className="text-base">System Theme</Label>
+                                <div className="flex flex-wrap gap-4">
+                                    <Button
+                                        variant={theme === 'light' ? 'default' : 'outline'}
+                                        className="w-24"
+                                        onClick={() => setTheme('light')}
+                                    >
+                                        Light
+                                    </Button>
+                                    <Button
+                                        variant={theme === 'dark' ? 'default' : 'outline'}
+                                        className="w-24"
+                                        onClick={() => setTheme('dark')}
+                                    >
+                                        Dark
+                                    </Button>
+                                    <Button
+                                        variant={theme === 'system' ? 'default' : 'outline'}
+                                        className="w-24"
+                                        onClick={() => setTheme('system')}
+                                    >
+                                        System
+                                    </Button>
+                                </div>
                             </div>
-                            <p className="text-xs text-muted-foreground mt-4">
-                                After changing the icon, relaunch the app for the change to take effect on your home screen.
+
+                            <Separator />
+
+                            <div className="space-y-4">
+                                <Label className="text-base">App Themes</Label>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                    {DISPLAY_THEMES.map(({ name, id }) => {
+                                        // Check if user owns ANY badge that maps to this theme ID
+                                        // This ensures old "Neon" or "Neon Skin" owners can still use "Neon Theme" if we map them together,
+                                        // OR gives us flexibility. But here, we specifically want to see if they own the badge corresponding to the theme.
+                                        // Adjusted Logic: Check if they own a badge with the exact name OR if they own a badge that maps to the same ID?
+                                        // Let's check for the Name specifically first, or map their badges.
+
+                                        const owned = userBadges.some((ub: any) => {
+                                            const badgeName = ub.badge?.name || ub.badgeId;
+                                            // Specific check: DOES this user's badge map to the CURRENT theme ID we are showing?
+                                            // e.g. "Neon" maps to "neon-theme". "Neon Theme" (displayed) is "neon-theme". Match!
+                                            return THEME_MAPPING[badgeName] === id;
+                                        });
+
+                                        // Find product to get dynamic image
+                                        const product = products.find((p: any) => p.name === name);
+                                        const imageUrl = product?.imageUrl || THEME_PREVIEWS[id];
+
+                                        return (
+                                            <ThemeCard
+                                                key={id}
+                                                id={id}
+                                                name={name}
+                                                imageUrl={imageUrl} // Pass dynamic image
+                                                active={theme === id}
+                                                locked={!owned}
+                                                setTheme={(t) => setTheme(t as any)}
+                                                setLocation={setLocation}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* App Icon - Only visible in installed PWA */}
+                    {isPWA && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Smartphone className="h-5 w-5" />
+                                    App Icon
+                                </CardTitle>
+                                <CardDescription>Change your app icon on the home screen</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                    {/* Default Icon */}
+                                    <button
+                                        onClick={() => handleIconChange('default')}
+                                        className={`relative flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all duration-200 ${selectedIcon === 'default'
+                                            ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20'
+                                            : 'border-muted hover:border-muted-foreground/30 hover:bg-muted/50'
+                                            }`}
+                                    >
+                                        <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-md">
+                                            <img src="/icons/icon.svg" alt="Default" className="w-full h-full object-cover bg-[#0a0a0a]" />
+                                        </div>
+                                        <span className="text-sm font-medium">Default</span>
+                                        {selectedIcon === 'default' && (
+                                            <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                                                <Check className="w-3 h-3 text-primary-foreground" />
+                                            </div>
+                                        )}
+                                    </button>
+
+                                    {/* Alternate Icon - Red S */}
+                                    <button
+                                        onClick={() => handleIconChange('alt')}
+                                        className={`relative flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all duration-200 ${selectedIcon === 'alt'
+                                            ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20'
+                                            : 'border-muted hover:border-muted-foreground/30 hover:bg-muted/50'
+                                            }`}
+                                    >
+                                        <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-md">
+                                            <img src="/icons/icon-alt.png" alt="Red S" className="w-full h-full object-cover" />
+                                        </div>
+                                        <span className="text-sm font-medium">Red S</span>
+                                        {selectedIcon === 'alt' && (
+                                            <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                                                <Check className="w-3 h-3 text-primary-foreground" />
+                                            </div>
+                                        )}
+                                    </button>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-4">
+                                    After changing the icon, relaunch the app for the change to take effect on your home screen.
+                                </p>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Features */}
+                    <Card id="features">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Bot className="h-5 w-5" />
+                                Features
+                            </CardTitle>
+                            <CardDescription>Enable or disable app features</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label htmlFor="chatbot">AI Chatbot</Label>
+                                    <p className="text-sm text-muted-foreground">Show the AI assistant chat widget</p>
+                                </div>
+                                <Switch
+                                    id="chatbot"
+                                    checked={settings.chatbotEnabled}
+                                    onCheckedChange={(checked) => updateSetting('chatbotEnabled', checked)}
+                                />
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label htmlFor="autoplay">Autoplay Trailers</Label>
+                                    <p className="text-sm text-muted-foreground">Automatically play trailers on content pages</p>
+                                </div>
+                                <Switch
+                                    id="autoplay"
+                                    checked={settings.autoplayTrailers}
+                                    onCheckedChange={(checked) => updateSetting('autoplayTrailers', checked)}
+                                />
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label htmlFor="subtitles">Subtitles by Default</Label>
+                                    <p className="text-sm text-muted-foreground">Enable subtitles automatically when available</p>
+                                </div>
+                                <Switch
+                                    id="subtitles"
+                                    checked={settings.subtitlesEnabled}
+                                    onCheckedChange={(checked) => updateSetting('subtitlesEnabled', checked)}
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Playback */}
+                    <Card id="playback">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Volume2 className="h-5 w-5" />
+                                Playback
+                            </CardTitle>
+                            <CardDescription>Video and audio preferences</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label htmlFor="quality">Default Video Quality</Label>
+                                    <p className="text-sm text-muted-foreground">Preferred streaming quality</p>
+                                </div>
+                                <Select
+                                    value={settings.defaultVideoQuality}
+                                    onValueChange={(value: 'auto' | '1080p' | '720p' | '480p') => updateSetting('defaultVideoQuality', value)}
+                                >
+                                    <SelectTrigger className="w-32">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="auto">Auto</SelectItem>
+                                        <SelectItem value="1080p">1080p</SelectItem>
+                                        <SelectItem value="720p">720p</SelectItem>
+                                        <SelectItem value="480p">480p</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label htmlFor="sound">Sound Effects</Label>
+                                    <p className="text-sm text-muted-foreground">Play notification and UI sounds</p>
+                                </div>
+                                <Switch
+                                    id="sound"
+                                    checked={settings.soundEnabled}
+                                    onCheckedChange={(checked) => updateSetting('soundEnabled', checked)}
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Notifications */}
+                    <Card id="notifications">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Bell className="h-5 w-5" />
+                                Notifications
+                            </CardTitle>
+                            <CardDescription>Manage your notification preferences</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label htmlFor="push">Push Notifications</Label>
+                                    <p className="text-sm text-muted-foreground">Get browser notifications for updates</p>
+                                </div>
+                                <Switch
+                                    id="push"
+                                    checked={settings.pushNotifications}
+                                    onCheckedChange={(checked) => updateSetting('pushNotifications', checked)}
+                                />
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label htmlFor="email">Email Notifications</Label>
+                                    <p className="text-sm text-muted-foreground">Receive email updates about new content</p>
+                                </div>
+                                <Switch
+                                    id="email"
+                                    checked={settings.emailNotifications}
+                                    onCheckedChange={(checked) => updateSetting('emailNotifications', checked)}
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Privacy */}
+                    <Card id="privacy">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Shield className="h-5 w-5" />
+                                Privacy
+                            </CardTitle>
+                            <CardDescription>Control your privacy settings</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label htmlFor="activity">Show Activity to Friends</Label>
+                                    <p className="text-sm text-muted-foreground">Let friends see what you're watching</p>
+                                </div>
+                                <Switch
+                                    id="activity"
+                                    checked={settings.friendActivityVisible}
+                                    onCheckedChange={(checked) => updateSetting('friendActivityVisible', checked)}
+                                />
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label htmlFor="adult">Adult Content</Label>
+                                    <p className="text-sm text-muted-foreground">Show 18+ content in search results</p>
+                                </div>
+                                <Switch
+                                    id="adult"
+                                    checked={settings.showAdultContent}
+                                    onCheckedChange={(checked) => updateSetting('showAdultContent', checked)}
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Referral System */}
+                    <div id="referrals">
+                        <ReferralSection showLeaderboard={false} />
+                    </div>
+
+                    {/* API Keys */}
+                    <Card id="api-keys">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Key className="h-5 w-5" />
+                                API Keys
+                            </CardTitle>
+                            <CardDescription>
+                                Generate API keys for external access (read-only). Rate limited to 60 req/min and 1000 req/day.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {/* Create new key */}
+                            <div className="flex gap-2">
+                                <Input
+                                    placeholder="Key name (e.g., My Bot)"
+                                    value={newKeyName}
+                                    onChange={(e) => setNewKeyName(e.target.value)}
+                                    className="flex-1"
+                                />
+                                <Button onClick={createApiKey} disabled={isCreatingKey}>
+                                    {isCreatingKey ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <>
+                                            <Plus className="h-4 w-4 mr-1" />
+                                            Create
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+
+                            {/* Newly created key (show once) */}
+                            {newlyCreatedKey && (
+                                <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                                    <p className="text-sm font-medium text-green-500 mb-1">🎉 New API Key Created!</p>
+                                    <p className="text-xs text-muted-foreground mb-2">Copy this key now - it won't be shown again:</p>
+                                    <div className="flex gap-2">
+                                        <code className="flex-1 p-2 bg-background rounded text-xs break-all">{newlyCreatedKey}</code>
+                                        <Button size="sm" variant="outline" onClick={() => copyToClipboard(newlyCreatedKey)}>
+                                            <Copy className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="mt-2 text-xs"
+                                        onClick={() => setNewlyCreatedKey(null)}
+                                    >
+                                        Dismiss
+                                    </Button>
+                                </div>
+                            )}
+
+                            {/* Existing keys */}
+                            {apiKeys.length > 0 ? (
+                                <div className="space-y-3">
+                                    {apiKeys.map((key) => {
+                                        const dailyPercent = Math.min((key.requestsToday / (key.rateLimitDaily || 1000)) * 100, 100);
+                                        const minutePercent = Math.min((key.requestsThisMinute / (key.rateLimitMinute || 60)) * 100, 100);
+                                        const dayResetDate = new Date(key.lastDayReset);
+                                        dayResetDate.setUTCDate(dayResetDate.getUTCDate() + 1);
+                                        dayResetDate.setUTCHours(0, 0, 0, 0);
+                                        const minuteResetDate = new Date(key.lastMinuteReset);
+                                        minuteResetDate.setTime(minuteResetDate.getTime() + 60000);
+
+                                        return (
+                                            <div key={key.id} className="p-4 bg-muted/50 rounded-lg border relative overflow-hidden">
+                                                <div className="flex items-start justify-between mb-3 pr-16 relative">
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-2 font-medium">
+                                                            {key.name}
+                                                            <Badge variant={key.tier === 'enterprise' ? 'default' : key.tier === 'pro' ? 'secondary' : 'outline'} className="uppercase text-[10px]">
+                                                                {key.tier || 'FREE'}
+                                                            </Badge>
+                                                        </div>
+                                                        <p className="text-xs text-muted-foreground font-mono">{key.key}</p>
+                                                        <p className="text-xs text-muted-foreground mt-1">
+                                                            Created {new Date(key.createdAt).toLocaleDateString()}
+                                                            {key.lastUsed && ` • Last used ${new Date(key.lastUsed).toLocaleString()}`}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex gap-1 absolute top-0 right-0">
+                                                        {(!key.tier || key.tier === 'free') && (
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="h-8 gap-1 text-xs"
+                                                                onClick={() => handleUpgrade(key)}
+                                                            >
+                                                                <Zap className="h-3 w-3 text-yellow-500" />
+                                                                Upgrade
+                                                            </Button>
+                                                        )}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-destructive hover:text-destructive"
+                                                            onClick={() => deleteApiKey(key.id)}
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Usage Stats */}
+                                                <div className="space-y-2 pt-2 border-t mt-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                                                        <span className="text-xs font-medium">Usage</span>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <div>
+                                                            <div className="flex justify-between text-xs mb-1">
+                                                                <span>Daily ({key.requestsToday}/{key.rateLimitDaily || 1000})</span>
+                                                                <span className="text-muted-foreground">Resets at midnight UTC</span>
+                                                            </div>
+                                                            <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                                                <div
+                                                                    className={`h-full rounded-full transition-all ${dailyPercent > 90 ? 'bg-red-500' : dailyPercent > 70 ? 'bg-yellow-500' : 'bg-primary'}`}
+                                                                    style={{ width: `${dailyPercent}%` }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="flex justify-between text-xs mb-1">
+                                                                <span>Per minute ({key.requestsThisMinute}/{key.rateLimitMinute || 60})</span>
+                                                                <span className="text-muted-foreground">Resets every minute</span>
+                                                            </div>
+                                                            <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                                                <div
+                                                                    className={`h-full rounded-full transition-all ${minutePercent > 90 ? 'bg-red-500' : minutePercent > 70 ? 'bg-yellow-500' : 'bg-primary'}`}
+                                                                    style={{ width: `${minutePercent}%` }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground text-center py-4">
+                                    No API keys yet. Create one to access the API externally.
+                                </p>
+                            )}
+
+                            <p className="text-xs text-muted-foreground">
+                                Use your API key by including the <code className="bg-muted px-1 rounded">X-API-Key</code> header in your requests.
                             </p>
                         </CardContent>
                     </Card>
-                )}
 
-                {/* Features */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Bot className="h-5 w-5" />
-                            Features
-                        </CardTitle>
-                        <CardDescription>Enable or disable app features</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                                <Label htmlFor="chatbot">AI Chatbot</Label>
-                                <p className="text-sm text-muted-foreground">Show the AI assistant chat widget</p>
-                            </div>
-                            <Switch
-                                id="chatbot"
-                                checked={settings.chatbotEnabled}
-                                onCheckedChange={(checked) => updateSetting('chatbotEnabled', checked)}
-                            />
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                                <Label htmlFor="autoplay">Autoplay Trailers</Label>
-                                <p className="text-sm text-muted-foreground">Automatically play trailers on content pages</p>
-                            </div>
-                            <Switch
-                                id="autoplay"
-                                checked={settings.autoplayTrailers}
-                                onCheckedChange={(checked) => updateSetting('autoplayTrailers', checked)}
-                            />
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                                <Label htmlFor="subtitles">Subtitles by Default</Label>
-                                <p className="text-sm text-muted-foreground">Enable subtitles automatically when available</p>
-                            </div>
-                            <Switch
-                                id="subtitles"
-                                checked={settings.subtitlesEnabled}
-                                onCheckedChange={(checked) => updateSetting('subtitlesEnabled', checked)}
-                            />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Playback */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Volume2 className="h-5 w-5" />
-                            Playback
-                        </CardTitle>
-                        <CardDescription>Video and audio preferences</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                                <Label htmlFor="quality">Default Video Quality</Label>
-                                <p className="text-sm text-muted-foreground">Preferred streaming quality</p>
-                            </div>
-                            <Select
-                                value={settings.defaultVideoQuality}
-                                onValueChange={(value: 'auto' | '1080p' | '720p' | '480p') => updateSetting('defaultVideoQuality', value)}
-                            >
-                                <SelectTrigger className="w-32">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="auto">Auto</SelectItem>
-                                    <SelectItem value="1080p">1080p</SelectItem>
-                                    <SelectItem value="720p">720p</SelectItem>
-                                    <SelectItem value="480p">480p</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                                <Label htmlFor="sound">Sound Effects</Label>
-                                <p className="text-sm text-muted-foreground">Play notification and UI sounds</p>
-                            </div>
-                            <Switch
-                                id="sound"
-                                checked={settings.soundEnabled}
-                                onCheckedChange={(checked) => updateSetting('soundEnabled', checked)}
-                            />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Notifications */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Bell className="h-5 w-5" />
-                            Notifications
-                        </CardTitle>
-                        <CardDescription>Manage your notification preferences</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                                <Label htmlFor="push">Push Notifications</Label>
-                                <p className="text-sm text-muted-foreground">Get browser notifications for updates</p>
-                            </div>
-                            <Switch
-                                id="push"
-                                checked={settings.pushNotifications}
-                                onCheckedChange={(checked) => updateSetting('pushNotifications', checked)}
-                            />
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                                <Label htmlFor="email">Email Notifications</Label>
-                                <p className="text-sm text-muted-foreground">Receive email updates about new content</p>
-                            </div>
-                            <Switch
-                                id="email"
-                                checked={settings.emailNotifications}
-                                onCheckedChange={(checked) => updateSetting('emailNotifications', checked)}
-                            />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Privacy */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Shield className="h-5 w-5" />
-                            Privacy
-                        </CardTitle>
-                        <CardDescription>Control your privacy settings</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                                <Label htmlFor="activity">Show Activity to Friends</Label>
-                                <p className="text-sm text-muted-foreground">Let friends see what you're watching</p>
-                            </div>
-                            <Switch
-                                id="activity"
-                                checked={settings.friendActivityVisible}
-                                onCheckedChange={(checked) => updateSetting('friendActivityVisible', checked)}
-                            />
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                                <Label htmlFor="adult">Adult Content</Label>
-                                <p className="text-sm text-muted-foreground">Show 18+ content in search results</p>
-                            </div>
-                            <Switch
-                                id="adult"
-                                checked={settings.showAdultContent}
-                                onCheckedChange={(checked) => updateSetting('showAdultContent', checked)}
-                            />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Referral System */}
-                <ReferralSection showLeaderboard={false} />
-
-                {/* API Keys */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Key className="h-5 w-5" />
-                            API Keys
-                        </CardTitle>
-                        <CardDescription>
-                            Generate API keys for external access (read-only). Rate limited to 60 req/min and 1000 req/day.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {/* Create new key */}
-                        <div className="flex gap-2">
-                            <Input
-                                placeholder="Key name (e.g., My Bot)"
-                                value={newKeyName}
-                                onChange={(e) => setNewKeyName(e.target.value)}
-                                className="flex-1"
-                            />
-                            <Button onClick={createApiKey} disabled={isCreatingKey}>
-                                {isCreatingKey ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                    <>
-                                        <Plus className="h-4 w-4 mr-1" />
-                                        Create
-                                    </>
-                                )}
-                            </Button>
-                        </div>
-
-                        {/* Newly created key (show once) */}
-                        {newlyCreatedKey && (
-                            <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
-                                <p className="text-sm font-medium text-green-500 mb-1">🎉 New API Key Created!</p>
-                                <p className="text-xs text-muted-foreground mb-2">Copy this key now - it won't be shown again:</p>
-                                <div className="flex gap-2">
-                                    <code className="flex-1 p-2 bg-background rounded text-xs break-all">{newlyCreatedKey}</code>
-                                    <Button size="sm" variant="outline" onClick={() => copyToClipboard(newlyCreatedKey)}>
-                                        <Copy className="h-4 w-4" />
-                                    </Button>
+                    {/* Danger Zone */}
+                    <Card id="danger-zone" className="border-red-500/30 bg-red-950/10">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-red-400">
+                                <Trash2 className="h-5 w-5" />
+                                Danger Zone
+                            </CardTitle>
+                            <CardDescription className="text-red-400/70">
+                                Irreversible and destructive actions
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label className="text-red-400">Delete Account</Label>
+                                    <p className="text-sm text-muted-foreground">
+                                        Permanently delete your account and all data. This cannot be undone.
+                                    </p>
                                 </div>
                                 <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="mt-2 text-xs"
-                                    onClick={() => setNewlyCreatedKey(null)}
+                                    variant="destructive"
+                                    onClick={() => setShowDeleteDialog(true)}
                                 >
-                                    Dismiss
+                                    Delete Account
                                 </Button>
                             </div>
-                        )}
 
-                        {/* Existing keys */}
-                        {apiKeys.length > 0 ? (
-                            <div className="space-y-3">
-                                {apiKeys.map((key) => {
-                                    const dailyPercent = Math.min((key.requestsToday / (key.rateLimitDaily || 1000)) * 100, 100);
-                                    const minutePercent = Math.min((key.requestsThisMinute / (key.rateLimitMinute || 60)) * 100, 100);
-                                    const dayResetDate = new Date(key.lastDayReset);
-                                    dayResetDate.setUTCDate(dayResetDate.getUTCDate() + 1);
-                                    dayResetDate.setUTCHours(0, 0, 0, 0);
-                                    const minuteResetDate = new Date(key.lastMinuteReset);
-                                    minuteResetDate.setTime(minuteResetDate.getTime() + 60000);
-
-                                    return (
-                                        <div key={key.id} className="p-4 bg-muted/50 rounded-lg border relative overflow-hidden">
-                                            <div className="flex items-start justify-between mb-3 pr-16 relative">
-                                                <div className="min-w-0">
-                                                    <div className="flex items-center gap-2 font-medium">
-                                                        {key.name}
-                                                        <Badge variant={key.tier === 'enterprise' ? 'default' : key.tier === 'pro' ? 'secondary' : 'outline'} className="uppercase text-[10px]">
-                                                            {key.tier || 'FREE'}
-                                                        </Badge>
-                                                    </div>
-                                                    <p className="text-xs text-muted-foreground font-mono">{key.key}</p>
-                                                    <p className="text-xs text-muted-foreground mt-1">
-                                                        Created {new Date(key.createdAt).toLocaleDateString()}
-                                                        {key.lastUsed && ` • Last used ${new Date(key.lastUsed).toLocaleString()}`}
-                                                    </p>
-                                                </div>
-                                                <div className="flex gap-1 absolute top-0 right-0">
-                                                    {(!key.tier || key.tier === 'free') && (
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="h-8 gap-1 text-xs"
-                                                            onClick={() => handleUpgrade(key)}
-                                                        >
-                                                            <Zap className="h-3 w-3 text-yellow-500" />
-                                                            Upgrade
-                                                        </Button>
-                                                    )}
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-destructive hover:text-destructive"
-                                                        onClick={() => deleteApiKey(key.id)}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-
-                                            {/* Usage Stats */}
-                                            <div className="space-y-2 pt-2 border-t mt-2">
-                                                <div className="flex items-center gap-2">
-                                                    <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                                                    <span className="text-xs font-medium">Usage</span>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <div>
-                                                        <div className="flex justify-between text-xs mb-1">
-                                                            <span>Daily ({key.requestsToday}/{key.rateLimitDaily || 1000})</span>
-                                                            <span className="text-muted-foreground">Resets at midnight UTC</span>
-                                                        </div>
-                                                        <div className="h-2 bg-muted rounded-full overflow-hidden">
-                                                            <div
-                                                                className={`h-full rounded-full transition-all ${dailyPercent > 90 ? 'bg-red-500' : dailyPercent > 70 ? 'bg-yellow-500' : 'bg-primary'}`}
-                                                                style={{ width: `${dailyPercent}%` }}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <div className="flex justify-between text-xs mb-1">
-                                                            <span>Per minute ({key.requestsThisMinute}/{key.rateLimitMinute || 60})</span>
-                                                            <span className="text-muted-foreground">Resets every minute</span>
-                                                        </div>
-                                                        <div className="h-2 bg-muted rounded-full overflow-hidden">
-                                                            <div
-                                                                className={`h-full rounded-full transition-all ${minutePercent > 90 ? 'bg-red-500' : minutePercent > 70 ? 'bg-yellow-500' : 'bg-primary'}`}
-                                                                style={{ width: `${minutePercent}%` }}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
+                            {/* Delete Confirmation Dialog */}
+                            {showDeleteDialog && (
+                                <div className="mt-4 p-4 border border-red-500/50 rounded-lg bg-red-950/20">
+                                    <h4 className="font-semibold text-red-400 mb-3">Confirm Account Deletion</h4>
+                                    <p className="text-sm text-muted-foreground mb-4">
+                                        This will permanently delete your account, including all your watchlist, progress, friends, messages, badges, comments, and settings. This action is irreversible.
+                                    </p>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <Label htmlFor="deletePassword" className="text-sm">Enter your password</Label>
+                                            <Input
+                                                id="deletePassword"
+                                                type="password"
+                                                value={deletePassword}
+                                                onChange={(e) => setDeletePassword(e.target.value)}
+                                                placeholder="Your password"
+                                                className="mt-1"
+                                            />
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        ) : (
-                            <p className="text-sm text-muted-foreground text-center py-4">
-                                No API keys yet. Create one to access the API externally.
-                            </p>
-                        )}
-
-                        <p className="text-xs text-muted-foreground">
-                            Use your API key by including the <code className="bg-muted px-1 rounded">X-API-Key</code> header in your requests.
-                        </p>
-                    </CardContent>
-                </Card>
-
-                {/* Danger Zone */}
-                <Card className="border-red-500/30 bg-red-950/10">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-red-400">
-                            <Trash2 className="h-5 w-5" />
-                            Danger Zone
-                        </CardTitle>
-                        <CardDescription className="text-red-400/70">
-                            Irreversible and destructive actions
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                                <Label className="text-red-400">Delete Account</Label>
-                                <p className="text-sm text-muted-foreground">
-                                    Permanently delete your account and all data. This cannot be undone.
-                                </p>
-                            </div>
-                            <Button
-                                variant="destructive"
-                                onClick={() => setShowDeleteDialog(true)}
-                            >
-                                Delete Account
-                            </Button>
-                        </div>
-
-                        {/* Delete Confirmation Dialog */}
-                        {showDeleteDialog && (
-                            <div className="mt-4 p-4 border border-red-500/50 rounded-lg bg-red-950/20">
-                                <h4 className="font-semibold text-red-400 mb-3">Confirm Account Deletion</h4>
-                                <p className="text-sm text-muted-foreground mb-4">
-                                    This will permanently delete your account, including all your watchlist, progress, friends, messages, badges, comments, and settings. This action is irreversible.
-                                </p>
-                                <div className="space-y-3">
-                                    <div>
-                                        <Label htmlFor="deletePassword" className="text-sm">Enter your password</Label>
-                                        <Input
-                                            id="deletePassword"
-                                            type="password"
-                                            value={deletePassword}
-                                            onChange={(e) => setDeletePassword(e.target.value)}
-                                            placeholder="Your password"
-                                            className="mt-1"
-                                        />
+                                        <div>
+                                            <Label htmlFor="deleteConfirm" className="text-sm">Type <strong>DELETE</strong> to confirm</Label>
+                                            <Input
+                                                id="deleteConfirm"
+                                                value={deleteConfirmText}
+                                                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                                                placeholder="DELETE"
+                                                className="mt-1"
+                                            />
+                                        </div>
+                                        <div className="flex gap-2 mt-4">
+                                            <Button
+                                                variant="destructive"
+                                                onClick={handleDeleteAccount}
+                                                disabled={isDeleting || deleteConfirmText !== 'DELETE' || !deletePassword}
+                                            >
+                                                {isDeleting ? (
+                                                    <>
+                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                        Deleting...
+                                                    </>
+                                                ) : 'Permanently Delete My Account'}
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => {
+                                                    setShowDeleteDialog(false);
+                                                    setDeletePassword('');
+                                                    setDeleteConfirmText('');
+                                                }}
+                                            >
+                                                Cancel
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <Label htmlFor="deleteConfirm" className="text-sm">Type <strong>DELETE</strong> to confirm</Label>
-                                        <Input
-                                            id="deleteConfirm"
-                                            value={deleteConfirmText}
-                                            onChange={(e) => setDeleteConfirmText(e.target.value)}
-                                            placeholder="DELETE"
-                                            className="mt-1"
-                                        />
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Upgrade Dialog */}
+                    <Dialog open={!!upgradeKey} onOpenChange={(open) => { if (!open) { setUpgradeKey(null); setUpgradeTurnstileToken(''); } }}>
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>Upgrade API Plan</DialogTitle>
+                                <DialogDescription>
+                                    Purchase higher rate limits for <strong>{upgradeKey?.name}</strong> using StreamCoins.
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            <div className="grid gap-4 py-4">
+                                {/* Pro Tier */}
+                                <div className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${(!upgradeKey?.tier || upgradeKey?.tier === 'free') ? 'border-primary/50 hover:border-primary' : 'opacity-50 border-muted'}`}>
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div>
+                                            <h3 className="font-bold flex items-center gap-2">
+                                                Pro Tier
+                                                {upgradeKey?.tier === 'pro' && <Badge variant="secondary">Current</Badge>}
+                                            </h3>
+                                            <p className="text-sm text-muted-foreground">For serious developers</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="font-bold text-lg text-yellow-500">1,000</span>
+                                            <span className="text-xs text-muted-foreground block">coins</span>
+                                        </div>
                                     </div>
-                                    <div className="flex gap-2 mt-4">
-                                        <Button
-                                            variant="destructive"
-                                            onClick={handleDeleteAccount}
-                                            disabled={isDeleting || deleteConfirmText !== 'DELETE' || !deletePassword}
-                                        >
-                                            {isDeleting ? (
-                                                <>
-                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                    Deleting...
-                                                </>
-                                            ) : 'Permanently Delete My Account'}
+                                    <ul className="text-sm space-y-1">
+                                        <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> 10,000 requests / day</li>
+                                        <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> 600 requests / minute</li>
+                                    </ul>
+                                    {(!upgradeKey?.tier || upgradeKey?.tier === 'free') && (
+                                        <Button className="w-full mt-4" onClick={() => confirmUpgrade('pro')} disabled={isUpgrading || !upgradeTurnstileToken}>
+                                            {isUpgrading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Purchase Pro"}
                                         </Button>
-                                        <Button
-                                            variant="outline"
-                                            onClick={() => {
-                                                setShowDeleteDialog(false);
-                                                setDeletePassword('');
-                                                setDeleteConfirmText('');
-                                            }}
-                                        >
-                                            Cancel
+                                    )}
+                                </div>
+
+                                {/* Enterprise Tier */}
+                                <div className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${upgradeKey?.tier !== 'enterprise' ? 'border-primary/50 hover:border-primary' : 'opacity-50 border-muted'}`}>
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div>
+                                            <h3 className="font-bold flex items-center gap-2">
+                                                Enterprise Tier
+                                                {upgradeKey?.tier === 'enterprise' && <Badge variant="default">Current</Badge>}
+                                            </h3>
+                                            <p className="text-sm text-muted-foreground">For commercial apps</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="font-bold text-lg text-yellow-500">5,000</span>
+                                            <span className="text-xs text-muted-foreground block">coins</span>
+                                        </div>
+                                    </div>
+                                    <ul className="text-sm space-y-1">
+                                        <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> 100,000 requests / day</li>
+                                        <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> 6,000 requests / minute</li>
+                                    </ul>
+                                    {upgradeKey?.tier !== 'enterprise' && (
+                                        <Button className="w-full mt-4" onClick={() => confirmUpgrade('enterprise')} disabled={isUpgrading || !upgradeTurnstileToken}>
+                                            {isUpgrading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Purchase Enterprise"}
                                         </Button>
-                                    </div>
+                                    )}
                                 </div>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
 
-                {/* Upgrade Dialog */}
-                <Dialog open={!!upgradeKey} onOpenChange={(open) => { if (!open) { setUpgradeKey(null); setUpgradeTurnstileToken(''); } }}>
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                            <DialogTitle>Upgrade API Plan</DialogTitle>
-                            <DialogDescription>
-                                Purchase higher rate limits for <strong>{upgradeKey?.name}</strong> using StreamCoins.
-                            </DialogDescription>
-                        </DialogHeader>
-
-                        <div className="grid gap-4 py-4">
-                            {/* Pro Tier */}
-                            <div className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${(!upgradeKey?.tier || upgradeKey?.tier === 'free') ? 'border-primary/50 hover:border-primary' : 'opacity-50 border-muted'}`}>
-                                <div className="flex justify-between items-start mb-2">
-                                    <div>
-                                        <h3 className="font-bold flex items-center gap-2">
-                                            Pro Tier
-                                            {upgradeKey?.tier === 'pro' && <Badge variant="secondary">Current</Badge>}
-                                        </h3>
-                                        <p className="text-sm text-muted-foreground">For serious developers</p>
-                                    </div>
-                                    <div className="text-right">
-                                        <span className="font-bold text-lg text-yellow-500">1,000</span>
-                                        <span className="text-xs text-muted-foreground block">coins</span>
-                                    </div>
-                                </div>
-                                <ul className="text-sm space-y-1">
-                                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> 10,000 requests / day</li>
-                                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> 600 requests / minute</li>
-                                </ul>
-                                {(!upgradeKey?.tier || upgradeKey?.tier === 'free') && (
-                                    <Button className="w-full mt-4" onClick={() => confirmUpgrade('pro')} disabled={isUpgrading || !upgradeTurnstileToken}>
-                                        {isUpgrading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Purchase Pro"}
-                                    </Button>
-                                )}
+                                <CloudflareTurnstile
+                                    onVerify={handleUpgradeTurnstileVerify}
+                                    onExpire={handleUpgradeTurnstileExpire}
+                                    theme="auto"
+                                />
                             </div>
 
-                            {/* Enterprise Tier */}
-                            <div className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${upgradeKey?.tier !== 'enterprise' ? 'border-primary/50 hover:border-primary' : 'opacity-50 border-muted'}`}>
-                                <div className="flex justify-between items-start mb-2">
-                                    <div>
-                                        <h3 className="font-bold flex items-center gap-2">
-                                            Enterprise Tier
-                                            {upgradeKey?.tier === 'enterprise' && <Badge variant="default">Current</Badge>}
-                                        </h3>
-                                        <p className="text-sm text-muted-foreground">For commercial apps</p>
-                                    </div>
-                                    <div className="text-right">
-                                        <span className="font-bold text-lg text-yellow-500">5,000</span>
-                                        <span className="text-xs text-muted-foreground block">coins</span>
-                                    </div>
-                                </div>
-                                <ul className="text-sm space-y-1">
-                                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> 100,000 requests / day</li>
-                                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> 6,000 requests / minute</li>
-                                </ul>
-                                {upgradeKey?.tier !== 'enterprise' && (
-                                    <Button className="w-full mt-4" onClick={() => confirmUpgrade('enterprise')} disabled={isUpgrading || !upgradeTurnstileToken}>
-                                        {isUpgrading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Purchase Enterprise"}
-                                    </Button>
-                                )}
-                            </div>
-
-                            <CloudflareTurnstile
-                                onVerify={handleUpgradeTurnstileVerify}
-                                onExpire={handleUpgradeTurnstileExpire}
-                                theme="auto"
-                            />
-                        </div>
-
-                        <DialogFooter className="sm:justify-between text-xs text-muted-foreground">
-                            <span>Your Balance: <span className="text-yellow-500 font-bold">{user?.coins || 0}</span> Coins</span>
-                            {/* <Button type="button" variant="secondary" onClick={() => setUpgradeKey(null)}>
+                            <DialogFooter className="sm:justify-between text-xs text-muted-foreground">
+                                <span>Your Balance: <span className="text-yellow-500 font-bold">{user?.coins || 0}</span> Coins</span>
+                                {/* <Button type="button" variant="secondary" onClick={() => setUpgradeKey(null)}>
                                 Close
                             </Button> */}
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
 
 
-                {/* Actions */}
-                <div className="flex flex-col sm:flex-row gap-3">
-                    <Button onClick={handleSaveSettings} disabled={isSaving} className="flex-1">
-                        {isSaving ? (
-                            <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Saving...
-                            </>
-                        ) : (
-                            'Save Settings'
-                        )}
-                    </Button>
-                    <Button variant="outline" onClick={handleResetSettings}>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Reset to Defaults
-                    </Button>
+                    {/* Actions */}
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <Button onClick={handleSaveSettings} disabled={isSaving} className="flex-1">
+                            {isSaving ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Saving...
+                                </>
+                            ) : (
+                                'Save Settings'
+                            )}
+                        </Button>
+                        <Button variant="outline" onClick={handleResetSettings}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Reset to Defaults
+                        </Button>
+                    </div>
                 </div>
             </div>
         </div >
