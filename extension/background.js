@@ -42,25 +42,55 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 });
 
 // ─── Cookie-based Auth ───────────────────────────────────────────────
-// ─── Cookie-based Auth ───────────────────────────────────────────────
 async function getAuthData() {
-    // Check domains (Prioritize Dev/VPS over Prod)
-    const domains = [
-        '13.205.136.45:5000', '13.205.136.45',
-        'localhost:5000', 'localhost:3000',
-        'streamvault.live', 'www.streamvault.live',
-        'streamvault.in', 'www.streamvault.in'
+    // Phase 1: Check specific domains by URL
+    const domainUrls = [
+        'http://localhost:5000',
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'https://streamvault.live',
+        'https://www.streamvault.live',
+        'https://streamvault.in',
+        'https://www.streamvault.in',
+        'http://13.205.136.45:5000',
+        'http://13.205.136.45'
     ];
-    for (const d of domains) {
+
+    for (const url of domainUrls) {
         try {
-            const url = d.includes(':') || d.match(/^\d/) ? `http://${d}` : `https://${d}`;
             const cookie = await chrome.cookies.get({ url, name: 'authToken' });
-            if (cookie?.value) return { token: cookie.value, apiBase: url };
+            if (cookie?.value) {
+                console.log('[StreamVault] Auth cookie found on:', url);
+                return { token: cookie.value, apiBase: url };
+            }
         } catch { }
     }
 
-    // Check localhost ports logic removed as it's now in the main list or handled above
+    // Phase 2: Fallback — search ALL cookies for authToken
+    // This catches cases where the domain/URL format doesn't match exactly
+    try {
+        const allCookies = await chrome.cookies.getAll({ name: 'authToken' });
+        if (allCookies.length > 0) {
+            // Pick the most relevant cookie (prefer streamvault domains, then localhost)
+            const svCookie = allCookies.find(c =>
+                c.domain.includes('streamvault')
+            ) || allCookies.find(c =>
+                c.domain.includes('localhost') || c.domain.includes('127.0.0.1')
+            ) || allCookies[0];
 
+            if (svCookie?.value) {
+                const protocol = svCookie.secure ? 'https' : 'http';
+                const domain = svCookie.domain.startsWith('.') ? svCookie.domain.slice(1) : svCookie.domain;
+                const apiBase = `${protocol}://${domain}`;
+                console.log('[StreamVault] Auth cookie found via getAll on domain:', svCookie.domain, '→ apiBase:', apiBase);
+                return { token: svCookie.value, apiBase };
+            }
+        }
+    } catch (e) {
+        console.log('[StreamVault] getAll cookies fallback failed:', e.message);
+    }
+
+    console.log('[StreamVault] No auth cookie found on any domain');
     return null;
 }
 

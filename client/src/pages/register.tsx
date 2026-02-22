@@ -1,11 +1,9 @@
 import { useState, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/contexts/auth-context';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Link } from 'wouter';
-import { Loader2, Mail, Lock, User, Eye, EyeOff, Play } from 'lucide-react';
+import { Loader2, Mail, Lock, User, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { CloudflareTurnstile } from '@/components/cloudflare-turnstile';
 
@@ -87,180 +85,227 @@ export default function RegisterPage() {
     };
 
     return (
-        <div className="min-h-screen flex flex-col lg:flex-row">
-            {/* Left Panel — Cinematic Branding */}
-            <div className="relative hidden lg:flex lg:w-[58%] items-center justify-center overflow-hidden bg-[#0a0a0a]">
-                {/* Gradient background */}
-                <div className="absolute inset-0 bg-gradient-to-br from-[#1a0000] via-[#0a0a0a] to-[#0a0a1a]" />
-
-                {/* Decorative blur orbs */}
-                <div className="absolute top-[15%] left-[20%] w-72 h-72 bg-red-600/15 rounded-full blur-[120px] animate-pulse" />
-                <div className="absolute bottom-[20%] right-[15%] w-80 h-80 bg-blue-600/10 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
-                <div className="absolute top-[60%] left-[50%] w-48 h-48 bg-red-500/10 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '4s' }} />
-
+        <div className="relative flex min-h-screen w-full flex-row">
+            {/* Left Side: Cinematic Branding (60%) */}
+            <section className="relative hidden lg:flex w-[60%] flex-col justify-center p-16 overflow-hidden">
+                {/* Background Image */}
+                <div
+                    className="absolute inset-0 z-0 bg-cover bg-center"
+                    style={{
+                        backgroundImage: `url('https://lh3.googleusercontent.com/aida-public/AB6AXuD9Z6BPIG6YlN4gLyRWSFlCEnA-BrQ0beJ4y9UkmtX74nWBehOg1qywsi6wUMLdx0ddGH6w7cCWEzc23sWo85XEVpBMMQW3IKIGpPJXVIUVhI8qmqF35GWXDqCPPS-BD66V0bXx7O1l1LYbwHMxYt2WPe2qk1O5-a2Y18hmek4VQbJXnwb-ETPrdhuLADV7Ab4Ebd9BjQ-4Zr5xURTKcxCYY3dUs1eQZWrjEQG3XeQkhwFpKt84lFTy2u0WxbRI0HFe7Oh4PSc6yjg')`,
+                    }}
+                />
+                {/* Cinematic Gradient Overlay */}
+                <div
+                    className="absolute inset-0 z-10"
+                    style={{
+                        background: `linear-gradient(to right, rgba(20,20,20,0) 0%, rgba(20,20,20,1) 100%), 
+                                     linear-gradient(to bottom, rgba(20,20,20,0.4) 0%, rgba(20,20,20,0.8) 100%)`,
+                    }}
+                />
+                {/* Floating Particles */}
+                <div className="absolute inset-0 z-[15] overflow-hidden pointer-events-none">
+                    <div className="absolute w-1 h-1 rounded-full bg-white opacity-30 top-[10%] left-[20%]" style={{ boxShadow: '0 0 10px white', filter: 'blur(1px)' }} />
+                    <div className="absolute w-2 h-2 rounded-full bg-white opacity-30 top-[40%] left-[10%]" style={{ boxShadow: '0 0 15px white', filter: 'blur(1px)' }} />
+                    <div className="absolute w-1.5 h-1.5 rounded-full bg-white opacity-30 top-[70%] left-[30%]" style={{ boxShadow: '0 0 12px white', filter: 'blur(1px)' }} />
+                    <div className="absolute w-1 h-1 rounded-full bg-white opacity-30 top-[85%] left-[15%]" style={{ boxShadow: '0 0 8px white', filter: 'blur(1px)' }} />
+                    <div className="absolute w-2 h-2 rounded-full bg-white opacity-30 top-[20%] left-[50%]" style={{ boxShadow: '0 0 15px white', filter: 'blur(1px)' }} />
+                </div>
                 {/* Content */}
-                <div className="relative z-10 max-w-md px-8 text-center">
-                    <div className="flex items-center justify-center gap-3 mb-6">
-                        <div className="p-2.5 bg-red-600 rounded-xl">
-                            <Play className="w-7 h-7 text-white fill-white" />
+                <div className="relative z-20 flex flex-col gap-6 max-w-2xl">
+                    <div className="flex items-center gap-2">
+                        <div className="bg-[#e60a15] p-2 rounded-lg">
+                            <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
                         </div>
-                        <h1 className="text-4xl font-black text-white tracking-tight">StreamVault</h1>
+                        <span className="text-3xl font-black tracking-tighter text-white">STREAMVAULT</span>
                     </div>
-                    <p className="text-lg text-gray-300 leading-relaxed mb-4">
-                        Unlimited Shows, Movies & Anime
-                    </p>
-                    <p className="text-sm text-gray-500">
-                        Create your account and start streaming today.
-                    </p>
-
-                    {/* Decorative line */}
-                    <div className="mt-10 flex items-center gap-3 justify-center">
-                        <div className="h-px w-12 bg-gradient-to-r from-transparent to-red-500/50" />
-                        <div className="w-2 h-2 rounded-full bg-red-500/50" />
-                        <div className="h-px w-12 bg-gradient-to-l from-transparent to-red-500/50" />
+                    <div className="space-y-4">
+                        <h1 className="text-5xl font-black leading-tight tracking-tight text-white lg:text-6xl">
+                            Unlimited Shows, Movies & <span className="text-[#e60a15]">Anime</span> — Free
+                        </h1>
+                        <p className="text-xl text-slate-300 font-medium max-w-lg">
+                            Experience the next generation of streaming. High-definition content, zero subscriptions, pure entertainment.
+                        </p>
+                    </div>
+                    {/* Stats */}
+                    <div className="flex gap-4 pt-8">
+                        <div className="flex flex-col items-center gap-1">
+                            <div className="text-2xl font-bold text-white">4K</div>
+                            <div className="text-xs text-slate-400 uppercase tracking-widest">Ultra HD</div>
+                        </div>
+                        <div className="w-px h-10 bg-white/20" />
+                        <div className="flex flex-col items-center gap-1">
+                            <div className="text-2xl font-bold text-white">50k+</div>
+                            <div className="text-xs text-slate-400 uppercase tracking-widest">Titles</div>
+                        </div>
+                        <div className="w-px h-10 bg-white/20" />
+                        <div className="flex flex-col items-center gap-1">
+                            <div className="text-2xl font-bold text-white">24/7</div>
+                            <div className="text-xs text-slate-400 uppercase tracking-widest">Support</div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            {/* Right Panel — Auth Form */}
-            <div className="flex-1 flex items-center justify-center bg-background p-6 sm:p-8 lg:p-12">
-                <div className="w-full max-w-[420px]">
-                    {/* Mobile logo */}
-                    <div className="flex items-center gap-2 mb-8 lg:hidden">
-                        <div className="p-2 bg-red-600 rounded-lg">
-                            <Play className="w-5 h-5 text-white fill-white" />
-                        </div>
-                        <span className="text-xl font-bold">StreamVault</span>
+            {/* Right Side: Auth Form (40%) */}
+            <section className="flex flex-1 flex-col items-center justify-center p-6 sm:p-12 lg:w-[40%] bg-[#141414]">
+                {/* Mobile Logo */}
+                <div className="lg:hidden absolute top-8 left-8 flex items-center gap-2">
+                    <svg className="w-8 h-8 text-[#e60a15]" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+                    <span className="text-2xl font-black tracking-tighter text-white">STREAMVAULT</span>
+                </div>
+
+                {/* Glass Card */}
+                <div
+                    className="w-full max-w-md space-y-6 p-8 rounded-lg shadow-2xl"
+                    style={{
+                        background: 'rgba(39, 27, 28, 0.6)',
+                        backdropFilter: 'blur(16px)',
+                        WebkitBackdropFilter: 'blur(16px)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                    }}
+                >
+                    {/* Header */}
+                    <div className="text-left space-y-2">
+                        <h2 className="text-3xl font-bold text-white tracking-tight">Join StreamVault</h2>
+                        <p className="text-slate-400 font-normal">Create your account and start streaming for free.</p>
                     </div>
 
-                    {/* Glass card */}
-                    <div className="rounded-2xl border border-white/[0.08] bg-card/50 backdrop-blur-xl p-8 shadow-2xl shadow-black/20">
-                        <div className="mb-6">
-                            <h2 className="text-2xl font-bold">Join StreamVault</h2>
-                            <p className="text-muted-foreground text-sm mt-1">
-                                Create your account to start streaming
-                            </p>
+                    {/* Divider */}
+                    <div className="relative flex items-center py-2">
+                        <div className="flex-grow border-t border-white/10" />
+                        <span className="flex-shrink mx-4 text-xs font-medium text-slate-500 uppercase tracking-widest">Create account</span>
+                        <div className="flex-grow border-t border-white/10" />
+                    </div>
+
+                    {/* Form */}
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        {error && (
+                            <div className="bg-red-500/10 text-red-400 text-sm p-3 rounded-lg border border-red-500/20">
+                                {error}
+                            </div>
+                        )}
+
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-medium text-slate-300 ml-1">Email Address</label>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
+                                    <Mail className="h-5 w-5" />
+                                </div>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    placeholder="name@example.com"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="w-full h-14 pl-12 pr-4 bg-white/5 border-white/10 rounded-lg text-white placeholder:text-slate-600 focus:ring-2 focus:ring-[#e60a15] focus:border-transparent transition-all"
+                                    required
+                                />
+                            </div>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            {error && (
-                                <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-lg border border-destructive/20">
-                                    {error}
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-medium text-slate-300 ml-1">Username</label>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
+                                    <User className="h-5 w-5" />
                                 </div>
+                                <Input
+                                    id="username"
+                                    type="text"
+                                    placeholder="Choose a username"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    className="w-full h-14 pl-12 pr-4 bg-white/5 border-white/10 rounded-lg text-white placeholder:text-slate-600 focus:ring-2 focus:ring-[#e60a15] focus:border-transparent transition-all"
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-medium text-slate-300 ml-1">Password</label>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
+                                    <Lock className="h-5 w-5" />
+                                </div>
+                                <Input
+                                    id="password"
+                                    type={showPassword ? 'text' : 'password'}
+                                    placeholder="••••••••"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full h-14 pl-12 pr-12 bg-white/5 border-white/10 rounded-lg text-white placeholder:text-slate-600 focus:ring-2 focus:ring-[#e60a15] focus:border-transparent transition-all"
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-white transition-colors"
+                                >
+                                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-medium text-slate-300 ml-1">Confirm Password</label>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
+                                    <Lock className="h-5 w-5" />
+                                </div>
+                                <Input
+                                    id="confirmPassword"
+                                    type={showPassword ? 'text' : 'password'}
+                                    placeholder="Repeat password"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    className="w-full h-14 pl-12 pr-4 bg-white/5 border-white/10 rounded-lg text-white placeholder:text-slate-600 focus:ring-2 focus:ring-[#e60a15] focus:border-transparent transition-all"
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <CloudflareTurnstile
+                            onVerify={handleTurnstileVerify}
+                            onExpire={handleTurnstileExpire}
+                            theme="auto"
+                        />
+
+                        {/* Submit */}
+                        <button
+                            type="submit"
+                            disabled={isLoading || !turnstileToken}
+                            className="w-full h-14 bg-[#e60a15] hover:bg-[#ff1a25] text-white font-bold rounded-lg shadow-lg shadow-[#e60a15]/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+                        >
+                            {isLoading ? (
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                            ) : (
+                                <>
+                                    <span>Create Account</span>
+                                    <ArrowRight className="h-5 w-5" />
+                                </>
                             )}
+                        </button>
+                    </form>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-                                <div className="relative">
-                                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        placeholder="you@example.com"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        className="pl-10 h-11 rounded-xl bg-background/50 border-white/10 focus:border-red-500/50 transition-colors"
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="username" className="text-sm font-medium">Username</Label>
-                                <div className="relative">
-                                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        id="username"
-                                        type="text"
-                                        placeholder="cooluser123"
-                                        value={username}
-                                        onChange={(e) => setUsername(e.target.value)}
-                                        className="pl-10 h-11 rounded-xl bg-background/50 border-white/10 focus:border-red-500/50 transition-colors"
-                                        required
-                                        minLength={3}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-                                <div className="relative">
-                                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        id="password"
-                                        type={showPassword ? 'text' : 'password'}
-                                        placeholder="••••••••"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className="pl-10 pr-10 h-11 rounded-xl bg-background/50 border-white/10 focus:border-red-500/50 transition-colors"
-                                        required
-                                        minLength={6}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                                    >
-                                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirm Password</Label>
-                                <div className="relative">
-                                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        id="confirmPassword"
-                                        type={showPassword ? 'text' : 'password'}
-                                        placeholder="••••••••"
-                                        value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
-                                        className="pl-10 h-11 rounded-xl bg-background/50 border-white/10 focus:border-red-500/50 transition-colors"
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            <CloudflareTurnstile
-                                onVerify={handleTurnstileVerify}
-                                onExpire={handleTurnstileExpire}
-                                theme="auto"
-                                className="mt-2"
-                            />
-
-                            <Button
-                                type="submit"
-                                className="w-full h-11 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-base shadow-lg shadow-red-600/20 transition-all hover:shadow-red-600/30"
-                                disabled={isLoading || !turnstileToken}
-                            >
-                                {isLoading ? (
-                                    <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Creating account...
-                                    </>
-                                ) : (
-                                    'Create Account'
-                                )}
-                            </Button>
-                        </form>
-
-                        {/* Divider */}
-                        <div className="relative my-6">
-                            <div className="absolute inset-0 flex items-center">
-                                <div className="w-full border-t border-white/[0.06]" />
-                            </div>
-                        </div>
-
-                        <p className="text-sm text-center text-muted-foreground">
+                    {/* Toggle */}
+                    <div className="text-center pt-2">
+                        <p className="text-sm text-slate-400">
                             Already have an account?{' '}
-                            <Link href="/login" className="text-red-400 hover:text-red-300 font-medium hover:underline transition-colors">
-                                Sign in
+                            <Link href="/login" className="text-[#e60a15] font-bold hover:underline ml-1">
+                                Sign In
                             </Link>
                         </p>
                     </div>
                 </div>
-            </div>
+
+                {/* Footer */}
+                <div className="mt-12 flex gap-6 text-xs text-slate-600 font-medium">
+                    <Link href="/privacy" className="hover:text-slate-400 transition-colors">Privacy Policy</Link>
+                    <Link href="/terms" className="hover:text-slate-400 transition-colors">Terms of Service</Link>
+                    <Link href="/help" className="hover:text-slate-400 transition-colors">Help Center</Link>
+                </div>
+            </section>
         </div>
     );
 }
