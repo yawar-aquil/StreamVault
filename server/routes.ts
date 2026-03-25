@@ -7601,34 +7601,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // URL Health Check Routes
   // ==========================================
 
-  // Check all video URLs for broken links
-  app.get("/api/admin/url-health", requireAdmin, async (req, res) => {
-    try {
-      const { checkAllVideoUrls } = await import("./url-health");
+  // ── URL Health Check: Background Job Pattern ──
+  // In-memory job state (survives across requests, cleared on restart)
+  let healthCheckJob: {
+    status: 'idle' | 'running' | 'done' | 'error';
+    startedAt?: Date;
+    completedAt?: Date;
+    checked: number;
+    total: number;
+    report?: any;
+    error?: string;
+  } = { status: 'idle', checked: 0, total: 0 };
 
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
-      const archiveOnly = req.query.archiveOnly === 'true';
-
-      const episodes = await storage.getAllEpisodes();
-      const animeEpisodes = await storage.getAllAnimeEpisodes();
-      const movies = await storage.getAllMovies();
-      const shows = await storage.getAllShows();
-      const anime = await storage.getAllAnime();
-
-      const report = await checkAllVideoUrls(
-        episodes,
-        animeEpisodes,
-        movies,
-        shows,
-        anime,
-        { checkArchiveOnly: archiveOnly, limit }
-      );
-
-      res.json(report);
-    } catch (error: any) {
-      console.error("URL health check failed:", error);
-      res.status(500).json({ error: error.message || "Failed to check URLs" });
+  // Start a health check (POST) — returns immediately, runs in background
+  app.post("/api/admin/url-health/start", requireAdmin, async (req, res) => {
+    if (healthCheckJob.status === 'running') {
+      return res.json({ message: "Health check already running", status: healthCheckJob.status, checked: healthCheckJob.checked, total: healthCheckJob.total });
     }
+
+    const archiveOnly = req.body.archiveOnly !== false; // default true
+    const limit = req.body.limit || 0;
+
+    // Reset job state
+    healthCheckJob = { status: 'running', startedAt: new Date(), checked: 0, total: 0 };
+
+    // Fire and forget — runs in background
+    (async () => {
+      try {
+        const { checkUrl } = await import("./url-health");
+
+        const episodes = await storage.getAllEpisodes();
+        const animeEpisodes = await storage.getAllAnimeEpisodes();
+        const movies = await storage.getAllMovies();
+        const shows = await storage.getAllShows();
+        const anime = await storage.getAllAnime();
+
+        // Build lookup maps
+        const showMap = new Map(shows.map((s: any) => [s.id, s.title]));
+        const animeMap = new Map(anime.map((a: any) => [a.id, a.title]));
+
+        const shouldCheck = (url: string | null | undefined) => {
+          if (!url) return false;
+          if (archiveOnly) return url.includes('archive.org');
+          return !url.includes('drive.google.com');
+        };
+
+        // Collect URLs
+        const urlsToCheck: any[] = [];
+
+        for (const ep of episodes) {
+          if (shouldCheck(ep.videoUrl)) {
+            urlsToCheck.push({ id: ep.id, type: 'episode', title: ep.title, parentTitle: showMap.get(ep.showId) || 'Unknown Show', season: ep.season, episodeNumber: ep.episodeNumber, url: ep.videoUrl, urlField: 'videoUrl' });
+          } else if (shouldCheck(ep.googleDriveUrl)) {
+            urlsToCheck.push({ id: ep.id, type: 'episode', title: ep.title, parentTitle: showMap.get(ep.showId) || 'Unknown Show', season: ep.season, episodeNumber: ep.episodeNumber, url: ep.googleDriveUrl, urlField: 'googleDriveUrl' });
+          }
+        }
+
+        for (const ep of animeEpisodes) {
+          if (shouldCheck(ep.videoUrl)) {
+            urlsToCheck.push({ id: ep.id, type: 'animeEpisode', title: ep.title, parentTitle: animeMap.get(ep.animeId) || 'Unknown Anime', season: ep.season, episodeNumber: ep.episodeNumber, url: ep.videoUrl, urlField: 'videoUrl' });
+          } else if (shouldCheck(ep.googleDriveUrl)) {
+            urlsToCheck.push({ id: ep.id, type: 'animeEpisode', title: ep.title, parentTitle: animeMap.get(ep.animeId) || 'Unknown Anime', season: ep.season, episodeNumber: ep.episodeNumber, url: ep.googleDriveUrl, urlField: 'googleDriveUrl' });
+          }
+        }
+
+        for (const movie of movies) {
+          if (shouldCheck(movie.googleDriveUrl)) {
+            urlsToCheck.push({ id: movie.id, type: 'movie', title: movie.title, parentTitle: 'Movie', url: movie.googleDriveUrl, urlField: 'googleDriveUrl' });
+          }
+        }
+
+        const toCheck = limit > 0 ? urlsToCheck.slice(0, limit) : urlsToCheck;
+        healthCheckJob.total = toCheck.length;
+
+        const brokenItems: any[] = [];
+        const summary = { episodes: { total: 0, broken: 0 }, animeEpisodes: { total: 0, broken: 0 }, movies: { total: 0, broken: 0 } };
+
+        // Count totals by type
+        for (const item of toCheck) {
+          if (item.type === 'episode') summary.episodes.total++;
+          if (item.type === 'animeEpisode') summary.animeEpisodes.total++;
+          if (item.type === 'movie') summary.movies.total++;
+        }
+
+        // Check in batches of 50
+        const batchSize = 50;
+        for (let i = 0; i < toCheck.length; i += batchSize) {
+          const batch = toCheck.slice(i, i + batchSize);
+          const results = await Promise.all(
+            batch.map(async (item: any) => {
+              const result = await checkUrl(item.url);
+              return { item, result };
+            })
+          );
+
+          for (const { item, result } of results) {
+            if (!result.valid) {
+              brokenItems.push({ ...item, checkResult: result });
+              if (item.type === 'episode') summary.episodes.broken++;
+              if (item.type === 'animeEpisode') summary.animeEpisodes.broken++;
+              if (item.type === 'movie') summary.movies.broken++;
+            }
+          }
+
+          healthCheckJob.checked = Math.min(i + batchSize, toCheck.length);
+        }
+
+        healthCheckJob.report = {
+          checkedAt: new Date(),
+          totalChecked: toCheck.length,
+          valid: toCheck.length - brokenItems.length,
+          broken: brokenItems.length,
+          brokenItems,
+          summary,
+        };
+        healthCheckJob.status = 'done';
+        healthCheckJob.completedAt = new Date();
+        console.log(`✅ URL health check complete: ${toCheck.length} checked, ${brokenItems.length} broken`);
+      } catch (err: any) {
+        healthCheckJob.status = 'error';
+        healthCheckJob.error = err.message;
+        console.error("❌ URL health check background job failed:", err);
+      }
+    })();
+
+    res.json({ message: "Health check started", status: "running", total: 0 });
+  });
+
+  // Poll health check status (GET) — lightweight, returns instantly
+  app.get("/api/admin/url-health/status", requireAdmin, async (_req, res) => {
+    res.json({
+      status: healthCheckJob.status,
+      checked: healthCheckJob.checked,
+      total: healthCheckJob.total,
+      startedAt: healthCheckJob.startedAt,
+      completedAt: healthCheckJob.completedAt,
+      report: healthCheckJob.status === 'done' ? healthCheckJob.report : undefined,
+      error: healthCheckJob.error,
+    });
+  });
+
+  // Keep the old GET endpoint for backwards compatibility — now just returns last result or starts a new check
+  app.get("/api/admin/url-health", requireAdmin, async (req, res) => {
+    // If a completed report exists, return it
+    if (healthCheckJob.status === 'done' && healthCheckJob.report) {
+      return res.json(healthCheckJob.report);
+    }
+    // If running, return progress
+    if (healthCheckJob.status === 'running') {
+      return res.json({ status: 'running', checked: healthCheckJob.checked, total: healthCheckJob.total, message: 'Health check in progress. Poll /api/admin/url-health/status for updates.' });
+    }
+    // Otherwise return idle
+    res.json({ status: 'idle', message: 'No health check has been run. POST to /api/admin/url-health/start to begin.' });
   });
 
   // Check for pending/incomplete content (Admin)

@@ -415,49 +415,86 @@ function UrlHealthTab() {
   const [report, setReport] = useState<any>(null);
   const [checkType, setCheckType] = useState<'all' | 'archive'>('archive');
   const [checkLimit, setCheckLimit] = useState<number>(0); // 0 = all
+  const [progress, setProgress] = useState<{ checked: number; total: number }>({ checked: 0, total: 0 });
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Clean up polling on unmount
+  useEffect(() => {
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, []);
+
+  // Check if a scan is already running on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/admin/url-health/status', { headers: getAuthHeaders() });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.status === 'running') {
+          setIsChecking(true);
+          setProgress({ checked: data.checked, total: data.total });
+          startPolling();
+        } else if (data.status === 'done' && data.report) {
+          setReport(data.report);
+        }
+      } catch {}
+    })();
+  }, []);
+
+  const startPolling = () => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await fetch('/api/admin/url-health/status', { headers: getAuthHeaders() });
+        if (!res.ok) return;
+        const data = await res.json();
+        setProgress({ checked: data.checked, total: data.total });
+
+        if (data.status === 'done') {
+          if (pollRef.current) clearInterval(pollRef.current);
+          pollRef.current = null;
+          setReport(data.report);
+          setIsChecking(false);
+          if (data.report.broken > 0) {
+            toast({ title: "Health Check Complete", description: `Found ${data.report.broken} broken URLs out of ${data.report.totalChecked} checked.`, variant: "destructive" });
+          } else {
+            toast({ title: "Health Check Complete", description: `All ${data.report.totalChecked} URLs are accessible!` });
+          }
+        } else if (data.status === 'error') {
+          if (pollRef.current) clearInterval(pollRef.current);
+          pollRef.current = null;
+          setIsChecking(false);
+          toast({ title: "Error", description: data.error || "Health check failed", variant: "destructive" });
+        }
+      } catch {}
+    }, 2000);
+  };
 
   const runHealthCheck = async () => {
     setIsChecking(true);
     setReport(null);
+    setProgress({ checked: 0, total: 0 });
     try {
-      const queryParams = new URLSearchParams();
-      if (checkType === 'archive') queryParams.append('archiveOnly', 'true');
-      if (checkLimit > 0) queryParams.append('limit', checkLimit.toString());
-
-      const res = await fetch(`/api/admin/url-health?${queryParams.toString()}`, {
-        headers: getAuthHeaders()
+      const res = await fetch('/api/admin/url-health/start', {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archiveOnly: checkType === 'archive', limit: checkLimit || 0 }),
       });
 
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || "Failed to run health check");
+        throw new Error(err.error || "Failed to start health check");
       }
 
-      const data = await res.json();
-      setReport(data);
-
-      if (data.broken > 0) {
-        toast({
-          title: "Health Check Complete",
-          description: `Found ${data.broken} broken URLs out of ${data.totalChecked} checked.`,
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Health Check Complete",
-          description: `All ${data.totalChecked} URLs are accessible!`,
-        });
-      }
+      toast({ title: "Health Check Started", description: "Scanning URLs in the background..." });
+      startPolling();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
       setIsChecking(false);
     }
   };
+
+  const progressPercent = progress.total > 0 ? Math.round((progress.checked / progress.total) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -514,6 +551,22 @@ function UrlHealthTab() {
               )}
             </Button>
           </div>
+
+          {/* Live progress bar */}
+          {isChecking && (
+            <div className="mt-4 space-y-2">
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Checking URLs...</span>
+                <span>{progress.checked} / {progress.total} ({progressPercent}%)</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+                <div
+                  className="bg-primary h-3 rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
