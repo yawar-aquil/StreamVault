@@ -53,7 +53,7 @@ export async function checkUrl(url: string): Promise<UrlCheckResult> {
         }
 
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+        const timeout = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
         const response = await fetch(url, {
             method: 'HEAD',
@@ -199,8 +199,8 @@ export async function checkAllVideoUrls(
     // Apply limit if specified
     const toCheck = options.limit ? urlsToCheck.slice(0, options.limit) : urlsToCheck;
 
-    // Check URLs in batches to avoid overwhelming the server
-    const batchSize = 10;
+    // Check URLs in batches — high concurrency to finish within Cloudflare's 100s limit
+    const batchSize = 50;
     for (let i = 0; i < toCheck.length; i += batchSize) {
         const batch = toCheck.slice(i, i + batchSize);
         const results = await Promise.all(
