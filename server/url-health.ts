@@ -53,7 +53,7 @@ export async function checkUrl(url: string): Promise<UrlCheckResult> {
         }
 
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+        const timeout = setTimeout(() => controller.abort(), 8000); // 8 second timeout
 
         const response = await fetch(url, {
             method: 'HEAD',
@@ -200,7 +200,7 @@ export async function checkAllVideoUrls(
     const toCheck = options.limit ? urlsToCheck.slice(0, options.limit) : urlsToCheck;
 
     // Check URLs in batches to avoid overwhelming the server
-    const batchSize = 5;
+    const batchSize = 10;
     for (let i = 0; i < toCheck.length; i += batchSize) {
         const batch = toCheck.slice(i, i + batchSize);
         const results = await Promise.all(
