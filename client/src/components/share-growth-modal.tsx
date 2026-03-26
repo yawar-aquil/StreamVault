@@ -140,48 +140,58 @@ export function ShareGrowthModal() {
                         
                         <div className="grid grid-cols-2 gap-3">
                             <Button 
-                                onClick={() => shareExternal(`https://wa.me/?text=${encodedMessage}%20${encodedUrl}`)}
+                                asChild
                                 variant="outline" 
-                                className="bg-black border-zinc-800 hover:bg-zinc-900 hover:border-[#25D366] hover:text-[#25D366] group gap-2 text-gray-300 h-10 transition-colors"
+                                className="bg-black border-zinc-800 hover:bg-zinc-900 hover:border-[#25D366] hover:text-[#25D366] group gap-2 text-gray-300 h-10 transition-colors w-full cursor-pointer"
                             >
-                                <MessageCircle className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                                WhatsApp
+                                <a href={`https://api.whatsapp.com/send?text=${encodedMessage}%20${encodedUrl}`} target="_blank" rel="noopener noreferrer">
+                                    <MessageCircle className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                    WhatsApp
+                                </a>
                             </Button>
 
                             <Button 
-                                onClick={() => shareExternal(`https://t.me/share/url?url=${encodedUrl}&text=${encodedMessage}`)}
+                                asChild
                                 variant="outline" 
-                                className="bg-black border-zinc-800 hover:bg-zinc-900 hover:border-[#0088cc] hover:text-[#0088cc] group gap-2 text-gray-300 h-10 transition-colors"
+                                className="bg-black border-zinc-800 hover:bg-zinc-900 hover:border-[#0088cc] hover:text-[#0088cc] group gap-2 text-gray-300 h-10 transition-colors w-full cursor-pointer"
                             >
-                                <Send className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                                Telegram
+                                <a href={`https://t.me/share/url?url=${encodedUrl}&text=${encodedMessage}`} target="_blank" rel="noopener noreferrer">
+                                    <Send className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                    Telegram
+                                </a>
                             </Button>
 
                             <Button 
-                                onClick={() => shareExternal(`https://twitter.com/intent/tweet?text=${encodedMessage}&url=${encodedUrl}`)}
+                                asChild
                                 variant="outline" 
-                                className="bg-black border-zinc-800 hover:bg-zinc-900 hover:border-[#1DA1F2] hover:text-[#1DA1F2] group gap-2 text-gray-300 h-10 transition-colors"
+                                className="bg-black border-zinc-800 hover:bg-zinc-900 hover:border-[#1DA1F2] hover:text-[#1DA1F2] group gap-2 text-gray-300 h-10 transition-colors w-full cursor-pointer"
                             >
-                                <Twitter className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                                X (Twitter)
+                                <a href={`https://twitter.com/intent/tweet?text=${encodedMessage}&url=${encodedUrl}`} target="_blank" rel="noopener noreferrer">
+                                    <Twitter className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                    X (Twitter)
+                                </a>
                             </Button>
 
                             <Button 
-                                onClick={() => shareExternal(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`)}
+                                asChild
                                 variant="outline" 
-                                className="bg-black border-zinc-800 hover:bg-zinc-900 hover:border-[#4267B2] hover:text-[#4267B2] group gap-2 text-gray-300 h-10 transition-colors"
+                                className="bg-black border-zinc-800 hover:bg-zinc-900 hover:border-[#4267B2] hover:text-[#4267B2] group gap-2 text-gray-300 h-10 transition-colors w-full cursor-pointer"
                             >
-                                <Facebook className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                                Facebook
+                                <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`} target="_blank" rel="noopener noreferrer">
+                                    <Facebook className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                    Facebook
+                                </a>
                             </Button>
                             
                             <Button 
-                                onClick={() => shareExternal(`https://www.reddit.com/submit?url=${encodedUrl}&title=${encodedMessage}`)}
+                                asChild
                                 variant="outline" 
-                                className="bg-black border-zinc-800 hover:bg-zinc-900 hover:border-[#FF4500] hover:text-[#FF4500] group gap-2 text-gray-300 h-10 transition-colors"
+                                className="bg-black border-zinc-800 hover:bg-zinc-900 hover:border-[#FF4500] hover:text-[#FF4500] group gap-2 text-gray-300 h-10 transition-colors w-full cursor-pointer"
                             >
-                                <RedditIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                                Reddit
+                                <a href={`https://www.reddit.com/submit?url=${encodedUrl}&title=${encodedMessage}`} target="_blank" rel="noopener noreferrer">
+                                    <RedditIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                    Reddit
+                                </a>
                             </Button>
 
                             {/* Only show "More Options" natively if supported by browser (mobile default share sheet brings up Instagram natively) */}
@@ -189,7 +199,8 @@ export function ShareGrowthModal() {
                                 <Button 
                                     onClick={shareNative}
                                     variant="outline" 
-                                    className="bg-black border-zinc-800 hover:bg-zinc-900 hover:border-white hover:text-white group gap-2 text-gray-300 h-10 transition-colors"
+                                    className="bg-black border-zinc-800 hover:bg-zinc-900 hover:border-white hover:text-white group gap-2 text-gray-300 h-10 transition-colors w-full cursor-pointer"
+                                    type="button"
                                 >
                                     <Share2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
                                     More Options
