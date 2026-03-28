@@ -83,6 +83,16 @@ function generateUUID() {
     });
 }
 
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function searchShowOnTMDB(title) {
+    const encoded = encodeURIComponent(title);
+    const url = `${TMDB_BASE_URL}/search/tv?api_key=${TMDB_API_KEY}&query=${encoded}&language=en-US`;
+    return await httpsGet(url);
+}
+
 async function fetchSeasonData(tmdbId, seasonNumber) {
     const seasonUrl = `${TMDB_BASE_URL}/tv/${tmdbId}/season/${seasonNumber}?api_key=${TMDB_API_KEY}&language=en-US`;
     return await httpsGet(seasonUrl);
@@ -134,12 +144,27 @@ async function main() {
 
         if (method.toLowerCase() === 't') {
             // TMDB method
-            const tmdbId = await question('Enter TMDB TV Show ID for this anime: ');
+            let tmdbId = selectedAnime.tmdbId;
 
-            if (!tmdbId || isNaN(tmdbId)) {
-                console.log('❌ Invalid TMDB ID');
-                rl.close();
-                return;
+            if (!tmdbId) {
+                console.log(`\n🔍 Searching TMDB for "${selectedAnime.title}"...`);
+                const searchResults = await searchShowOnTMDB(selectedAnime.title);
+
+                if (!searchResults.results || searchResults.results.length === 0) {
+                    console.log('❌ Show not found on TMDB');
+                    const manualInput = await question('Enter TMDB TV Show ID manually (or press Enter to skip): ');
+                    if (!manualInput) {
+                        rl.close();
+                        return;
+                    }
+                    tmdbId = parseInt(manualInput, 10);
+                } else {
+                    let tmdbShow = searchResults.results.find(r => 
+                        r.name.toLowerCase() === selectedAnime.title.toLowerCase()
+                    ) || searchResults.results[0];
+                    console.log(`✅ Found on TMDB: ${tmdbShow.name} (ID: ${tmdbShow.id})`);
+                    tmdbId = tmdbShow.id;
+                }
             }
 
             const seasonNum = await question('Season number to add: ');
