@@ -6729,3 +6729,170 @@ function PendingContentTab() {
   );
 }
 
+// User Feedback Tab Component
+function FeedbackManager() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: feedbacks = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/feedback"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/feedback", { headers: getAuthHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch feedback");
+      return res.json();
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string, updates: any }) => {
+      const res = await fetch(`/api/admin/feedback/${id}`, {
+        method: "PATCH",
+        headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      if (!res.ok) throw new Error("Failed to update feedback");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/feedback"] });
+      toast({ title: "Success", description: "Feedback updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update feedback", variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/admin/feedback/${id}`, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to delete feedback");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/feedback"] });
+      toast({ title: "Success", description: "Feedback deleted successfully" });
+    },
+  });
+
+  if (isLoading) return <div>Loading feedback...</div>;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>User Feedback</CardTitle>
+        <CardDescription>Manage user feedback and suggestions</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Date</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Subject</TableHead>
+              <TableHead>User / Email</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {feedbacks.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  No feedback found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              feedbacks.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell>{new Date(item.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell className="capitalize">{item.category}</TableCell>
+                  <TableCell className="font-medium">{item.subject}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span>{item.username || "Anonymous"}</span>
+                      {item.email && <span className="text-xs text-muted-foreground">{item.email}</span>}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={item.status === "resolved" ? "default" : "secondary"}>
+                      {item.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right flex gap-2 justify-end">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">View / Resolve</Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>{item.subject}</DialogTitle>
+                          <DialogDescription>
+                            From {item.username || "Anonymous"} {item.email ? `(${item.email})` : ""} on {new Date(item.createdAt).toLocaleString()}
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2">
+                            <Label className="font-semibold text-muted-foreground">Message</Label>
+                            <div className="p-4 bg-muted/50 rounded-md border text-sm whitespace-pre-wrap">
+                              {item.message}
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor={`adminNote-${item.id}`}>Admin Note (will be sent in email if user provided one)</Label>
+                            <Textarea 
+                              id={`adminNote-${item.id}`}
+                              placeholder="Your response..."
+                              defaultValue={item.adminNote || ""}
+                              onChange={(e) => {
+                                item._draftNote = e.target.value;
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter className="flex gap-2 sm:justify-between">
+                          <div className="flex gap-2">
+                            {item.status !== "resolved" && (
+                              <Button 
+                                onClick={() => updateMutation.mutate({ 
+                                  id: item.id, 
+                                  updates: { status: "resolved", adminNote: item._draftNote || item.adminNote }
+                                })}
+                                disabled={updateMutation.isPending}
+                              >
+                                Mark Resolved & Send Email
+                              </Button>
+                            )}
+                          </div>
+                          <DialogTrigger asChild>
+                            <Button variant="outline">Close</Button>
+                          </DialogTrigger>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                    <Button 
+                      variant="destructive" 
+                      size="icon" 
+                      onClick={() => {
+                        if (confirm("Are you sure you want to delete this feedback?")) {
+                          deleteMutation.mutate(item.id);
+                        }
+                      }}
+                      disabled={deleteMutation.isPending}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
