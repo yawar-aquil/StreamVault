@@ -43,7 +43,7 @@ export interface Feedback {
   message: string;
   email?: string;
   username?: string;
-  status: 'new' | 'reviewed' | 'planned' | 'implemented' | 'dismissed';
+  status: 'new' | 'reviewed' | 'planned' | 'implemented' | 'dismissed' | 'resolved';
   adminNote?: string;
   createdAt: string;
 }
