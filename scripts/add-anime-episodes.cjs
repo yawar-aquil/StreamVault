@@ -119,22 +119,63 @@ async function main() {
         }
 
         // List available anime
-        console.log('Available anime:\n');
-        data.anime.forEach((a, i) => {
-            const epCount = (data.animeEpisodes || []).filter(e => e.animeId === a.id).length;
-            console.log(`  ${i + 1}. ${a.title} (${a.year}) - ${epCount} episodes`);
-        });
+        console.log('\n📋 Available anime:\n');
+        const animeList = data.anime || [];
 
-        const animeIndexStr = await question('\nSelect anime by number: ');
-        const animeIndex = parseInt(animeIndexStr) - 1;
+        // Show paginated list
+        const pageSize = 20;
+        let page = 0;
+        let selectedAnime = null;
 
-        if (isNaN(animeIndex) || animeIndex < 0 || animeIndex >= data.anime.length) {
-            console.log('❌ Invalid selection');
-            rl.close();
-            return;
+        while (!selectedAnime) {
+            const start = page * pageSize;
+            const end = Math.min(start + pageSize, animeList.length);
+
+            for (let i = start; i < end; i++) {
+                const epCount = (data.animeEpisodes || []).filter(e => e.animeId === animeList[i].id).length;
+                console.log(`   ${i + 1}. ${animeList[i].title} (${animeList[i].year}) - ${epCount} episodes`);
+            }
+
+            console.log(`\n   Showing ${start + 1}-${end} of ${animeList.length}`);
+            const input = await question('\nEnter anime number (or "n" for next, "p" for prev, or search term): ');
+
+            if (input.toLowerCase() === 'n' && end < animeList.length) {
+                page++;
+                continue;
+            } else if (input.toLowerCase() === 'p' && page > 0) {
+                page--;
+                continue;
+            } else if (!isNaN(input) && input.trim() !== '') {
+                const idx = parseInt(input) - 1;
+                if (idx >= 0 && idx < animeList.length) {
+                    selectedAnime = animeList[idx];
+                } else {
+                    console.log('❌ Invalid number');
+                }
+            } else {
+                // Search by title
+                const matches = animeList.filter(s =>
+                    s.title.toLowerCase().includes(input.toLowerCase())
+                );
+                if (matches.length === 0) {
+                    console.log('❌ No matches found');
+                } else if (matches.length === 1) {
+                    selectedAnime = matches[0];
+                } else {
+                    console.log('\n   Matches found:');
+                    matches.slice(0, 10).forEach((m, i) => {
+                        const epCount = (data.animeEpisodes || []).filter(e => e.animeId === m.id).length;
+                        console.log(`   ${i + 1}. ${m.title} (${m.year}) - ${epCount} episodes`);
+                    });
+                    const matchInput = await question('Enter number: ');
+                    const matchIdx = parseInt(matchInput) - 1;
+                    if (matchIdx >= 0 && matchIdx < matches.length) {
+                        selectedAnime = matches[matchIdx];
+                    }
+                }
+            }
         }
 
-        const selectedAnime = data.anime[animeIndex];
         console.log(`\n✅ Selected: ${selectedAnime.title}`);
 
         // Ask for method: TMDB or manual
