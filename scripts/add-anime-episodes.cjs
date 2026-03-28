@@ -178,13 +178,10 @@ async function main() {
 
         console.log(`\n✅ Selected: ${selectedAnime.title}`);
 
-        // Ask for method: TMDB or manual
-        const method = await question('\nAdd episodes from TMDB (t) or manually (m)? (t/m): ');
-
         const newEpisodes = [];
-
-        if (method.toLowerCase() === 't') {
-            // TMDB method
+        
+        // Always use TMDB method natively
+        if (true) {
             let tmdbId = selectedAnime.tmdbId;
 
             if (!tmdbId) {
@@ -272,42 +269,6 @@ async function main() {
                 }
             }
 
-        } else {
-            // Manual method
-            const season = parseInt(await question('Season number: '));
-            const startEp = parseInt(await question('Starting episode number: '));
-            const endEp = parseInt(await question('Ending episode number: '));
-            const isDubbed = (await question('Are these episodes dubbed? (y/n): ')).toLowerCase() === 'y';
-
-            if (isNaN(season) || isNaN(startEp) || isNaN(endEp) || startEp > endEp) {
-                console.log('❌ Invalid episode range');
-                rl.close();
-                return;
-            }
-
-            console.log('\nEnter Google Drive URLs for each episode:\n');
-
-            for (let epNum = startEp; epNum <= endEp; epNum++) {
-                const title = await question(`S${season}E${epNum} title (default: Episode ${epNum}): `) || `Episode ${epNum}`;
-                const driveUrl = await question(`S${season}E${epNum} Google Drive URL: `);
-
-                if (driveUrl && driveUrl.trim()) {
-                    newEpisodes.push({
-                        id: generateUUID(),
-                        animeId: selectedAnime.id,
-                        season: season,
-                        episodeNumber: epNum,
-                        title: title,
-                        description: '',
-                        duration: 24,
-                        thumbnailUrl: '',
-                        googleDriveUrl: driveUrl.trim(),
-                        videoUrl: null,
-                        airDate: null,
-                        dubbed: isDubbed
-                    });
-                }
-            }
         }
 
         if (newEpisodes.length === 0) {
