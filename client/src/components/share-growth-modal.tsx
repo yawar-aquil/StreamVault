@@ -3,13 +3,19 @@ import { createPortal } from "react-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Share2, Copy, Check, Twitter, Facebook, Heart, MessageCircle, Send } from "lucide-react";
+import { Share2, Copy, Check, Twitter, Facebook, Crown, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 // Use a simple custom icon for Reddit since lucide-react doesn't have it natively
 const RedditIcon = ({ className }: { className?: string }) => (
     <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
         <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zm-4.47 5.235c-1.393 0-2.52.92-2.52 2.055 0 1.135 1.127 2.055 2.52 2.055 1.393 0 2.52-.92 2.52-2.055 0-1.135-1.127-2.055-2.52-2.055zm.022 5.035c-1.12 0-2.028-.888-2.028-1.983 0-1.095.908-1.982 2.028-1.982 1.12 0 2.028.887 2.028 1.982 0 1.095-.908 1.983-2.028 1.983z" />
+    </svg>
+);
+
+const WhatsAppIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={className} aria-hidden="true">
+        <path fill="currentColor" d="M20.52 3.48A11.77 11.77 0 0 0 12 0 11.94 11.94 0 0 0 .24 11.76 11.74 11.74 0 0 0 2.4 18.6L0 24l5.64-2.4A12.06 12.06 0 0 0 12 24h.01A11.93 11.93 0 0 0 24 12a11.8 11.8 0 0 0-3.48-8.52ZM12 21.8h-.01a9.76 9.76 0 0 1-4.98-1.37l-.36-.21-3.35 1.43L4 18.5l-.24-.38A9.77 9.77 0 0 1 2.2 12 9.8 9.8 0 0 1 12 2.2 9.72 9.72 0 0 1 21.8 12 9.78 9.78 0 0 1 12 21.8Zm5.36-7.34c-.29-.14-1.7-.84-1.96-.94s-.45-.14-.64.14-.74.94-.9 1.13-.33.21-.62.07a7.95 7.95 0 0 1-2.34-1.44 8.77 8.77 0 0 1-1.62-2.01c-.17-.29 0-.45.13-.59.14-.14.29-.33.43-.5s.19-.29.29-.48a.52.52 0 0 0 0-.5c-.07-.14-.64-1.54-.88-2.12s-.45-.48-.64-.48h-.54a1 1 0 0 0-.74.35 3.12 3.12 0 0 0-.97 2.31 5.46 5.46 0 0 0 1.14 2.91 12.5 12.5 0 0 0 4.79 4.26 5.5 5.5 0 0 0 3.29.69 2.79 2.79 0 0 0 1.86-1.31 2.27 2.27 0 0 0 .16-1.31c-.07-.14-.26-.21-.55-.35Z" />
     </svg>
 );
 
@@ -105,7 +111,7 @@ export function ShareGrowthModal() {
 
                         {/* Background Decorative Icon */}
                         <div className="absolute z-0 opacity-5 transform scale-150">
-                            <Heart className="w-40 h-40 text-red-500" />
+                            <Crown className="w-40 h-40 text-red-500" />
                         </div>
                     </div>
 
@@ -145,7 +151,7 @@ export function ShareGrowthModal() {
                                 className="bg-black border-zinc-800 hover:bg-zinc-900 hover:border-[#25D366] hover:text-[#25D366] group gap-2 text-gray-300 h-10 transition-colors w-full cursor-pointer"
                             >
                                 <a href={`https://api.whatsapp.com/send?text=${encodedMessage}%20${encodedUrl}`} target="_blank" rel="noopener noreferrer">
-                                    <MessageCircle className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                    <WhatsAppIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
                                     WhatsApp
                                 </a>
                             </Button>

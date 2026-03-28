@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Lightbulb, Send, CheckCircle, Loader2, MessageSquarePlus } from "lucide-react";
+import { Crown, Send, CheckCircle, Loader2, MessageSquarePlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 
@@ -110,7 +110,7 @@ export function FeedbackModal() {
             {/* Modal Backdrop */}
             {isOpen && createPortal(
                 <div
-                    className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[45] transition-all duration-300 animate-in fade-in"
+                    className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[90] transition-all duration-300 animate-in fade-in"
                     aria-hidden="true"
                     onClick={handleClose}
                 />,
@@ -121,23 +121,27 @@ export function FeedbackModal() {
                 if (!open) handleClose();
             }} modal={false}>
                 <DialogContent
-                    className="w-[90%] sm:w-full sm:max-w-md bg-black border-red-900/40 text-white p-0 overflow-hidden shadow-[0_0_100px_-20px_rgba(220,38,38,0.5)] z-[46] rounded-2xl"
+                    className="w-[90%] sm:w-full sm:max-w-md bg-black border-red-900/40 text-white p-0 overflow-hidden shadow-[0_0_100px_-20px_rgba(220,38,38,0.5)] z-[100] rounded-2xl"
                     onInteractOutside={(e) => {
                         e.preventDefault();
                     }}
                 >
-                    {/* Header */}
-                    <div className="h-16 bg-gradient-to-br from-red-900 to-black relative flex items-center justify-center border-b border-red-900/50">
+                    {/* Header Image / Gradient */}
+                    <div className="h-32 bg-gradient-to-br from-red-900 to-black relative flex items-center justify-center">
                         <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay" />
+                        
+                        {/* Logo */}
                         <div className="relative z-10 flex flex-col items-center">
                             <img
                                 src="/streamvault-logo.png"
                                 alt="StreamVault"
-                                className="w-auto h-8 drop-shadow-xl"
+                                className="w-auto h-12 drop-shadow-xl"
                             />
                         </div>
+                        
+                        {/* Background Decorative Icon */}
                         <div className="absolute z-0 opacity-5 transform scale-150">
-                            <Lightbulb className="w-40 h-40 text-red-500" />
+                            <Crown className="w-40 h-40 text-red-500" />
                         </div>
                     </div>
 
@@ -161,16 +165,16 @@ export function FeedbackModal() {
                     ) : (
                         /* Form State */
                         <>
-                            <DialogHeader className="px-6 pt-3 text-center">
-                                <DialogTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-500 to-red-600">
+                            <DialogHeader className="px-6 pt-6 text-center">
+                                <DialogTitle className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-500 to-red-600">
                                     Share Your Ideas
                                 </DialogTitle>
-                                <DialogDescription className="text-gray-400 text-xs mt-1">
+                                <DialogDescription className="text-gray-400 text-base mt-2">
                                     Help us build a better StreamVault! Suggest features, improvements, or report anything — we'll implement the best ideas ASAP.
                                 </DialogDescription>
                             </DialogHeader>
 
-                            <div className="px-6 py-2 space-y-2">
+                            <div className="px-6 py-4 space-y-3">
                                 {/* Category */}
                                 <div>
                                     <label className="text-xs text-gray-500 font-medium mb-1 block">Category *</label>
@@ -178,7 +182,7 @@ export function FeedbackModal() {
                                         <SelectTrigger className="bg-zinc-900 border-zinc-700 text-gray-300 focus:ring-red-500 h-9">
                                             <SelectValue placeholder="What's this about?" />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-zinc-900 border-zinc-700">
+                                        <SelectContent className="bg-zinc-900 border-zinc-700 z-[110]">
                                             <SelectItem value="feature">🚀 Feature Request</SelectItem>
                                             <SelectItem value="improvement">✨ Improvement</SelectItem>
                                             <SelectItem value="bug">🐛 Bug Report</SelectItem>
@@ -207,7 +211,7 @@ export function FeedbackModal() {
                                         value={message}
                                         onChange={(e) => setMessage(e.target.value)}
                                         placeholder="Describe your idea, suggestion, or what needs improvement..."
-                                        className="bg-zinc-900 border-zinc-700 text-gray-300 focus-visible:ring-red-500 min-h-[60px] resize-none"
+                                        className="bg-zinc-900 border-zinc-700 text-gray-300 focus-visible:ring-red-500 min-h-[80px] resize-none"
                                         maxLength={1000}
                                     />
                                     <div className="text-right text-xs text-gray-600 mt-1">{message.length}/1000</div>
@@ -226,11 +230,11 @@ export function FeedbackModal() {
                                 </div>
                             </div>
 
-                            <div className="p-6 pt-1 pb-4 bg-zinc-900/30">
+                            <div className="p-6 bg-zinc-900/30 flex flex-col gap-3">
                                 <Button
                                     onClick={handleSubmit}
                                     disabled={isSubmitting || !category || !subject.trim() || !message.trim()}
-                                    className="w-full bg-red-600 hover:bg-red-700 text-white font-bold h-11 text-base shadow-lg shadow-red-900/20 border-t border-red-500/20 gap-2 disabled:opacity-50"
+                                    className="w-full bg-red-600 hover:bg-red-700 text-white font-bold h-12 text-lg shadow-lg shadow-red-900/20 border-t border-red-500/20 gap-2 disabled:opacity-50"
                                 >
                                     {isSubmitting ? (
                                         <>
