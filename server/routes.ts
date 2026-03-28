@@ -11,7 +11,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { setupSitemaps } from "./sitemap";
 import { searchShow, getShowDetails } from "./utils/tmdb";
-import { sendContentRequestEmail, sendIssueReportEmail, sendPasswordResetEmail, sendCoinPurchaseReceiptEmail, sendEmailVerificationEmail, sendContentRequestCompletedEmail, sendIssueReportResolvedEmail, sendFeedbackEmail } from "./email-service";
+import { sendContentRequestEmail, sendIssueReportEmail, sendPasswordResetEmail, sendCoinPurchaseReceiptEmail, sendEmailVerificationEmail, sendContentRequestCompletedEmail, sendIssueReportResolvedEmail, sendFeedbackEmail, sendFeedbackResolvedEmail } from "./email-service";
 import { createRazorpayOrder, verifyRazorpaySignature } from "./payment";
 import { convertCurrency } from "./currency";
 import { searchSubtitles, downloadSubtitle, getCachedSubtitle } from "./subtitle-service";
@@ -4798,6 +4798,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update anime episode
+  app.put("/api/admin/anime-episodes/:episodeId", requireAdmin, async (req, res) => {
+    try {
+      const { episodeId } = req.params;
+      const episode = await storage.updateAnimeEpisode(episodeId, req.body);
+      res.json(episode);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to update anime episode", details: error.message });
+    }
+  });
+
   // Delete anime episode
   app.delete("/api/admin/anime-episodes/:episodeId", requireAdmin, async (req, res) => {
     try {
@@ -5593,6 +5604,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const updates = req.body;
       const updated = await storage.updateFeedback(id, updates);
+      
+      // Send email if status is resolved or note is added
+      if (updates.status === 'resolved' || updates.adminNote) {
+        if (updated.email) {
+          sendFeedbackResolvedEmail(updated).catch(err => 
+            console.error('Failed to send feedback resolution email:', err)
+          );
+        }
+      }
+      
       res.json(updated);
     } catch (error: any) {
       console.error('Error updating feedback:', error);

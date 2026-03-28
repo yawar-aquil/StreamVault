@@ -1379,3 +1379,89 @@ Manage in Admin Panel: https://streamvault.live/admin
     text,
   });
 }
+
+export async function sendFeedbackResolvedEmail(feedback: Feedback): Promise<void> {
+  if (!feedback.email) return;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feedback Follow-up</title>
+</head>
+<body style="margin:0; padding:0; background-color:#141414; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#141414;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color:#1f1f1f; border-radius:8px; overflow:hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+          <!-- Logo Header -->
+          <tr>
+            <td align="center" style="padding: 30px; background-color:#000000;">
+              <h1 style="margin:0; color:#E50914; font-size:36px; font-weight:900; letter-spacing:2px; text-transform:uppercase;">STREAMVAULT</h1>
+            </td>
+          </tr>
+          
+          <!-- Hero Section -->
+          <tr>
+            <td style="padding: 40px 40px 20px 40px;">
+              <h2 style="margin:0 0 10px 0; color:#ffffff; font-size:24px; font-weight:bold;">Update on Your Feedback</h2>
+              <p style="margin:0; color:#b3b3b3; font-size:16px;">We have an update regarding the feedback you submitted.</p>
+            </td>
+          </tr>
+
+          <!-- Main Content -->
+          <tr>
+            <td style="padding: 0 40px 40px 40px;">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#2a2a2a; border-radius:6px; border:1px solid #333;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <h3 style="margin:0 0 15px 0; color:#ffffff; font-size:20px; font-weight:bold;">\${feedback.subject}</h3>
+                    
+                    <p style="margin:0 0 15px 0; color:#ddd; font-size:14px; line-height: 1.6;">
+                      Thank you for taking the time to provide feedback. The team has reviewed it and the status is now <strong>\${feedback.status.toUpperCase()}</strong>.
+                    </p>
+
+                    ${feedback.adminNote ? `
+                    <div style="background-color:#1f1f1f; border-left:4px solid #E50914; padding:15px; margin-top:20px;">
+                      <p style="margin:0 0 5px 0; color:#888; font-size:12px; text-transform:uppercase;">Note from Admin:</p>
+                      <p style="margin:0; color:#fff; font-size:14px; font-style:italic;">"${feedback.adminNote}"</p>
+                    </div>` : ''}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding: 30px; background-color:#181818; border-top:1px solid #2a2a2a;">
+              <p style="margin:0; color:#666; font-size:12px;">© ${new Date().getFullYear()} StreamVault. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  const text = `UPDATE ON YOUR FEEDBACK
+  
+Subject: ${feedback.subject}
+Status: ${feedback.status.toUpperCase()}
+
+${feedback.adminNote ? 'Admin Note: ' + feedback.adminNote : ''}
+
+Thank you for your feedback! It helps us improve StreamVault.
+`;
+
+  await sendEmail({
+    to: feedback.email,
+    subject: `Update on your feedback: ${feedback.subject}`,
+    html,
+    text,
+  });
+}

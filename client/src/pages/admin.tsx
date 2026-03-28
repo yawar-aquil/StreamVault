@@ -162,6 +162,7 @@ export default function AdminPage() {
             </TabsTrigger>
             <TabsTrigger value="requests">Requests</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
+            <TabsTrigger value="feedback">Feedback</TabsTrigger>
             <TabsTrigger value="newsletter">Newsletter</TabsTrigger>
             <TabsTrigger value="push">Push</TabsTrigger>
             <TabsTrigger value="broadcast">📢 Broadcast</TabsTrigger>
@@ -244,6 +245,11 @@ export default function AdminPage() {
             <IssueReports />
           </TabsContent>
 
+          {/* User Feedback Tab */}
+          <TabsContent value="feedback">
+            <FeedbackManager />
+          </TabsContent>
+
           {/* Newsletter Tab */}
           <TabsContent value="newsletter">
             <NewsletterManager />
@@ -266,12 +272,12 @@ export default function AdminPage() {
 
           {/* Add Episode Tab */}
           <TabsContent value="add-episode">
-            <AddEpisodeForm shows={shows} />
+            <AddEpisodeForm shows={shows} anime={anime} />
           </TabsContent>
 
           {/* Manage Episodes Tab */}
           <TabsContent value="manage-episodes">
-            <ManageEpisodesTab shows={shows} />
+            <ManageEpisodesTab shows={shows} anime={anime} />
           </TabsContent>
 
           {/* Import Episodes Tab */}
@@ -1429,9 +1435,10 @@ function AddShowForm() {
 }
 
 // Add Episode Form Component
-function AddEpisodeForm({ shows }: { shows: Show[] }) {
+function AddEpisodeForm({ shows, anime }: { shows: Show[], anime: Anime[] }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [contentType, setContentType] = useState<"show" | "anime">("show");
   const [formData, setFormData] = useState({
     showId: "",
     season: 1,
@@ -1446,16 +1453,25 @@ function AddEpisodeForm({ shows }: { shows: Show[] }) {
 
   const addEpisodeMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await fetch("/api/admin/episodes", {
+      const endpoint = contentType === "show" ? "/api/admin/episodes" : "/api/admin/anime-episodes";
+      const payload = { ...data };
+      
+      // If anime, rename showId to animeId
+      if (contentType === "anime") {
+        payload.animeId = payload.showId;
+        delete payload.showId;
+      }
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: getAuthHeaders(),
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error("Failed to add episode");
+      if (!res.ok) throw new Error(`Failed to add ${contentType} episode`);
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/episodes"] });
+      queryClient.invalidateQueries({ queryKey: [contentType === "show" ? "/api/episodes" : "/api/anime-episodes"] });
       toast({
         title: "Success!",
         description: "Episode added successfully",
@@ -1479,26 +1495,42 @@ function AddEpisodeForm({ shows }: { shows: Show[] }) {
     <Card>
       <CardHeader>
         <CardTitle>Add New Episode</CardTitle>
-        <CardDescription>Add episodes to existing shows</CardDescription>
+        <CardDescription>Add episodes to existing shows or anime</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="showId">Select Show *</Label>
-            <select
-              id="showId"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              value={formData.showId}
-              onChange={(e) => setFormData({ ...formData, showId: e.target.value })}
-              required
-            >
-              <option value="">Choose a show...</option>
-              {shows.map((show) => (
-                <option key={show.id} value={show.id}>
-                  {show.title}
-                </option>
-              ))}
-            </select>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Content Type *</Label>
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={contentType}
+                onChange={(e) => {
+                  setContentType(e.target.value as "show" | "anime");
+                  setFormData({ ...formData, showId: "" });
+                }}
+                required
+              >
+                <option value="show">TV Show</option>
+                <option value="anime">Anime</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="showId">Select {contentType === "show" ? "Show" : "Anime"} *</Label>
+              <select
+                id="showId"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={formData.showId}
+                onChange={(e) => setFormData({ ...formData, showId: e.target.value })}
+                required
+              >
+                <option value="">Choose a {contentType === "show" ? "show" : "anime"}...</option>
+                {contentType === "show" 
+                  ? shows.map((show) => <option key={show.id} value={show.id}>{show.title}</option>)
+                  : anime.map((a) => <option key={a.id} value={a.id}>{a.title}</option>)
+                }
+              </select>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -1620,26 +1652,28 @@ function AddEpisodeForm({ shows }: { shows: Show[] }) {
 }
 
 // Manage Episodes Tab Component
-function ManageEpisodesTab({ shows }: { shows: Show[] }) {
+function ManageEpisodesTab({ shows, anime }: { shows: Show[], anime: Anime[] }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedShowId, setSelectedShowId] = useState<string>("");
+  const [contentType, setContentType] = useState<"show" | "anime">("show");
+  const [selectedContentId, setSelectedContentId] = useState<string>("");
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
-  const [editingEpisode, setEditingEpisode] = useState<Episode | null>(null);
+  const [editingEpisode, setEditingEpisode] = useState<any | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  // Fetch episodes for selected show
-  const { data: episodes = [], isLoading: episodesLoading } = useQuery<Episode[]>({
-    queryKey: ["/api/episodes", selectedShowId],
+  // Fetch episodes for selected content
+  const { data: episodes = [], isLoading: episodesLoading } = useQuery<any[]>({
+    queryKey: [contentType === "show" ? "/api/episodes" : "/api/anime-episodes", selectedContentId],
     queryFn: async () => {
-      if (!selectedShowId) return [];
-      const res = await fetch(`/api/episodes/${selectedShowId}`, {
+      if (!selectedContentId) return [];
+      const endpoint = contentType === "show" ? `/api/episodes/${selectedContentId}` : `/api/anime-episodes/${selectedContentId}`;
+      const res = await fetch(endpoint, {
         headers: getAuthHeaders()
       });
       if (!res.ok) throw new Error("Failed to fetch episodes");
       return res.json();
     },
-    enabled: !!selectedShowId,
+    enabled: !!selectedContentId,
   });
 
   // Get unique seasons from episodes
@@ -1652,8 +1686,9 @@ function ManageEpisodesTab({ shows }: { shows: Show[] }) {
 
   // Update episode mutation
   const updateMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Episode> }) => {
-      const res = await fetch(`/api/admin/episodes/${id}`, {
+    mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
+      const endpoint = contentType === "show" ? `/api/admin/episodes/${id}` : `/api/admin/anime-episodes/${id}`;
+      const res = await fetch(endpoint, {
         method: "PUT",
         headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify(updates),
@@ -1662,7 +1697,7 @@ function ManageEpisodesTab({ shows }: { shows: Show[] }) {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/episodes", selectedShowId] });
+      queryClient.invalidateQueries({ queryKey: [contentType === "show" ? "/api/episodes" : "/api/anime-episodes", selectedContentId] });
       setIsEditDialogOpen(false);
       setEditingEpisode(null);
       toast({ title: "Success", description: "Episode updated successfully" });
@@ -1675,7 +1710,8 @@ function ManageEpisodesTab({ shows }: { shows: Show[] }) {
   // Delete episode mutation
   const deleteMutation = useMutation({
     mutationFn: async (episodeId: string) => {
-      const res = await fetch(`/api/admin/episodes/${episodeId}`, {
+      const endpoint = contentType === "show" ? `/api/admin/episodes/${episodeId}` : `/api/admin/anime-episodes/${episodeId}`;
+      const res = await fetch(endpoint, {
         method: "DELETE",
         headers: getAuthHeaders(),
       });
@@ -1683,7 +1719,7 @@ function ManageEpisodesTab({ shows }: { shows: Show[] }) {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/episodes", selectedShowId] });
+      queryClient.invalidateQueries({ queryKey: [contentType === "show" ? "/api/episodes" : "/api/anime-episodes", selectedContentId] });
       toast({ title: "Success", description: "Episode deleted successfully" });
     },
     onError: () => {
@@ -1691,18 +1727,20 @@ function ManageEpisodesTab({ shows }: { shows: Show[] }) {
     },
   });
 
-  const handleEditClick = (episode: Episode) => {
+  const handleEditClick = (episode: any) => {
     setEditingEpisode(episode);
     setIsEditDialogOpen(true);
   };
 
-  const handleDeleteClick = (episode: Episode) => {
+  const handleDeleteClick = (episode: any) => {
     if (confirm(`Delete S${episode.season}E${episode.episodeNumber}: "${episode.title}"?`)) {
       deleteMutation.mutate(episode.id);
     }
   };
 
-  const selectedShow = shows.find(s => s.id === selectedShowId);
+  const selectedTitle = contentType === "show" 
+    ? shows.find(s => s.id === selectedContentId)?.title 
+    : anime.find(a => a.id === selectedContentId)?.title;
 
   return (
     <Card>
@@ -1711,24 +1749,39 @@ function ManageEpisodesTab({ shows }: { shows: Show[] }) {
         <CardDescription>Edit or delete existing episodes</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Show Selector */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* Content Type, Program & Season Selectors */}
+        <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label>Select Show</Label>
+            <Label>Content Type</Label>
             <select
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              value={selectedShowId}
+              value={contentType}
               onChange={(e) => {
-                setSelectedShowId(e.target.value);
+                setContentType(e.target.value as "show" | "anime");
+                setSelectedContentId("");
                 setSelectedSeason(1);
               }}
             >
-              <option value="">Choose a show...</option>
-              {shows.map((show) => (
-                <option key={show.id} value={show.id}>
-                  {show.title}
-                </option>
-              ))}
+              <option value="show">TV Show</option>
+              <option value="anime">Anime</option>
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Select {contentType === "show" ? "Show" : "Anime"}</Label>
+            <select
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={selectedContentId}
+              onChange={(e) => {
+                setSelectedContentId(e.target.value);
+                setSelectedSeason(1);
+              }}
+            >
+              <option value="">Choose a {contentType === "show" ? "show" : "anime"}...</option>
+              {contentType === "show" 
+                ? shows.map((show) => <option key={show.id} value={show.id}>{show.title}</option>)
+                : anime.map((a) => <option key={a.id} value={a.id}>{a.title}</option>)
+              }
             </select>
           </div>
 
@@ -1739,7 +1792,7 @@ function ManageEpisodesTab({ shows }: { shows: Show[] }) {
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               value={selectedSeason}
               onChange={(e) => setSelectedSeason(parseInt(e.target.value))}
-              disabled={!selectedShowId || seasons.length === 0}
+              disabled={!selectedContentId || seasons.length === 0}
             >
               {seasons.length === 0 ? (
                 <option value="1">No seasons found</option>
@@ -1753,10 +1806,10 @@ function ManageEpisodesTab({ shows }: { shows: Show[] }) {
         </div>
 
         {/* Episodes List */}
-        {selectedShowId && (
+        {selectedContentId && (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">
-              {selectedShow?.title} - Season {selectedSeason}
+              {selectedTitle} - Season {selectedSeason}
             </h3>
 
             {episodesLoading ? (
