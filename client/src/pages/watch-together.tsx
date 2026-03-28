@@ -1762,8 +1762,8 @@ function WatchTogetherContent() {
                             </div>
                         )}
 
-                        {/* Manual Sync Controls for Google Drive videos - Host Only */}
-                        {isHost && isScheduledRoomReady && (
+                        {/* Manual Sync Controls for Google Drive videos - Host Only (Disabled) */}
+                        {false && isHost && isScheduledRoomReady && (
                             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/80 backdrop-blur-lg rounded-full px-4 py-2 flex items-center gap-3 border border-white/10 shadow-lg">
                                 <span className="text-xs text-gray-400 hidden sm:inline">Manual Sync:</span>
                                 <button
