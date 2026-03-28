@@ -11,7 +11,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { setupSitemaps } from "./sitemap";
 import { searchShow, getShowDetails } from "./utils/tmdb";
-import { sendContentRequestEmail, sendIssueReportEmail, sendPasswordResetEmail, sendCoinPurchaseReceiptEmail, sendEmailVerificationEmail, sendContentRequestCompletedEmail, sendIssueReportResolvedEmail } from "./email-service";
+import { sendContentRequestEmail, sendIssueReportEmail, sendPasswordResetEmail, sendCoinPurchaseReceiptEmail, sendEmailVerificationEmail, sendContentRequestCompletedEmail, sendIssueReportResolvedEmail, sendFeedbackEmail } from "./email-service";
 import { createRazorpayOrder, verifyRazorpaySignature } from "./payment";
 import { convertCurrency } from "./currency";
 import { searchSubtitles, downloadSubtitle, getCachedSubtitle } from "./subtitle-service";
@@ -5526,6 +5526,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error updating issue report:', error);
       res.status(500).json({ error: "Failed to update issue report" });
+    }
+  });
+
+  // Comments - Get comments for an episode
+
+  // ==========================================
+  // FEEDBACK / SUGGESTIONS
+  // ==========================================
+
+  // Public: Submit feedback
+  app.post("/api/feedback", async (req, res) => {
+    try {
+      const { category, subject, message, email, username } = req.body;
+
+      if (!subject || !message || !category) {
+        return res.status(400).json({ error: "Category, subject, and message are required" });
+      }
+
+      const feedback = await storage.createFeedback({
+        category,
+        subject,
+        message,
+        email,
+        username,
+      });
+
+      console.log('💡 Feedback Received:', feedback.id);
+      console.log('Category:', category);
+      console.log('Subject:', subject);
+      console.log('---');
+
+      // Send email notification (don't wait for it)
+      sendFeedbackEmail(feedback).catch(err =>
+        console.error('Failed to send feedback email:', err)
+      );
+
+      res.json({
+        success: true,
+        message: 'Feedback submitted successfully! Thank you for helping us improve.',
+        feedbackId: feedback.id
+      });
+    } catch (error: any) {
+      console.error('Error submitting feedback:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to submit feedback'
+      });
+    }
+  });
+
+  // Admin: Get all feedback
+  app.get("/api/admin/feedback", requireAdmin, async (req, res) => {
+    try {
+      const feedbacks = await storage.getAllFeedback();
+      res.json(feedbacks);
+    } catch (error: any) {
+      console.error('Error fetching feedback:', error);
+      res.status(500).json({ error: 'Failed to fetch feedback' });
+    }
+  });
+
+  // Admin: Update feedback status/note
+  app.patch("/api/admin/feedback/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const updated = await storage.updateFeedback(id, updates);
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error updating feedback:', error);
+      res.status(500).json({ error: 'Failed to update feedback' });
+    }
+  });
+
+  // Admin: Delete feedback
+  app.delete("/api/admin/feedback/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteFeedback(id);
+      res.json({ success: true, message: 'Feedback deleted successfully' });
+    } catch (error: any) {
+      console.error('Error deleting feedback:', error);
+      res.status(500).json({ error: 'Failed to delete feedback' });
     }
   });
 

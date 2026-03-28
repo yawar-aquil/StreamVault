@@ -36,6 +36,18 @@ export interface IssueReport {
   createdAt: string;
 }
 
+export interface Feedback {
+  id: string;
+  category: 'feature' | 'improvement' | 'bug' | 'content' | 'other';
+  subject: string;
+  message: string;
+  email?: string;
+  username?: string;
+  status: 'new' | 'reviewed' | 'planned' | 'implemented' | 'dismissed';
+  adminNote?: string;
+  createdAt: string;
+}
+
 // Friends System Types
 export interface Friend {
   id: string;
@@ -192,6 +204,12 @@ export interface IStorage {
   getAllIssueReports(): Promise<IssueReport[]>;
   createIssueReport(report: Omit<IssueReport, 'id' | 'status' | 'createdAt'>): Promise<IssueReport>;
   updateIssueReport(id: string, updates: Partial<IssueReport>): Promise<IssueReport>;
+
+  // Feedback
+  getAllFeedback(): Promise<Feedback[]>;
+  createFeedback(feedback: Omit<Feedback, 'id' | 'status' | 'createdAt'>): Promise<Feedback>;
+  updateFeedback(id: string, updates: Partial<Feedback>): Promise<Feedback>;
+  deleteFeedback(id: string): Promise<void>;
 
   // Comments
   getCommentsByEpisodeId(episodeId: string): Promise<CommentWithBadges[]>;
@@ -374,6 +392,7 @@ export class MemStorage implements IStorage {
   private categories: Category[];
   private contentRequests: Map<string, ContentRequest>;
   private issueReports: Map<string, IssueReport>;
+  private feedbacks: Map<string, Feedback>;
   private blogPosts: Map<string, BlogPost>;
   private users: Map<string, User>;
   private friends: Map<string, Friend>;
@@ -411,6 +430,7 @@ export class MemStorage implements IStorage {
     this.viewingProgress = new Map();
     this.contentRequests = new Map();
     this.issueReports = new Map();
+    this.feedbacks = new Map();
     this.blogPosts = new Map();
     this.users = new Map();
     this.friends = new Map();
@@ -560,6 +580,12 @@ export class MemStorage implements IStorage {
           console.log(`✅ Loaded ${data.issueReports.length} issue reports`);
         }
 
+        // Restore feedback
+        if (data.feedbacks) {
+          data.feedbacks.forEach((fb: Feedback) => this.feedbacks.set(fb.id, fb));
+          console.log(`✅ Loaded ${data.feedbacks.length} feedbacks`);
+        }
+
         // Restore blog posts
         if (data.blogPosts) {
           data.blogPosts.forEach((post: BlogPost) => this.blogPosts.set(post.id, post));
@@ -657,6 +683,7 @@ export class MemStorage implements IStorage {
         comments: Array.from(this.comments.values()),
         contentRequests: Array.from(this.contentRequests.values()),
         issueReports: Array.from(this.issueReports.values()),
+        feedbacks: Array.from(this.feedbacks.values()),
         blogPosts: Array.from(this.blogPosts.values()),
         viewingProgress: progressObj,
         reminders: Array.from(this.reminders.values()),
@@ -1393,6 +1420,40 @@ export class MemStorage implements IStorage {
     this.issueReports.set(id, updated);
     this.saveData();
     return updated;
+  }
+
+  // Feedback
+  async getAllFeedback(): Promise<Feedback[]> {
+    return Array.from(this.feedbacks.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async createFeedback(feedback: Omit<Feedback, 'id' | 'status' | 'createdAt'>): Promise<Feedback> {
+    const id = randomUUID();
+    const newFeedback: Feedback = {
+      ...feedback,
+      id,
+      status: 'new',
+      createdAt: new Date().toISOString(),
+    };
+    this.feedbacks.set(id, newFeedback);
+    this.saveData();
+    return newFeedback;
+  }
+
+  async updateFeedback(id: string, updates: Partial<Feedback>): Promise<Feedback> {
+    const feedback = this.feedbacks.get(id);
+    if (!feedback) {
+      throw new Error(`Feedback with id ${id} not found`);
+    }
+    const updated = { ...feedback, ...updates };
+    this.feedbacks.set(id, updated);
+    this.saveData();
+    return updated;
+  }
+
+  async deleteFeedback(id: string): Promise<void> {
+    this.feedbacks.delete(id);
+    this.saveData();
   }
 
 

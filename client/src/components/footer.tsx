@@ -143,6 +143,15 @@ export function Footer() {
                   </Link>
                 </li>
               ))}
+                <li key="feedback">
+                  <span
+                    onClick={() => window.dispatchEvent(new Event('open-feedback-modal'))}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    data-testid="link-footer-feedback"
+                  >
+                    Feedback
+                  </span>
+                </li>
             </ul>
           </div>
 
