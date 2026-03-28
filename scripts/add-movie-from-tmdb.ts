@@ -101,7 +101,7 @@ async function addMovieFromTMDB(movieTitle: string, googleDriveUrl: string) {
 
   // Extract data
   const title = movieDetails.title;
-  const slug = createSlug(title);
+  let slug = createSlug(title);
   const description = movieDetails.overview || "No description available.";
   const posterUrl = movieDetails.poster_path
     ? `${TMDB_IMAGE_BASE}${movieDetails.poster_path}`
@@ -125,9 +125,15 @@ async function addMovieFromTMDB(movieTitle: string, googleDriveUrl: string) {
     .join(", ");
 
   // Check if movie already exists
-  const existingMovie = await storage.getMovieBySlug(slug);
+  let existingMovie = await storage.getMovieBySlug(slug);
+  
+  if (existingMovie && existingMovie.year !== year) {
+    slug = `${slug}-${year}`;
+    existingMovie = await storage.getMovieBySlug(slug);
+  }
+
   if (existingMovie) {
-    console.log(`⚠️  Movie "${title}" already exists!`);
+    console.log(`⚠️  Movie "${title}" (${year}) already exists!`);
     console.log(`   Slug: ${slug}`);
     process.exit(1);
   }

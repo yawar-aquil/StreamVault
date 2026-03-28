@@ -369,9 +369,16 @@ async function main() {
     const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
 
     // Check if show already exists
-    const existingShow = data.shows.find(s => s.slug === newShow.slug);
+    let existingShow = data.shows.find(s => s.slug === newShow.slug);
+
+    // If a show with same slug exists but different year, append year to slug
+    if (existingShow && existingShow.year !== newShow.year) {
+      newShow.slug = `${newShow.slug}-${newShow.year}`;
+      existingShow = data.shows.find(s => s.slug === newShow.slug);
+    }
+
     if (existingShow) {
-      console.log(`⚠️  Show "${newShow.title}" already exists!`);
+      console.log(`⚠️  Show "${newShow.title}" (${newShow.year}) already exists!`);
       const overwrite = (await question('Overwrite show and add new episodes? (y/n): ')).toLowerCase() === 'y';
       if (!overwrite) {
         console.log('❌ Cancelled');
@@ -383,6 +390,9 @@ async function main() {
       newShow.updatedAt = new Date().toISOString();
       newShow.id = existingShow.id; // Keep same ID for episode references
 
+      // Update episodes with the existing show ID so they link properly
+      episodes.forEach(e => e.showId = existingShow.id);
+
       // Remove existing show
       data.shows = data.shows.filter(s => s.slug !== newShow.slug);
       // Keep existing episodes for other seasons, remove episodes for seasons we're adding
@@ -391,7 +401,6 @@ async function main() {
         return !seasonsToAdd.includes(e.season);
       });
     }
-
     // Add show and episodes
     data.shows.push(newShow);
     data.episodes.push(...episodes);

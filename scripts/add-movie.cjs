@@ -244,9 +244,16 @@ async function main() {
     const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
 
     // Check if movie already exists
-    const exists = data.movies.some(m => m.slug === newMovie.slug);
-    if (exists) {
-      console.log(`⚠️  Movie "${newMovie.title}" already exists!`);
+    let existingMovie = data.movies.find(m => m.slug === newMovie.slug);
+
+    // If a movie with same slug exists but different year, append year to slug
+    if (existingMovie && existingMovie.year !== newMovie.year) {
+      newMovie.slug = `${newMovie.slug}-${newMovie.year}`;
+      existingMovie = data.movies.find(m => m.slug === newMovie.slug);
+    }
+
+    if (existingMovie) {
+      console.log(`⚠️  Movie "${newMovie.title}" (${newMovie.year}) already exists!`);
       const overwrite = (await question('Overwrite? (y/n): ')).toLowerCase() === 'y';
       if (!overwrite) {
         console.log('❌ Cancelled');

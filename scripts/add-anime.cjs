@@ -355,9 +355,16 @@ async function main() {
         if (!data.animeEpisodes) data.animeEpisodes = [];
 
         // Check if anime already exists
-        const existingAnime = data.anime.find(a => a.slug === newAnime.slug);
+        let existingAnime = data.anime.find(a => a.slug === newAnime.slug);
+
+        // If an anime with same slug exists but different year, append year to slug
+        if (existingAnime && existingAnime.year !== newAnime.year) {
+            newAnime.slug = `${newAnime.slug}-${newAnime.year}`;
+            existingAnime = data.anime.find(a => a.slug === newAnime.slug);
+        }
+
         if (existingAnime) {
-            console.log(`⚠️  Anime "${newAnime.title}" already exists!`);
+            console.log(`⚠️  Anime "${newAnime.title}" (${newAnime.year}) already exists!`);
             const overwrite = (await question('Overwrite anime and add new episodes? (y/n): ')).toLowerCase() === 'y';
             if (!overwrite) {
                 console.log('❌ Cancelled');
@@ -365,6 +372,10 @@ async function main() {
                 return;
             }
             newAnime.id = existingAnime.id;
+            
+            // Update episodes with the existing anime ID so they link properly
+            episodes.forEach(e => e.animeId = existingAnime.id);
+
             // Remove existing anime
             data.anime = data.anime.filter(a => a.slug !== newAnime.slug);
             // Remove existing episodes for seasons we're adding
