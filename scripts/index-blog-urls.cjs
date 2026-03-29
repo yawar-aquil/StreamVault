@@ -35,7 +35,7 @@ const https = require('https');
 const readline = require('readline');
 
 // ─── Configuration ────────────────────────────────────────────────────────────
-const SITE_URL = 'https://streamvault.in';
+const SITE_URL = 'https://streamvault.live';
 const DATA_FILE = path.join(__dirname, '..', 'data', 'streamvault-data.json');
 const TRACKING_FILE = path.join(__dirname, 'blog-indexing-log.json');
 const GOOGLE_KEY_FILE = path.join(__dirname, '..', 'google-service-account.json');
