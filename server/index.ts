@@ -116,10 +116,21 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve IndexNow verification file
-app.get('/430747cadbbf78f339306f7049a8f3c5.txt', (_req, res) => {
-  res.type('text/plain');
-  res.send('430747cadbbf78f339306f7049a8f3c5');
+import fs from "fs";
+
+// Serve IndexNow verification file dynamically based on generated key
+app.get('/:key.txt', (req, res, next) => {
+  try {
+    const keyFile = path.join(process.cwd(), 'indexnow-key.txt');
+    if (fs.existsSync(keyFile)) {
+      const key = fs.readFileSync(keyFile, 'utf-8').trim();
+      if (req.params.key === key) {
+        res.type('text/plain');
+        return res.send(key);
+      }
+    }
+  } catch (err) {}
+  next();
 });
 
 const server = await registerRoutes(app);
