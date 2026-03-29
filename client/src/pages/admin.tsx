@@ -2446,6 +2446,8 @@ function ManageMovies({ movies }: { movies: Movie[] }) {
 function ManageAnime({ anime }: { anime: Anime[] }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [editingAnime, setEditingAnime] = useState<Anime | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const deleteAnimeMutation = useMutation({
     mutationFn: async (animeId: string) => {
@@ -2472,73 +2474,422 @@ function ManageAnime({ anime }: { anime: Anime[] }) {
     },
   });
 
+  const updateAnimeMutation = useMutation({
+    mutationFn: async (data: { id: string; updates: Partial<Anime> }) => {
+      const res = await fetch(`/api/admin/anime/${data.id}`, {
+        method: "PUT",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data.updates),
+      });
+      if (!res.ok) throw new Error("Failed to update anime");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/anime"] });
+      setIsEditDialogOpen(false);
+      setEditingAnime(null);
+      toast({
+        title: "Success",
+        description: "Anime updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update anime",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEdit = (a: Anime) => {
+    setEditingAnime(a);
+    setIsEditDialogOpen(true);
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>All Anime ({anime.length})</CardTitle>
-            <CardDescription>Manage your anime library</CardDescription>
+    <div className="grid gap-4">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>All Anime ({anime.length})</CardTitle>
+              <CardDescription>Manage your anime library</CardDescription>
+            </div>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {anime.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              No anime found. Use the add-anime.cjs script to add anime from TMDB.
-            </p>
-          ) : (
-            anime.map((a) => (
-              <div
-                key={a.id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  <img
-                    src={a.posterUrl}
-                    alt={a.title}
-                    className="w-16 h-24 object-cover rounded"
-                  />
-                  <div>
-                    <h3 className="font-semibold text-lg">{a.title}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {a.year} • {a.totalSeasons} Season(s) • {a.status || 'Ongoing'}
-                    </p>
-                    {a.studio && (
-                      <p className="text-xs text-muted-foreground">Studio: {a.studio}</p>
-                    )}
-                    <div className="flex gap-2 mt-2">
-                      {a.genres?.split(',').slice(0, 3).map((genre) => (
-                        <Badge key={genre.trim()} variant="secondary">
-                          {genre.trim()}
-                        </Badge>
-                      ))}
-                      {a.featured && <Badge variant="default">Featured</Badge>}
-                      {a.trending && <Badge variant="outline">Trending</Badge>}
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {anime.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">
+                No anime found. Use the add-anime.cjs script to add anime from TMDB.
+              </p>
+            ) : (
+              anime.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={a.posterUrl}
+                      alt={a.title}
+                      className="w-16 h-24 object-cover rounded"
+                    />
+                    <div>
+                      <h3 className="font-semibold text-lg">{a.title}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {a.year} • {a.totalSeasons} Season(s) • {a.status || 'Ongoing'}
+                      </p>
+                      {a.studio && (
+                        <p className="text-xs text-muted-foreground">Studio: {a.studio}</p>
+                      )}
+                      <div className="flex gap-2 mt-2">
+                        {a.genres?.split(',').slice(0, 3).map((genre) => (
+                          <Badge key={genre.trim()} variant="secondary">
+                            {genre.trim()}
+                          </Badge>
+                        ))}
+                        {a.featured && <Badge variant="default">Featured</Badge>}
+                        {a.trending && <Badge variant="outline">Trending</Badge>}
+                      </div>
                     </div>
                   </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEdit(a)}
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        if (confirm(`Delete "${a.title}" and all its episodes?`)) {
+                          deleteAnimeMutation.mutate(a.id);
+                        }
+                      }}
+                      disabled={deleteAnimeMutation.isPending}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      {deleteAnimeMutation.isPending ? "Deleting..." : "Delete"}
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    onClick={() => {
-                      if (confirm(`Delete "${a.title}" and all its episodes?`)) {
-                        deleteAnimeMutation.mutate(a.id);
-                      }
-                    }}
-                    disabled={deleteAnimeMutation.isPending}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            ))
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Anime</DialogTitle>
+            <DialogDescription>Update anime information</DialogDescription>
+          </DialogHeader>
+          {editingAnime && (
+            <EditAnimeForm
+              anime={editingAnime}
+              onSave={(updates) => updateAnimeMutation.mutate({ id: editingAnime.id, updates })}
+              onCancel={() => setIsEditDialogOpen(false)}
+              isLoading={updateAnimeMutation.isPending}
+            />
           )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// Edit Anime Form Component
+function EditAnimeForm({ anime, onSave, onCancel, isLoading }: {
+  anime: Anime;
+  onSave: (updates: Partial<Anime>) => void;
+  onCancel: () => void;
+  isLoading: boolean;
+}) {
+  const [formData, setFormData] = useState({
+    title: anime.title,
+    slug: anime.slug,
+    description: anime.description,
+    posterUrl: anime.posterUrl,
+    backdropUrl: anime.backdropUrl,
+    year: anime.year,
+    rating: anime.rating,
+    imdbRating: anime.imdbRating || "",
+    malRating: anime.malRating || "",
+    genres: anime.genres || "",
+    language: anime.language,
+    totalSeasons: anime.totalSeasons,
+    totalEpisodes: anime.totalEpisodes || 0,
+    status: anime.status || "Ongoing",
+    studio: anime.studio || "",
+    cast: anime.cast || "",
+    creators: anime.creators || "",
+    featured: anime.featured || false,
+    trending: anime.trending || false,
+    category: anime.category || "action",
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({ ...formData });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="anime-edit-title">Title</Label>
+          <Input
+            id="anime-edit-title"
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            required
+          />
         </div>
-      </CardContent>
-    </Card>
+        <div className="space-y-2">
+          <Label htmlFor="anime-edit-slug">Slug (URL)</Label>
+          <Input
+            id="anime-edit-slug"
+            value={formData.slug}
+            onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })}
+            required
+          />
+          <p className="text-xs text-muted-foreground">URL: /anime/{formData.slug}</p>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="anime-edit-description">Description</Label>
+        <Textarea
+          id="anime-edit-description"
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          rows={3}
+          required
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="anime-edit-posterUrl">Poster URL</Label>
+          <Input
+            id="anime-edit-posterUrl"
+            value={formData.posterUrl}
+            onChange={(e) => setFormData({ ...formData, posterUrl: e.target.value })}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="anime-edit-backdropUrl">Backdrop URL</Label>
+          <Input
+            id="anime-edit-backdropUrl"
+            value={formData.backdropUrl}
+            onChange={(e) => setFormData({ ...formData, backdropUrl: e.target.value })}
+            required
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="anime-edit-year">Year</Label>
+          <Input
+            id="anime-edit-year"
+            type="number"
+            value={formData.year}
+            onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="anime-edit-totalSeasons">Total Seasons</Label>
+          <Input
+            id="anime-edit-totalSeasons"
+            type="number"
+            min="1"
+            value={formData.totalSeasons}
+            onChange={(e) => setFormData({ ...formData, totalSeasons: parseInt(e.target.value) })}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="anime-edit-totalEpisodes">Total Episodes</Label>
+          <Input
+            id="anime-edit-totalEpisodes"
+            type="number"
+            min="0"
+            value={formData.totalEpisodes}
+            onChange={(e) => setFormData({ ...formData, totalEpisodes: parseInt(e.target.value) })}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="anime-edit-rating">Rating</Label>
+          <select
+            id="anime-edit-rating"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            value={formData.rating}
+            onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
+          >
+            <option value="TV-Y">TV-Y</option>
+            <option value="TV-Y7">TV-Y7</option>
+            <option value="TV-G">TV-G</option>
+            <option value="TV-PG">TV-PG</option>
+            <option value="TV-14">TV-14</option>
+            <option value="TV-MA">TV-MA</option>
+          </select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="anime-edit-imdbRating">IMDb Rating</Label>
+          <Input
+            id="anime-edit-imdbRating"
+            value={formData.imdbRating}
+            placeholder="e.g. 8.5"
+            onChange={(e) => setFormData({ ...formData, imdbRating: e.target.value })}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="anime-edit-malRating">MAL Rating</Label>
+          <Input
+            id="anime-edit-malRating"
+            value={formData.malRating}
+            placeholder="e.g. 9.1"
+            onChange={(e) => setFormData({ ...formData, malRating: e.target.value })}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="anime-edit-status">Status</Label>
+          <select
+            id="anime-edit-status"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            value={formData.status}
+            onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+          >
+            <option value="Ongoing">Ongoing</option>
+            <option value="Completed">Completed</option>
+            <option value="Upcoming">Upcoming</option>
+          </select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="anime-edit-category">Category</Label>
+          <select
+            id="anime-edit-category"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            value={formData.category}
+            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+          >
+            <option value="action">Action</option>
+            <option value="drama">Drama</option>
+            <option value="comedy">Comedy</option>
+            <option value="romance">Romance</option>
+            <option value="thriller">Thriller</option>
+            <option value="sci-fi">Sci-Fi</option>
+            <option value="fantasy">Fantasy</option>
+            <option value="horror">Horror</option>
+            <option value="shonen">Shonen</option>
+            <option value="shojo">Shojo</option>
+            <option value="seinen">Seinen</option>
+            <option value="mecha">Mecha</option>
+            <option value="slice-of-life">Slice of Life</option>
+            <option value="sports">Sports</option>
+            <option value="supernatural">Supernatural</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="anime-edit-genres">Genres (comma-separated)</Label>
+          <Input
+            id="anime-edit-genres"
+            value={formData.genres}
+            onChange={(e) => setFormData({ ...formData, genres: e.target.value })}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="anime-edit-language">Language</Label>
+          <Input
+            id="anime-edit-language"
+            value={formData.language}
+            onChange={(e) => setFormData({ ...formData, language: e.target.value })}
+            required
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="anime-edit-studio">Studio</Label>
+        <Input
+          id="anime-edit-studio"
+          value={formData.studio}
+          placeholder="e.g. MAPPA, Wit Studio"
+          onChange={(e) => setFormData({ ...formData, studio: e.target.value })}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="anime-edit-cast">Voice Actors (comma-separated)</Label>
+        <Input
+          id="anime-edit-cast"
+          value={formData.cast}
+          onChange={(e) => setFormData({ ...formData, cast: e.target.value })}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="anime-edit-creators">Creators / Directors (comma-separated)</Label>
+        <Input
+          id="anime-edit-creators"
+          value={formData.creators}
+          onChange={(e) => setFormData({ ...formData, creators: e.target.value })}
+        />
+      </div>
+
+      <div className="flex items-center gap-4">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={formData.featured}
+            onChange={(e) => setFormData({ ...formData, featured: e.target.checked })}
+            className="w-4 h-4"
+          />
+          <span className="text-sm">Featured</span>
+        </label>
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={formData.trending}
+            onChange={(e) => setFormData({ ...formData, trending: e.target.checked })}
+            className="w-4 h-4"
+          />
+          <span className="text-sm">Trending</span>
+        </label>
+      </div>
+
+      <div className="flex gap-4 pt-4">
+        <Button type="submit" disabled={isLoading}>
+          <Save className="w-4 h-4 mr-2" />
+          {isLoading ? "Saving..." : "Save Changes"}
+        </Button>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          <X className="w-4 h-4 mr-2" />
+          Cancel
+        </Button>
+      </div>
+    </form>
   );
 }
 
