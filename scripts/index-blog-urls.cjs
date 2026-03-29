@@ -205,7 +205,7 @@ async function submitToBing(urls, apiKey) {
   }
 
   console.log(`\n  📊 Bing: ✅ ${successTotal} submitted, ❌ ${failTotal} failed`);
-  return successTotal;
+  return { count: successTotal, submittedUrls: successTotal > 0 ? urls : [] };
 }
 
 // ─── Google Indexing API ──────────────────────────────────────────────────────
@@ -415,11 +415,13 @@ async function main() {
   // ── Bing ──────────────────────────────────────────────────────
   if (DO_BING && bingUrls.length > 0) {
     const apiKey = getOrCreateIndexNowKey();
-    const bingSuccess = await submitToBing(bingUrls, apiKey);
+    const bingResult = await submitToBing(bingUrls, apiKey);
 
-    // Mark successful ones
-    tracking.bingSubmitted = [...new Set([...tracking.bingSubmitted, ...bingUrls])];
-    tracking.stats.bingTotal = tracking.bingSubmitted.length;
+    // Only mark URLs as submitted if they were actually accepted
+    if (bingResult.count > 0) {
+      tracking.bingSubmitted = [...new Set([...tracking.bingSubmitted, ...bingResult.submittedUrls])];
+      tracking.stats.bingTotal = tracking.bingSubmitted.length;
+    }
   } else if (DO_BING) {
     console.log('\n🔵 Bing: No new URLs to submit');
   }
