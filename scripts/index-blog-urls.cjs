@@ -155,7 +155,7 @@ function getBlogUrls() {
   const posts = data.blogPosts || [];
 
   const publishedPosts = posts.filter(p => p.published !== false);
-  const urls = publishedPosts.map(p => `${SITE_URL}/blog/${p.slug}`);
+  const urls = publishedPosts.map(p => `${SITE_URL}/blog/${p.contentType}/${p.slug}`);
 
   return { urls, total: posts.length, published: publishedPosts.length };
 }
