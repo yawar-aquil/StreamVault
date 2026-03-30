@@ -1499,12 +1499,9 @@ function WatchTogetherContent() {
                                                     <div className="flex items-center gap-2">
                                                         {/* Avatar - Clickable to view profile, with speaking glow ring */}
                                                         <div className="relative flex-shrink-0">
-                                                            {isRoomUserSpeaking && (
-                                                                <span className="absolute inset-0 rounded-full animate-ping bg-green-400 opacity-40 z-0" />
-                                                            )}
                                                             <button
                                                                 onClick={() => handleViewProfile(roomUser)}
-                                                                className={`relative z-10 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all ${isRoomUserSpeaking ? 'ring-2 ring-green-400 shadow-[0_0_8px_2px_rgba(74,222,128,0.5)]' : ''}`}
+                                                                className={`w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium overflow-hidden cursor-pointer transition-all ${isRoomUserSpeaking ? 'ring-2 ring-green-400 shadow-[0_0_10px_3px_rgba(74,222,128,0.6)]' : 'hover:ring-2 hover:ring-primary/50'}`}
                                                                 title={`View ${roomUser.username}'s profile`}
                                                             >
                                                                 {roomUser.avatarUrl ? (
@@ -1514,14 +1511,15 @@ function WatchTogetherContent() {
                                                                 )}
                                                             </button>
                                                         </div>
-                                                        <div className="flex flex-col min-w-0">
-                                                            <div className="flex items-center gap-1 flex-wrap">
+                                                        <div className="flex flex-col min-w-0 overflow-hidden">
+                                                            {/* Single row: host crown + name + badges + friend + speaking bars - all nowrap */}
+                                                            <div className="flex items-center gap-1 overflow-hidden">
                                                                 {roomUser.isHost && <Crown className="h-3 w-3 text-yellow-500 flex-shrink-0" />}
-                                                                <span className="text-sm font-medium truncate">{roomUser.username}</span>
-                                                                {/* Badges */}
+                                                                <span className="text-sm font-medium truncate max-w-[80px]">{roomUser.username}</span>
+                                                                {/* Badges - max 3 shown */}
                                                                 {roomUser.badges && (
-                                                                    <div className="flex items-center gap-0.5">
-                                                                        {roomUser.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime()).map((badge: any) => (
+                                                                    <div className="flex items-center gap-0.5 flex-shrink-0">
+                                                                        {roomUser.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime()).slice(0, 3).map((badge: any) => (
                                                                             <div key={badge.id} title={badge.name}>
                                                                                 <img
                                                                                     src={badge.imageUrl}
@@ -1540,7 +1538,7 @@ function WatchTogetherContent() {
                                                                 )}
                                                                 {/* Speaking indicator — inline audio wave bars */}
                                                                 {isRoomUserSpeaking && (
-                                                                    <div className="flex items-end gap-[2px] ml-1" style={{ height: '14px' }} title="Speaking...">
+                                                                    <div className="flex items-end gap-[2px] flex-shrink-0 ml-0.5" style={{ height: '14px' }} title="Speaking...">
                                                                         <div className="w-[3px] rounded-sm bg-green-400" style={{ height: '6px', animation: 'audio-wave-anim 0.6s ease-in-out infinite', animationDelay: '0ms', transformOrigin: 'bottom', boxShadow: '0 0 4px rgba(74,222,128,0.8)' }} />
                                                                         <div className="w-[3px] rounded-sm bg-green-400" style={{ height: '10px', animation: 'audio-wave-anim 0.6s ease-in-out infinite', animationDelay: '100ms', transformOrigin: 'bottom', boxShadow: '0 0 4px rgba(74,222,128,0.8)' }} />
                                                                         <div className="w-[3px] rounded-sm bg-green-400" style={{ height: '14px', animation: 'audio-wave-anim 0.6s ease-in-out infinite', animationDelay: '200ms', transformOrigin: 'bottom', boxShadow: '0 0 4px rgba(74,222,128,0.8)' }} />

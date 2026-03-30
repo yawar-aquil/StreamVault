@@ -35,11 +35,21 @@ export function useVoiceChat({ socket, roomUsers, currentUserId, enabled = true,
     const animationFrameRef = useRef<number | null>(null);
     // Ref to always have the latest isMuted value inside the animation frame loop (avoids stale closure)
     const isMutedRef = useRef(true);
+    // Refs for debounced speaking detection (avoids rapid true/false bouncing)
+    const lastSpeakingRef = useRef(false);
+    const speakingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // Ref to the socket for direct emission from the rAF loop
+    const socketRef = useRef<typeof socket>(null);
 
     // Keep isMutedRef in sync with isMuted state
     useEffect(() => {
         isMutedRef.current = isMuted;
     }, [isMuted]);
+
+    // Keep socketRef in sync with socket prop
+    useEffect(() => {
+        socketRef.current = socket;
+    }, [socket]);
 
     // Resume all pending audio after user interaction
     useEffect(() => {
@@ -89,10 +99,19 @@ export function useVoiceChat({ socket, roomUsers, currentUserId, enabled = true,
                 const source = audioContextRef.current.createMediaStreamSource(stream);
                 source.connect(analyserRef.current);
 
-                // Start speaking detection loop
+                // Start speaking detection loop with debouncing
                 const detectSpeaking = () => {
                     if (!analyserRef.current || isMutedRef.current) {
-                        setIsSpeaking(false);
+                        // Muted — clear any pending speak and mark as not speaking
+                        if (speakingTimeoutRef.current) {
+                            clearTimeout(speakingTimeoutRef.current);
+                            speakingTimeoutRef.current = null;
+                        }
+                        if (lastSpeakingRef.current) {
+                            lastSpeakingRef.current = false;
+                            setIsSpeaking(false);
+                            socketRef.current?.emit('voice:speaking', { isSpeaking: false });
+                        }
                         animationFrameRef.current = requestAnimationFrame(detectSpeaking);
                         return;
                     }
@@ -100,10 +119,29 @@ export function useVoiceChat({ socket, roomUsers, currentUserId, enabled = true,
                     const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
                     analyserRef.current.getByteFrequencyData(dataArray);
 
-                    // Calculate average volume
                     const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-                    const speaking = average > 20; // Threshold
-                    setIsSpeaking(speaking);
+                    const speaking = average > 15; // Slightly lower threshold for better detection
+
+                    if (speaking && !lastSpeakingRef.current) {
+                        // Transition to speaking — fire immediately
+                        if (speakingTimeoutRef.current) {
+                            clearTimeout(speakingTimeoutRef.current);
+                            speakingTimeoutRef.current = null;
+                        }
+                        lastSpeakingRef.current = true;
+                        setIsSpeaking(true);
+                        socketRef.current?.emit('voice:speaking', { isSpeaking: true });
+                    } else if (!speaking && lastSpeakingRef.current) {
+                        // Transition to silent — debounce by 300ms to avoid choppy indicators
+                        if (!speakingTimeoutRef.current) {
+                            speakingTimeoutRef.current = setTimeout(() => {
+                                lastSpeakingRef.current = false;
+                                setIsSpeaking(false);
+                                socketRef.current?.emit('voice:speaking', { isSpeaking: false });
+                                speakingTimeoutRef.current = null;
+                            }, 300);
+                        }
+                    }
 
                     animationFrameRef.current = requestAnimationFrame(detectSpeaking);
                 };
@@ -310,11 +348,15 @@ export function useVoiceChat({ socket, roomUsers, currentUserId, enabled = true,
         });
     }, [roomUsers, isVoiceEnabled, currentUserId, createPeer]);
 
-    // Emit speaking state to server for other users to see
+    // Emit speaking state to server — now handled directly in detectSpeaking loop via socketRef
+    // This effect is kept as a fallback for initial state sync
     useEffect(() => {
         if (!socket || !isVoiceEnabled) return;
-        socket.emit('voice:speaking', { isSpeaking });
-    }, [socket, isSpeaking, isVoiceEnabled]);
+        // Only sync the initial not-speaking state when voice is first enabled
+        socket.emit('voice:speaking', { isSpeaking: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isVoiceEnabled]);
+
 
     // Toggle mute
     const toggleMute = useCallback(() => {
