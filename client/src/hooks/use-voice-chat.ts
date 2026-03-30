@@ -33,6 +33,13 @@ export function useVoiceChat({ socket, roomUsers, currentUserId, enabled = true,
     const audioContextRef = useRef<AudioContext | null>(null);
     const analyserRef = useRef<AnalyserNode | null>(null);
     const animationFrameRef = useRef<number | null>(null);
+    // Ref to always have the latest isMuted value inside the animation frame loop (avoids stale closure)
+    const isMutedRef = useRef(true);
+
+    // Keep isMutedRef in sync with isMuted state
+    useEffect(() => {
+        isMutedRef.current = isMuted;
+    }, [isMuted]);
 
     // Resume all pending audio after user interaction
     useEffect(() => {
@@ -84,7 +91,7 @@ export function useVoiceChat({ socket, roomUsers, currentUserId, enabled = true,
 
                 // Start speaking detection loop
                 const detectSpeaking = () => {
-                    if (!analyserRef.current || isMuted) {
+                    if (!analyserRef.current || isMutedRef.current) {
                         setIsSpeaking(false);
                         animationFrameRef.current = requestAnimationFrame(detectSpeaking);
                         return;
@@ -119,7 +126,7 @@ export function useVoiceChat({ socket, roomUsers, currentUserId, enabled = true,
             setError(err.message || 'Failed to access microphone');
             return null;
         }
-    }, [isMuted]);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Create a peer connection
     const createPeer = useCallback((targetId: string, initiator: boolean, stream: MediaStream) => {
@@ -259,6 +266,7 @@ export function useVoiceChat({ socket, roomUsers, currentUserId, enabled = true,
                         track.enabled = false;
                     });
                 }
+                isMutedRef.current = true;
                 setIsMuted(true);
                 // Call custom callback instead of alert
                 onMutedByHost?.();
@@ -316,6 +324,7 @@ export function useVoiceChat({ socket, roomUsers, currentUserId, enabled = true,
         localStreamRef.current.getAudioTracks().forEach(track => {
             track.enabled = !newMuted;
         });
+        isMutedRef.current = newMuted; // update ref immediately so detection loop sees it
         setIsMuted(newMuted);
 
         // Notify server
