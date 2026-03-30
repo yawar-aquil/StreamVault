@@ -41,7 +41,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { InviteFriendsModal } from "@/components/invite-friends-modal";
 import { VoiceMessage } from '@/components/ui/voice-message';
-import { AbstractInt } from 'node:v8';
+
 import { AudioVisualizer } from '@/components/ui/audio-visualizer';
 import { LinkPreview } from '@/components/link-preview';
 import { useWatchTogether, WatchTogetherProvider } from '@/contexts/watch-together-context';
@@ -734,9 +734,9 @@ function WatchTogetherContent() {
                 contentType,
                 contentId,
                 storedUsername,
-                user?.avatarUrl,
+                user?.avatarUrl || undefined,
                 episodeId || undefined,
-                user?.id, // authUserId
+                user?.id?.toString(), // authUserId
                 {
                     contentTitle: contentTitle || 'Untitled',
                     contentPoster: contentPoster || undefined,
@@ -754,7 +754,7 @@ function WatchTogetherContent() {
             sessionStorage.removeItem('watchTogether_isCreator');
 
             setUsername(storedUsername);
-            joinRoom(roomCode, storedUsername, user?.avatarUrl, urlPassword || undefined, user?.id);
+            joinRoom(roomCode, storedUsername, user?.avatarUrl || undefined, urlPassword || undefined, user?.id?.toString());
             setShowJoinModal(false);
         }
     }, [isConnected, roomCode, roomInfo, joinRoom, createRoom, urlPassword]);
@@ -798,7 +798,7 @@ function WatchTogetherContent() {
             setUsername(user.username);
             // Small delay to ensure socket is ready
             setTimeout(() => {
-                joinRoom(roomCode, user.username, user.avatarUrl, undefined, user.id);
+                joinRoom(roomCode, user.username, user.avatarUrl || undefined, undefined, user.id.toString());
                 setShowJoinModal(false);
             }, 500);
         }
@@ -908,7 +908,7 @@ function WatchTogetherContent() {
             localStorage.setItem('watch-together-room', roomCode);
 
             // Pass URL password for private rooms, and auth user ID for friend requests
-            joinRoom(roomCode, username.trim(), user?.avatarUrl, urlPassword || undefined, user?.id?.toString());
+            joinRoom(roomCode, username.trim(), user?.avatarUrl || undefined, urlPassword || undefined, user?.id?.toString());
             setShowJoinModal(false);
         }
     };
@@ -954,19 +954,11 @@ function WatchTogetherContent() {
 
         setPendingFriendRequests(prev => new Set(Array.from(prev).concat(userId)));
 
-        const result = await sendFriendRequest(userId);
-
-        if (result.success) {
-            toast({
-                title: 'Friend Request Sent! 🎉',
-                description: `Request sent to ${username}`,
-            });
-        } else {
-            toast({
-                title: 'Request Failed',
-                description: result.error || 'Could not send friend request',
-                variant: 'destructive',
-            });
+        try {
+            await sendFriendRequest(userId);
+            // Toasts are handled by the friends context
+        } catch (error) {
+            console.error('Failed to send friend request', error);
         }
 
         setPendingFriendRequests(prev => {
@@ -1544,7 +1536,11 @@ function WatchTogetherContent() {
                                                                 )}
                                                             </div>
                                                             {isRoomUserSpeaking && (
-                                                                <span className="text-xs text-green-500">Speaking...</span>
+                                                                <div className="flex items-end gap-[3px] h-3 ml-1 mt-0.5" title="Speaking...">
+                                                                    <div className="w-[3px] h-full bg-green-500 rounded-sm animate-audio-wave" style={{ animationDelay: '0ms' }} />
+                                                                    <div className="w-[3px] h-full bg-green-500 rounded-sm animate-audio-wave" style={{ animationDelay: '200ms', animationDuration: '0.9s' }} />
+                                                                    <div className="w-[3px] h-full bg-green-500 rounded-sm animate-audio-wave" style={{ animationDelay: '400ms', animationDuration: '0.7s' }} />
+                                                                </div>
                                                             )}
                                                         </div>
                                                     </div>
@@ -1647,7 +1643,7 @@ function WatchTogetherContent() {
                                     {/* Background pattern */}
                                     <div className="absolute inset-0 opacity-10">
                                         <div className="w-full h-full" style={{
-                                            backgroundImage: `url(${episode?.posterUrl || movie?.posterUrl || ''})`,
+                                            backgroundImage: `url(${episode?.thumbnailUrl || movie?.posterUrl || ''})`,
                                             backgroundSize: 'cover',
                                             backgroundPosition: 'center',
                                             filter: 'blur(20px)'
