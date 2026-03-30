@@ -1496,7 +1496,7 @@ function WatchTogetherContent() {
                                                     className={`flex items-center justify-between p-2 hover:bg-accent/50 ${isRoomUserSpeaking ? 'bg-green-500/10' : ''
                                                         }`}
                                                 >
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex items-center gap-2 min-w-0 flex-1">
                                                         {/* Avatar - Clickable to view profile, with speaking glow ring */}
                                                         <div className="relative flex-shrink-0">
                                                             <button
@@ -1515,7 +1515,7 @@ function WatchTogetherContent() {
                                                             {/* Single row: host crown + name + badges + friend + speaking bars - all nowrap */}
                                                             <div className="flex items-center gap-1 overflow-hidden">
                                                                 {roomUser.isHost && <Crown className="h-3 w-3 text-yellow-500 flex-shrink-0" />}
-                                                                <span className="text-sm font-medium truncate max-w-[80px]">{roomUser.username}</span>
+                                                                <span className="text-sm font-medium whitespace-nowrap truncate">{roomUser.username}</span>
                                                                 {/* Badges - max 3 shown */}
                                                                 {roomUser.badges && (
                                                                     <div className="flex items-center gap-0.5 flex-shrink-0">
