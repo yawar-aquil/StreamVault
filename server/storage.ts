@@ -476,8 +476,39 @@ export class MemStorage implements IStorage {
     this.loadFriendsData();
     this.apiKeysFile = join(process.cwd(), "data", "api-keys.json");
     this.loadApiKeys();
+    this.savedSubtitlesFile = join(process.cwd(), "data", "saved_subtitles.json");
     this.loadSavedSubtitles();
   }
+
+  private loadSavedSubtitles() {
+    try {
+      if (existsSync(this.savedSubtitlesFile)) {
+        console.log("📂 Loading saved subtitles from file...");
+        const data = JSON.parse(readFileSync(this.savedSubtitlesFile, "utf-8"));
+        Object.entries(data).forEach(([id, sub]) => {
+          this.savedSubtitles.set(id, sub as SavedSubtitle);
+        });
+        console.log(`✅ Loaded ${this.savedSubtitles.size} saved subtitles`);
+      }
+    } catch (error) {
+      console.error("Failed to load saved subtitles:", error);
+    }
+  }
+
+  private saveSavedSubtitles() {
+    try {
+      const dataDir = join(process.cwd(), "data");
+      if (!existsSync(dataDir)) {
+        mkdirSync(dataDir, { recursive: true });
+      }
+      const data = Object.fromEntries(this.savedSubtitles.entries());
+      writeFileSync(this.savedSubtitlesFile, JSON.stringify(data, null, 2), "utf-8");
+    } catch (error) {
+      console.error("Failed to save subtitles:", error);
+    }
+  }
+
+  private savedSubtitlesFile!: string;
 
   // Email Verification
   async createEmailVerificationToken(email: string): Promise<string> {
