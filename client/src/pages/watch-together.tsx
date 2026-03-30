@@ -1497,26 +1497,30 @@ function WatchTogetherContent() {
                                                         }`}
                                                 >
                                                     <div className="flex items-center gap-2">
-                                                        {/* Avatar - Clickable to view profile */}
-                                                        <button
-                                                            onClick={() => handleViewProfile(roomUser)}
-                                                            className={`w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all ${isRoomUserSpeaking ? 'ring-2 ring-green-400' : ''
-                                                                }`}
-                                                            title={`View ${roomUser.username}'s profile`}
-                                                        >
-                                                            {roomUser.avatarUrl ? (
-                                                                <img src={roomUser.avatarUrl} alt={roomUser.username} className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                roomUser.username.slice(0, 2).toUpperCase()
+                                                        {/* Avatar - Clickable to view profile, with speaking glow ring */}
+                                                        <div className="relative flex-shrink-0">
+                                                            {isRoomUserSpeaking && (
+                                                                <span className="absolute inset-0 rounded-full animate-ping bg-green-400 opacity-40 z-0" />
                                                             )}
-                                                        </button>
-                                                        <div className="flex flex-col">
-                                                            <div className="flex items-center gap-1">
-                                                                {roomUser.isHost && <Crown className="h-3 w-3 text-yellow-500" />}
-                                                                <span className="text-sm font-medium">{roomUser.username}</span>
+                                                            <button
+                                                                onClick={() => handleViewProfile(roomUser)}
+                                                                className={`relative z-10 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all ${isRoomUserSpeaking ? 'ring-2 ring-green-400 shadow-[0_0_8px_2px_rgba(74,222,128,0.5)]' : ''}`}
+                                                                title={`View ${roomUser.username}'s profile`}
+                                                            >
+                                                                {roomUser.avatarUrl ? (
+                                                                    <img src={roomUser.avatarUrl} alt={roomUser.username} className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    roomUser.username.slice(0, 2).toUpperCase()
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                        <div className="flex flex-col min-w-0">
+                                                            <div className="flex items-center gap-1 flex-wrap">
+                                                                {roomUser.isHost && <Crown className="h-3 w-3 text-yellow-500 flex-shrink-0" />}
+                                                                <span className="text-sm font-medium truncate">{roomUser.username}</span>
                                                                 {/* Badges */}
                                                                 {roomUser.badges && (
-                                                                    <div className="flex items-center gap-0.5 ml-1">
+                                                                    <div className="flex items-center gap-0.5">
                                                                         {roomUser.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime()).map((badge: any) => (
                                                                             <div key={badge.id} title={badge.name}>
                                                                                 <img
@@ -1530,18 +1534,21 @@ function WatchTogetherContent() {
                                                                 )}
                                                                 {/* Friend indicator */}
                                                                 {isAuthenticated && roomUser.authUserId && roomUser.authUserId !== user?.id?.toString() && friends.some(f => f.friendId === roomUser.authUserId) && (
-                                                                    <span className="text-green-500" title={`${roomUser.username} is your friend`}>
+                                                                    <span className="text-green-500 flex-shrink-0" title={`${roomUser.username} is your friend`}>
                                                                         <Users className="h-3 w-3" />
                                                                     </span>
                                                                 )}
+                                                                {/* Speaking indicator — inline audio wave bars */}
+                                                                {isRoomUserSpeaking && (
+                                                                    <div className="flex items-end gap-[2px] ml-1" style={{ height: '14px' }} title="Speaking...">
+                                                                        <div className="w-[3px] rounded-sm bg-green-400" style={{ height: '6px', animation: 'audio-wave-anim 0.6s ease-in-out infinite', animationDelay: '0ms', transformOrigin: 'bottom', boxShadow: '0 0 4px rgba(74,222,128,0.8)' }} />
+                                                                        <div className="w-[3px] rounded-sm bg-green-400" style={{ height: '10px', animation: 'audio-wave-anim 0.6s ease-in-out infinite', animationDelay: '100ms', transformOrigin: 'bottom', boxShadow: '0 0 4px rgba(74,222,128,0.8)' }} />
+                                                                        <div className="w-[3px] rounded-sm bg-green-400" style={{ height: '14px', animation: 'audio-wave-anim 0.6s ease-in-out infinite', animationDelay: '200ms', transformOrigin: 'bottom', boxShadow: '0 0 4px rgba(74,222,128,0.8)' }} />
+                                                                        <div className="w-[3px] rounded-sm bg-green-400" style={{ height: '10px', animation: 'audio-wave-anim 0.6s ease-in-out infinite', animationDelay: '300ms', transformOrigin: 'bottom', boxShadow: '0 0 4px rgba(74,222,128,0.8)' }} />
+                                                                        <div className="w-[3px] rounded-sm bg-green-400" style={{ height: '6px', animation: 'audio-wave-anim 0.6s ease-in-out infinite', animationDelay: '400ms', transformOrigin: 'bottom', boxShadow: '0 0 4px rgba(74,222,128,0.8)' }} />
+                                                                    </div>
+                                                                )}
                                                             </div>
-                                                            {isRoomUserSpeaking && (
-                                                                <div className="flex items-end gap-[3px] h-3 ml-1 mt-0.5" title="Speaking...">
-                                                                    <div className="w-[3px] h-full bg-green-500 rounded-sm animate-audio-wave" style={{ animationDelay: '0ms' }} />
-                                                                    <div className="w-[3px] h-full bg-green-500 rounded-sm animate-audio-wave" style={{ animationDelay: '200ms', animationDuration: '0.9s' }} />
-                                                                    <div className="w-[3px] h-full bg-green-500 rounded-sm animate-audio-wave" style={{ animationDelay: '400ms', animationDuration: '0.7s' }} />
-                                                                </div>
-                                                            )}
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-1">
