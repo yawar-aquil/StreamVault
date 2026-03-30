@@ -17,12 +17,31 @@ const SUBSCRIPTION_PRICES: Record<string, { price: number; durationDays: number 
 const notifiedUsers = new Set<string>();
 
 /**
+ * Revokes all subscription-category badges for a user.
+ * Called when the subscription expires (no renewal) or renewal fails.
+ */
+async function revokeSubscriptionBadge(userId: string, username: string): Promise<void> {
+  try {
+    const userBadges = await storage.getUserBadges(userId);
+    const subscriptionBadges = userBadges.filter(ub => ub.badge.category === 'subscription');
+
+    for (const ub of subscriptionBadges) {
+      await storage.revokeBadge(userId, ub.badge.id);
+      log(`[Subscription] Revoked badge "${ub.badge.name}" from ${username} (subscription expired)`);
+    }
+  } catch (err) {
+    console.error(`[Subscription] Failed to revoke badge for ${username}:`, err);
+  }
+}
+
+/**
  * Processes all subscriptions:
  * 1. 24h before expiry: send notification + email
  *    - Auto-renew ON: "Your subscription will renew tomorrow"
  *    - Auto-renew OFF: "Your subscription expires tomorrow, consider upgrading"
  * 2. On expiry with auto-renew ON: deduct coins, extend subscription
- *    - If insufficient coins: disable auto-renew, notify user
+ *    - If insufficient coins: disable auto-renew, notify user, revoke badge
+ * 3. On expiry with auto-renew OFF: revoke badge + clear adFreeUntil
  */
 async function processSubscriptions() {
   try {
@@ -168,24 +187,26 @@ async function processSubscriptions() {
             ).catch(console.error);
           }
         } else {
-          // Insufficient coins — disable auto-renew
-          log(`[Subscription] Insufficient coins for ${user.username} (${currentCoins}/${subConfig.price}). Disabling auto-renew.`);
+          // Insufficient coins — disable auto-renew, revoke badge, and clear subscription
+          log(`[Subscription] Insufficient coins for ${user.username} (${currentCoins}/${subConfig.price}). Disabling auto-renew and revoking badge.`);
 
           await storage.updateSubscriptionAutoRenew(user.id, false);
+          await storage.updateUser(user.id, { adFreeUntil: null });
+          await revokeSubscriptionBadge(user.id, user.username);
 
           // In-app notification
           await storage.createNotification({
             userId: user.id,
             type: 'system',
             title: '❌ Renewal Failed — Insufficient Coins',
-            message: `We couldn't renew your subscription. You need ${subConfig.price} coins but only have ${currentCoins}. Auto-renewal has been turned off.`,
+            message: `We couldn't renew your subscription. You need ${subConfig.price} coins but only have ${currentCoins}. Auto-renewal has been turned off and your ad-free access has ended.`,
             read: false,
             data: { type: 'subscription_renewal_failed' },
           });
           sendNotificationToUser(user.id, {
             type: 'system',
             title: '❌ Renewal Failed',
-            message: `Insufficient coins (${currentCoins}/${subConfig.price}). Auto-renewal disabled.`,
+            message: `Insufficient coins (${currentCoins}/${subConfig.price}). Auto-renewal disabled. Ad-free access revoked.`,
           });
 
           // Email
@@ -199,6 +220,34 @@ async function processSubscriptions() {
             ).catch(console.error);
           }
         }
+      }
+
+      // Subscription expired with auto-renew OFF — revoke badge and clear adFreeUntil
+      if (hoursUntilExpiry <= 0 && !user.subscriptionAutoRenew) {
+        const expiredKey = `expired-${user.id}-${expiry.toISOString().split('T')[0]}`;
+        if (notifiedUsers.has(expiredKey)) continue; // Already processed
+        notifiedUsers.add(expiredKey);
+
+        log(`[Subscription] Subscription expired for ${user.username} (auto-renew OFF). Revoking badge.`);
+
+        // Revoke badge and clear subscription
+        await revokeSubscriptionBadge(user.id, user.username);
+        await storage.updateUser(user.id, { adFreeUntil: null });
+
+        // In-app notification
+        await storage.createNotification({
+          userId: user.id,
+          type: 'system',
+          title: '⏰ Subscription Expired',
+          message: `Your ${subType === 'yearly' ? 'Ad-Free Yearly' : 'Ad-Free Monthly'} subscription has expired. Your ad-free badge has been removed. Renew anytime in the Store!`,
+          read: false,
+          data: { type: 'subscription_expired' },
+        });
+        sendNotificationToUser(user.id, {
+          type: 'system',
+          title: '⏰ Subscription Expired',
+          message: 'Your ad-free subscription has expired. Renew in the Store to get it back!',
+        });
       }
     }
 
