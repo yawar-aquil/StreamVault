@@ -38,6 +38,8 @@ export function useVoiceChat({ socket, roomUsers, currentUserId, enabled = true,
     // Refs for debounced speaking detection (avoids rapid true/false bouncing)
     const lastSpeakingRef = useRef(false);
     const speakingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // Consecutive frames above threshold required before triggering speaking (prevents ambient noise)
+    const speakingFramesRef = useRef(0);
     // Ref to the socket for direct emission from the rAF loop
     const socketRef = useRef<typeof socket>(null);
 
@@ -99,10 +101,15 @@ export function useVoiceChat({ socket, roomUsers, currentUserId, enabled = true,
                 const source = audioContextRef.current.createMediaStreamSource(stream);
                 source.connect(analyserRef.current);
 
-                // Start speaking detection loop with debouncing
+                // Start speaking detection loop with debouncing + hysteresis
+                const SPEAK_THRESHOLD = 35;  // Must exceed this to START speaking (filters ambient noise)
+                const STOP_THRESHOLD = 20;   // Must drop below this to STOP speaking (hysteresis)
+                const SPEAK_FRAMES_REQUIRED = 4; // Consecutive frames above threshold to confirm speaking
+
                 const detectSpeaking = () => {
                     if (!analyserRef.current || isMutedRef.current) {
-                        // Muted — clear any pending speak and mark as not speaking
+                        // Muted — immediately clear speaking state
+                        speakingFramesRef.current = 0;
                         if (speakingTimeoutRef.current) {
                             clearTimeout(speakingTimeoutRef.current);
                             speakingTimeoutRef.current = null;
@@ -118,28 +125,43 @@ export function useVoiceChat({ socket, roomUsers, currentUserId, enabled = true,
 
                     const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
                     analyserRef.current.getByteFrequencyData(dataArray);
-
                     const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-                    const speaking = average > 15; // Slightly lower threshold for better detection
 
-                    if (speaking && !lastSpeakingRef.current) {
-                        // Transition to speaking — fire immediately
-                        if (speakingTimeoutRef.current) {
-                            clearTimeout(speakingTimeoutRef.current);
-                            speakingTimeoutRef.current = null;
+                    if (!lastSpeakingRef.current) {
+                        // Not currently speaking — need N consecutive frames above SPEAK_THRESHOLD
+                        if (average > SPEAK_THRESHOLD) {
+                            speakingFramesRef.current++;
+                            if (speakingFramesRef.current >= SPEAK_FRAMES_REQUIRED) {
+                                // Confirmed speaking — clear any silence debounce and fire
+                                if (speakingTimeoutRef.current) {
+                                    clearTimeout(speakingTimeoutRef.current);
+                                    speakingTimeoutRef.current = null;
+                                }
+                                lastSpeakingRef.current = true;
+                                setIsSpeaking(true);
+                                socketRef.current?.emit('voice:speaking', { isSpeaking: true });
+                            }
+                        } else {
+                            speakingFramesRef.current = 0; // Reset counter if frame drops below threshold
                         }
-                        lastSpeakingRef.current = true;
-                        setIsSpeaking(true);
-                        socketRef.current?.emit('voice:speaking', { isSpeaking: true });
-                    } else if (!speaking && lastSpeakingRef.current) {
-                        // Transition to silent — debounce by 300ms to avoid choppy indicators
-                        if (!speakingTimeoutRef.current) {
-                            speakingTimeoutRef.current = setTimeout(() => {
-                                lastSpeakingRef.current = false;
-                                setIsSpeaking(false);
-                                socketRef.current?.emit('voice:speaking', { isSpeaking: false });
+                    } else {
+                        // Currently speaking — stop only when audio drops below STOP_THRESHOLD for 400ms
+                        speakingFramesRef.current = 0;
+                        if (average < STOP_THRESHOLD) {
+                            if (!speakingTimeoutRef.current) {
+                                speakingTimeoutRef.current = setTimeout(() => {
+                                    lastSpeakingRef.current = false;
+                                    setIsSpeaking(false);
+                                    socketRef.current?.emit('voice:speaking', { isSpeaking: false });
+                                    speakingTimeoutRef.current = null;
+                                }, 400);
+                            }
+                        } else {
+                            // Still speaking — cancel any pending silence timeout
+                            if (speakingTimeoutRef.current) {
+                                clearTimeout(speakingTimeoutRef.current);
                                 speakingTimeoutRef.current = null;
-                            }, 300);
+                            }
                         }
                     }
 
