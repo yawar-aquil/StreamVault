@@ -82,18 +82,18 @@ export default function WatchMovie() {
         console.log(`🔍 Fetching subtitles for movie ${imdbMatch[0]}`);
 
         const response = await fetch(
-          `/api/subtitles/search?imdbId=${imdbMatch[0]}&language=en`
+          `/api/subtitles/saved?imdbId=${imdbMatch[0]}`
         );
 
         if (!response.ok) {
-          console.error('Movie subtitle search failed');
+          console.error('Movie subtitle fetch failed');
           return;
         }
 
         const data = await response.json();
 
         if (data.subtitles && data.subtitles.length > 0) {
-          console.log(`✅ Found ${data.subtitles.length} movie subtitles`);
+          console.log(`✅ Found ${data.subtitles.length} assigned movie subtitles`);
 
           // Language code to full name mapping
           const langNames: Record<string, string> = {
@@ -103,17 +103,17 @@ export default function WatchMovie() {
             'tr': 'Turkish', 'pl': 'Polish', 'nl': 'Dutch', 'sv': 'Swedish'
           };
 
-          // Convert to VideoPlayer format (use first 10 subtitles)
-          const tracks = data.subtitles.slice(0, 10).map((sub: any, index: number) => ({
-            file: sub.downloadUrl,
-            label: langNames[sub.lang] || sub.language || sub.lang || 'Unknown',
+          // Convert to VideoPlayer format
+          const tracks = data.subtitles.map((sub: any, index: number) => ({
+            file: sub.url,
+            label: langNames[sub.language] || sub.language || 'Unknown',
             kind: 'subtitles' as const,
-            default: index === 0
+            default: sub.language === 'en' || index === 0
           }));
 
           setSubtitleTracks(tracks);
         } else {
-          console.log('No movie subtitles found');
+          console.log('No assigned movie subtitles found');
         }
       } catch (error) {
         console.error('Error fetching movie subtitles:', error);

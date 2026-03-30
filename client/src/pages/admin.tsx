@@ -45,6 +45,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import StreamCoin from "@/components/stream-coin";
 import type { Show, Episode, Movie, BlogPost, Anime, AnimeEpisode, Review } from "@shared/schema";
 import { getAuthHeaders, logout as authLogout } from "@/lib/auth";
+import { SubtitleManager } from "@/components/admin/SubtitleManager";
 
 export default function AdminPage() {
   const { toast } = useToast();
@@ -197,6 +198,10 @@ export default function AdminPage() {
               <Activity className="w-4 h-4" />
               URL Health
             </TabsTrigger>
+            <TabsTrigger value="subtitles" className="gap-2">
+              <Settings className="w-4 h-4" />
+              Subtitles
+            </TabsTrigger>
           </TabsList>
 
 
@@ -318,6 +323,11 @@ export default function AdminPage() {
           {/* URL Health Tab */}
           <TabsContent value="url-health">
             <UrlHealthTab />
+          </TabsContent>
+
+          {/* Subtitles Management Tab */}
+          <TabsContent value="subtitles">
+            <SubtitleManager shows={shows} movies={movies} anime={anime} />
           </TabsContent>
         </Tabs>
       </div>

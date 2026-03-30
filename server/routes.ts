@@ -14,7 +14,7 @@ import { searchShow, getShowDetails } from "./utils/tmdb";
 import { sendContentRequestEmail, sendIssueReportEmail, sendPasswordResetEmail, sendCoinPurchaseReceiptEmail, sendEmailVerificationEmail, sendContentRequestCompletedEmail, sendIssueReportResolvedEmail, sendFeedbackEmail, sendFeedbackResolvedEmail } from "./email-service";
 import { createRazorpayOrder, verifyRazorpaySignature } from "./payment";
 import { convertCurrency } from "./currency";
-import { searchSubtitles, downloadSubtitle, getCachedSubtitle } from "./subtitle-service";
+import { getCachedSubtitle, searchSubtitles, downloadSubtitle, getFirstSubtitle, convertSrtToVtt } from "./subtitle-service";
 import { checkAndAwardAchievements, ACHIEVEMENTS } from "./achievements";
 import { getActiveRooms, checkRoomExists } from "./watch-together";
 import { sendNotificationToUser, sendInventoryUpdate, logAndBroadcastActivity, emitDMReceived } from "./social";
@@ -7156,11 +7156,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============================================
-  // Subtitle API - Wyzie Subs Integration
+  // Subtitle API - Manual Admin Management
   // ============================================
 
-  // Search for subtitles by IMDB ID
-  app.get("/api/subtitles/search", async (req, res) => {
+  // Admin endpoint to search subtitles on-demand
+  app.get("/api/admin/subtitles/search", requireAdmin, async (req, res) => {
     try {
       const imdbId = req.query.imdbId as string;
       const season = req.query.season ? parseInt(req.query.season as string) : undefined;
@@ -7171,33 +7171,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "imdbId parameter required" });
       }
 
-      console.log(`🔍 Subtitle search: imdbId=${imdbId}, season=${season}, episode=${episode}, lang=${language}`);
+      console.log(`[Admin] 🔍 Subtitle search: imdbId=${imdbId}, season=${season}, episode=${episode}, lang=${language}`);
 
       const result = await searchSubtitles(imdbId, season, episode, language);
-
-      // Transform results to include download URLs
-      const subtitles = result.subtitles.map(sub => ({
-        ...sub,
-        downloadUrl: `/api/subtitles/download?url=${encodeURIComponent(sub.url)}`
-      }));
-
-      res.json({ subtitles, error: result.error });
+      res.json({ subtitles: result.subtitles, error: result.error });
     } catch (error: any) {
-      console.error("❌ Subtitle search error:", error.message);
+      console.error("[Admin] ❌ Subtitle search error:", error.message);
       res.status(500).json({ error: "Search failed", details: error.message });
     }
   });
 
-  // Download and serve a subtitle file (with caching)
-  app.get("/api/subtitles/download", async (req, res) => {
+  // Admin endpoint to explicitly save a subtitle to the local storage
+  app.post("/api/admin/subtitles/save", requireAdmin, async (req, res) => {
     try {
-      const subtitleUrl = req.query.url as string;
+      const { imdbId, season, episode, language, subtitleUrl } = req.body;
 
-      if (!subtitleUrl) {
-        return res.status(400).json({ error: "url parameter required" });
+      if (!imdbId || !language || !subtitleUrl) {
+        return res.status(400).json({ error: "imdbId, language, and subtitleUrl are required" });
       }
 
-      console.log(`⬇️ Subtitle download request: ${subtitleUrl}`);
+      console.log(`[Admin] ⬇️ Downloading & Saving Subtitle: ${language} for ${imdbId} ${season ? `S${season}` : ''} ${episode ? `E${episode}` : ''}`);
 
       const cachedPath = await downloadSubtitle(subtitleUrl);
 
@@ -7205,18 +7198,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Subtitle not found or download failed" });
       }
 
-      // Set headers for VTT file
-      res.setHeader('Content-Type', 'text/vtt');
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+      const path = await import('path');
+      const fileName = path.basename(cachedPath);
+      const fileHash = fileName.split('.')[0];
+      const localUrl = `/api/subtitles/file/${fileHash}`;
 
-      // Send the file
-      const fs = await import('fs');
-      const content = fs.readFileSync(cachedPath, 'utf-8');
-      res.send(content);
+      const savedData = {
+        imdbId,
+        season: season ? parseInt(season as string) : undefined,
+        episode: episode ? parseInt(episode as string) : undefined,
+        language,
+        url: localUrl,
+        fileName
+      };
+
+      const savedSub = await storage.saveSubtitle(savedData);
+
+      res.json({ success: true, subtitle: savedSub });
     } catch (error: any) {
-      console.error("❌ Subtitle download error:", error.message);
+      console.error("[Admin] ❌ Subtitle download error:", error.message);
       res.status(500).json({ error: "Download failed", details: error.message });
+    }
+  });
+
+  // Admin endpoint to upload a subtitle file directly
+  app.post("/api/admin/subtitles/upload", requireAdmin, async (req, res) => {
+    try {
+      const { imdbId, season, episode, language, fileName, fileContent } = req.body;
+
+      if (!imdbId || !language || !fileName || !fileContent) {
+        return res.status(400).json({ error: "imdbId, language, fileName, and fileContent are required" });
+      }
+
+      console.log(`[Admin] 📤 Uploading Subtitle: ${language} for ${imdbId} ${season ? `S${season}` : ''} ${episode ? `E${episode}` : ''}`);
+
+      const fs = await import('fs');
+      const path = await import('path');
+      const crypto = await import('crypto');
+
+      // Convert from base64 string
+      const base64Data = fileContent.replace(/^data:.*\/.*;base64,/, "");
+      let content = Buffer.from(base64Data, 'base64').toString('utf-8');
+
+      // Generate cache filename from content hash
+      const contentHash = crypto.createHash('md5').update(content).digest('hex');
+      const SUBTITLE_CACHE_DIR = path.join(process.cwd(), 'data', 'subtitles');
+      
+      // Ensure cache directory exists
+      if (!fs.existsSync(SUBTITLE_CACHE_DIR)) {
+          fs.mkdirSync(SUBTITLE_CACHE_DIR, { recursive: true });
+      }
+
+      // Format as VTT if needed
+      if (fileName.endsWith('.srt') || (content.includes('-->') && !content.startsWith('WEBVTT'))) {
+        content = convertSrtToVtt(content);
+      }
+
+      const cachedPath = path.join(SUBTITLE_CACHE_DIR, `${contentHash}.vtt`);
+      fs.writeFileSync(cachedPath, content, 'utf-8');
+
+      const savedFileName = path.basename(cachedPath);
+      const localUrl = `/api/subtitles/file/${contentHash}`;
+
+      const savedData = {
+        imdbId,
+        season: season ? parseInt(season as string) : undefined,
+        episode: episode ? parseInt(episode as string) : undefined,
+        language,
+        url: localUrl,
+        fileName: savedFileName
+      };
+
+      const savedSub = await storage.saveSubtitle(savedData);
+
+      res.json({ success: true, subtitle: savedSub });
+    } catch (error: any) {
+      console.error("[Admin] ❌ Subtitle upload error:", error.message);
+      res.status(500).json({ error: "Upload failed", details: error.message });
+    }
+  });
+
+  // Admin endpoint to delete a saved subtitle
+  app.delete("/api/admin/subtitles/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteSavedSubtitle(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to delete subtitle" });
+    }
+  });
+
+  // Public endpoint for players to query assigned subtitles
+  app.get("/api/subtitles/saved", async (req, res) => {
+    try {
+      const imdbId = req.query.imdbId as string;
+      const season = req.query.season ? parseInt(req.query.season as string) : undefined;
+      const episode = req.query.episode ? parseInt(req.query.episode as string) : undefined;
+
+      if (!imdbId) {
+        return res.status(400).json({ error: "imdbId parameter required" });
+      }
+
+      const savedSubtitles = await storage.getSavedSubtitles(imdbId, season, episode);
+
+      // Map to the simple format the players expect: { url, language }
+      const subtitles = savedSubtitles.map(s => ({
+        url: s.url,
+        language: s.language
+      }));
+
+      res.json({ subtitles });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch saved subtitles" });
     }
   });
 

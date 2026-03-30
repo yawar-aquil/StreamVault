@@ -119,8 +119,6 @@ export interface ApiKey {
 export interface PasswordResetToken {
   email: string;
   token: string;
-  email: string;
-  token: string;
   expiresAt: number;
 }
 
@@ -257,7 +255,6 @@ export interface IStorage {
 
   // Coins & Transactions
   updateUserCoins(userId: string, amount: number): Promise<User>;
-  updateUserCoins(userId: string, amount: number): Promise<User>;
   updateAdFreeStatus(userId: string, until: Date): Promise<User>;
   createCoinTransaction(transaction: InsertCoinTransaction): Promise<CoinTransaction>;
   getUserCoinTransactions(userId: string): Promise<CoinTransaction[]>;
@@ -378,6 +375,11 @@ export interface IStorage {
   // Account Deletion
   deleteUserCompletely(userId: string): Promise<void>;
   async getActivitiesForUser(userId: string): Promise<Activity[]>;
+
+  // Subtitles
+  getSavedSubtitles(imdbId: string, season?: number, episode?: number): Promise<SavedSubtitle[]>;
+  saveSubtitle(data: Omit<SavedSubtitle, 'id' | 'addedAt'>): Promise<SavedSubtitle>;
+  deleteSavedSubtitle(id: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -412,6 +414,9 @@ export class MemStorage implements IStorage {
   private userBadges: Map<string, UserBadge>;
   private passwordResetTokens: Map<string, PasswordResetToken>;
   private emailVerificationTokens: Map<string, EmailVerificationToken>;
+  private coinTransactions: Map<string, CoinTransaction>;
+  private activities: Map<string, Activity>;
+  private savedSubtitles: Map<string, SavedSubtitle>;
   private dataFile: string;
   private usersFile: string;
   private friendsFile!: string;
@@ -451,6 +456,8 @@ export class MemStorage implements IStorage {
     this.passwordResetTokens = new Map();
     this.emailVerificationTokens = new Map();
     this.coinTransactions = new Map();
+    this.activities = new Map();
+    this.savedSubtitles = new Map();
     this.categories = [
       { id: "action", name: "Action & Thriller", slug: "action" },
       { id: "drama", name: "Drama & Romance", slug: "drama" },
@@ -469,7 +476,7 @@ export class MemStorage implements IStorage {
     this.loadFriendsData();
     this.apiKeysFile = join(process.cwd(), "data", "api-keys.json");
     this.loadApiKeys();
-    this.loadApiKeys();
+    this.loadSavedSubtitles();
   }
 
   // Email Verification
@@ -714,10 +721,38 @@ export class MemStorage implements IStorage {
   }
 
   // Load users from users.json
-
+  private loadUsers() {
+    try {
+      if (existsSync(this.usersFile)) {
+        const data = JSON.parse(readFileSync(this.usersFile, "utf-8"));
+        if (data.users) {
+          data.users.forEach((user: User) => this.users.set(user.id, user));
+          console.log(`✅ Loaded ${data.users.length} users`);
+        }
+      }
+    } catch (error) {
+      console.error("❌ Error loading users:", error);
+    }
+  }
 
   // Save users to users.json
+  private saveUsers() {
+    try {
+      const data = {
+        users: Array.from(this.users.values()),
+        lastUpdated: new Date().toISOString(),
+      };
 
+      const dataDir = join(process.cwd(), "data");
+      if (!existsSync(dataDir)) {
+        mkdirSync(dataDir, { recursive: true });
+      }
+
+      writeFileSync(this.usersFile, JSON.stringify(data, null, 2), "utf-8");
+    } catch (error) {
+      console.error("❌ Error saving users:", error);
+    }
+  }
 
   // Shows methods
   async getAllShows(): Promise<Show[]> {
@@ -1620,38 +1655,6 @@ export class MemStorage implements IStorage {
   }
 
   // User Authentication Methods
-  private loadUsers() {
-    try {
-      if (existsSync(this.usersFile)) {
-        const data = JSON.parse(readFileSync(this.usersFile, "utf-8"));
-        if (data.users) {
-          data.users.forEach((user: User) => this.users.set(user.id, user));
-          console.log(`✅ Loaded ${data.users.length} users`);
-        }
-      }
-    } catch (error) {
-      console.error("❌ Error loading users:", error);
-    }
-  }
-
-  private saveUsers() {
-    try {
-      const data = {
-        users: Array.from(this.users.values()),
-        lastUpdated: new Date().toISOString(),
-      };
-
-      const dataDir = join(process.cwd(), "data");
-      if (!existsSync(dataDir)) {
-        mkdirSync(dataDir, { recursive: true });
-      }
-
-      writeFileSync(this.usersFile, JSON.stringify(data, null, 2), "utf-8");
-    } catch (error) {
-      console.error("❌ Error saving users:", error);
-    }
-  }
-
   private enrichUser(user: User): User {
     const userBadges = Array.from(this.userBadges.values())
       .filter(ub => ub.userId === user.id);
@@ -2670,6 +2673,63 @@ export class MemStorage implements IStorage {
     user.updatedAt = new Date();
     this.users.set(userId, user);
     this.saveUsers();
+  }
+
+  // ============================================
+  // SAVED SUBTITLES IMPLEMENTATION
+  // ============================================
+
+  async getSavedSubtitles(imdbId: string, season?: number, episode?: number): Promise<SavedSubtitle[]> {
+    return Array.from(this.savedSubtitles.values()).filter(sub => {
+      // Must match IMDB ID
+      if (sub.imdbId !== imdbId) return false;
+      
+      // If content demands season/episode, it must match.
+      // If subtitle has season/episode attached, it must match the request's season/episode.
+      // E.g., a movie subtitle has undefined season/episode, which matches a movie request.
+      if (sub.season !== season || sub.episode !== episode) return false;
+      
+      return true;
+    });
+  }
+
+  async saveSubtitle(data: Omit<SavedSubtitle, 'id' | 'addedAt'>): Promise<SavedSubtitle> {
+    // Check if an existing one with same language+imdbid+season+episode exists
+    const existing = Array.from(this.savedSubtitles.values()).find(sub => 
+      sub.imdbId === data.imdbId && 
+      sub.season === data.season && 
+      sub.episode === data.episode &&
+      sub.language === data.language
+    );
+
+    if (existing) {
+      // Overwrite it!
+      const updated: SavedSubtitle = {
+        ...existing,
+        ...data,
+      };
+      this.savedSubtitles.set(existing.id, updated);
+      this.saveSavedSubtitles();
+      return updated;
+    }
+
+    const id = randomUUID();
+    const sub: SavedSubtitle = {
+      ...data,
+      id,
+      addedAt: new Date().toISOString()
+    };
+    
+    this.savedSubtitles.set(id, sub);
+    this.saveSavedSubtitles();
+    return sub;
+  }
+
+  async deleteSavedSubtitle(id: string): Promise<void> {
+    if (this.savedSubtitles.has(id)) {
+      this.savedSubtitles.delete(id);
+      this.saveSavedSubtitles();
+    }
   }
 
   // ============================================

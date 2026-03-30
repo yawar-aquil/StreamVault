@@ -12,9 +12,10 @@ import crypto from 'crypto';
 
 // API URLs (in order of preference)
 const SUBTITLE_APIS = [
-    'https://subs.wyzie.ru',           // Primary
-    'https://sub.wyzie.ru/v2',         // Alternative mirror
-    'https://api.subdl.com/subtitle'   // SubDL API (backup)
+    { url: 'https://subs.wyzie.ru', type: 'wyzie' },           // Primary free
+    { url: 'https://sub.wyzie.ru/v2', type: 'wyzie' },         // Alternative mirror
+    { url: 'https://api.subdl.com/api/v1/subtitles', type: 'subdl' }, // SubDL API
+    { url: 'https://api.opensubtitles.com/api/v1/subtitles', type: 'opensubtitles' } // OpenSubtitles standard REST API
 ];
 
 // Subtitle cache directory
@@ -76,31 +77,69 @@ export async function searchSubtitles(
     console.log(`🔍 Subtitle search: imdbId=${imdbId}, season=${season}, episode=${episode}, lang=${language}`);
 
 
-    // Try each API in order
+    // Try each API in order, prioritizing APIs with keys if available
     for (let i = 0; i < SUBTITLE_APIS.length; i++) {
-        const baseUrl = SUBTITLE_APIS[i];
+        const provider = SUBTITLE_APIS[i];
+        const baseUrl = provider.url;
+
+        // Skip providers that strictly require API keys if we don't have them
+        if (provider.type === 'opensubtitles' && !process.env.OPENSUBTITLES_API_KEY) {
+            continue;
+        }
 
         try {
             let url: string;
+            const headers: any = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'application/json'
+            };
 
             // Different URL formats for different providers
-            if (baseUrl.includes('subdl.com')) {
-                // SubDL format
-                url = `${baseUrl}/search?imdb_id=${imdbId}&languages=${language}`;
+            if (provider.type === 'subdl') {
+                url = `${baseUrl}?imdb_id=${imdbId}&languages=${language}`;
                 if (season !== undefined && episode !== undefined) {
                     url += `&season_number=${season}&episode_number=${episode}`;
                 }
+                if (process.env.SUBDL_API_KEY) {
+                    url += `&api_key=${process.env.SUBDL_API_KEY}`;
+                } else {
+                    // fallback to old open endpoint if no key
+                    url = `https://api.subdl.com/subtitle/search?imdb_id=${imdbId}&languages=${language}`;
+                    if (season !== undefined && episode !== undefined) {
+                        url += `&season_number=${season}&episode_number=${episode}`;
+                    }
+                }
+            } else if (provider.type === 'opensubtitles') {
+                // OpenSubtitles uses 0-padded imdb ids sometimes, but accepts format without tt
+                const osImdbId = imdbId.replace('tt', '');
+                url = `${baseUrl}?imdb_id=${osImdbId}&languages=${language}`;
+                if (season !== undefined && episode !== undefined) {
+                    url += `&season_number=${season}&episode_number=${episode}`;
+                }
+                headers['Api-Key'] = process.env.OPENSUBTITLES_API_KEY;
+                // Add a unique User-Agent as required by OpenSubtitles
+                headers['User-Agent'] = 'StreamVault v1.0';
             } else {
                 // Wyzie format
                 url = `${baseUrl}/search?id=${imdbId}&language=${language}`;
                 if (season !== undefined && episode !== undefined) {
                     url += `&season=${season}&episode=${episode}`;
                 }
+                if (process.env.WYZIE_API_KEY) {
+                    url += `&apikey=${process.env.WYZIE_API_KEY}`;
+                }
             }
 
-            console.log(`🔍 Trying provider ${i + 1}/${SUBTITLE_APIS.length}: ${url}`);
+            console.log(`🔍 Trying provider ${i + 1}/${SUBTITLE_APIS.length} (${provider.type}): ${url.split('api_key')[0]}`); // Hide API keys in logs
 
-            const response = await fetchWithTimeout(url, 8000);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
+            
+            const response = await fetch(url, {
+                signal: controller.signal,
+                headers
+            });
+            clearTimeout(timeoutId);
 
             if (!response.ok) {
                 console.log(`⚠️ Provider ${i + 1} (${baseUrl}) returned ${response.status} ${response.statusText}, trying next...`);
@@ -112,7 +151,23 @@ export async function searchSubtitles(
             // Parse response based on provider format
             let subtitles: SubtitleResult[] = [];
 
-            if (Array.isArray(data)) {
+            if (provider.type === 'opensubtitles' && data.data && Array.isArray(data.data)) {
+                // OpenSubtitles format
+                subtitles = data.data.map((item: any, index: number) => {
+                    const attrs = item.attributes;
+                    const file = attrs?.files?.[0]; // Get first file associated
+                    return {
+                        id: item.id || `sub_${index}`,
+                        url: attrs.url || attrs.download_url || (file ? `https://api.opensubtitles.com/api/v1/download/${file.file_id}` : ''),
+                        downloadUrl: file ? file.file_id : attrs.url,
+                        lang: attrs.language || language,
+                        language: attrs.language || 'English',
+                        format: 'srt',
+                        hearingImpaired: attrs.hearing_impaired || false,
+                        provider: 'opensubtitles'
+                    };
+                });
+            } else if (Array.isArray(data)) {
                 // Wyzie format - array of subtitles
                 subtitles = data.map((sub: any, index: number) => ({
                     id: sub.id || `sub_${index}`,
@@ -122,7 +177,7 @@ export async function searchSubtitles(
                     language: sub.language || sub.LanguageName || 'English',
                     format: sub.format || 'srt',
                     hearingImpaired: sub.hearingImpaired || sub.SubHearingImpaired === '1' || false,
-                    provider: baseUrl.includes('subdl') ? 'subdl' : 'wyzie'
+                    provider: 'wyzie'
                 }));
             } else if (data.subtitles && Array.isArray(data.subtitles)) {
                 // SubDL format - { subtitles: [] }
@@ -138,7 +193,7 @@ export async function searchSubtitles(
                 }));
             }
 
-            // Filter out empty URLs
+            // Filter out empty URLs or OS files that need separate download step
             subtitles = subtitles.filter(s => s.url && s.url.startsWith('http'));
 
             if (subtitles.length > 0) {
@@ -212,7 +267,7 @@ export async function downloadSubtitle(subtitleUrl: string): Promise<string | nu
 /**
  * Convert SRT format to WebVTT format
  */
-function convertSrtToVtt(srt: string): string {
+export function convertSrtToVtt(srt: string): string {
     // Add WEBVTT header
     let vtt = 'WEBVTT\n\n';
 

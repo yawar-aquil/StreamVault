@@ -135,18 +135,18 @@ export default function Watch() {
         console.log(`🔍 Fetching subtitles for ${imdbMatch[0]} S${currentSeason}E${currentEpisode}`);
 
         const response = await fetch(
-          `/api/subtitles/search?imdbId=${imdbMatch[0]}&season=${currentSeason}&episode=${currentEpisode}&language=en`
+          `/api/subtitles/saved?imdbId=${imdbMatch[0]}&season=${currentSeason}&episode=${currentEpisode}`
         );
 
         if (!response.ok) {
-          console.error('Subtitle search failed');
+          console.error('Subtitle fetch failed');
           return;
         }
 
         const data = await response.json();
 
         if (data.subtitles && data.subtitles.length > 0) {
-          console.log(`✅ Found ${data.subtitles.length} subtitles`);
+          console.log(`✅ Found ${data.subtitles.length} assigned subtitles`);
 
           // Language code to full name mapping
           const langNames: Record<string, string> = {
@@ -156,17 +156,17 @@ export default function Watch() {
             'tr': 'Turkish', 'pl': 'Polish', 'nl': 'Dutch', 'sv': 'Swedish'
           };
 
-          // Convert to VideoPlayer format (use first 10 subtitles)
-          const tracks = data.subtitles.slice(0, 10).map((sub: any, index: number) => ({
-            file: sub.downloadUrl,
-            label: langNames[sub.lang] || sub.language || sub.lang || 'Unknown',
+          // Convert to VideoPlayer format
+          const tracks = data.subtitles.map((sub: any, index: number) => ({
+            file: sub.url,
+            label: langNames[sub.language] || sub.language || 'Unknown',
             kind: 'subtitles' as const,
-            default: index === 0
+            default: sub.language === 'en' || index === 0
           }));
 
           setSubtitleTracks(tracks);
         } else {
-          console.log('No subtitles found');
+          console.log('No assigned subtitles found');
         }
       } catch (error) {
         console.error('Error fetching subtitles:', error);
