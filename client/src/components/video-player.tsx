@@ -251,7 +251,7 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
                 fontFamily: 'Arial, sans-serif',
                 fontOpacity: 100,
                 backgroundColor: '#000000',
-                backgroundOpacity: 75,
+                backgroundOpacity: 0,
                 edgeStyle: 'uniform',
                 windowColor: '#000000',
                 windowOpacity: 0

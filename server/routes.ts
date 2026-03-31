@@ -8247,6 +8247,155 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==========================================
+  // Subtitle Auto-Assigner Background Job
+  // ==========================================
+
+  let subtitleAutoAssignJob: {
+    status: 'idle' | 'running' | 'done' | 'error';
+    startedAt?: Date;
+    completedAt?: Date;
+    checked: number;
+    total: number;
+    assignedCount: number;
+    failedCount: number;
+    error?: string;
+  } = { status: 'idle', checked: 0, total: 0, assignedCount: 0, failedCount: 0 };
+
+  app.post("/api/admin/subtitles/auto-assign/start", requireAdmin, async (req, res) => {
+    if (subtitleAutoAssignJob.status === 'running') {
+      return res.json({ message: "Job already running", status: subtitleAutoAssignJob.status });
+    }
+
+    const { contentType, language } = req.body;
+    if (!language) {
+      return res.status(400).json({ error: "Language is required" });
+    }
+
+    subtitleAutoAssignJob = { status: 'running', startedAt: new Date(), checked: 0, total: 0, assignedCount: 0, failedCount: 0 };
+
+    (async () => {
+      try {
+        const movies = await storage.getAllMovies();
+        const shows = await storage.getAllShows();
+        const episodes = await storage.getAllEpisodes();
+        const anime = await storage.getAllAnime();
+        const animeEpisodes = await storage.getAllAnimeEpisodes();
+
+        // Collect all items to process
+        const itemsToProcess: { id: string, imdbId: string, season?: number, episode?: number, title: string, isShowTitle: boolean }[] = [];
+
+        // Helper to extract IMDB
+        const extractImdb = (externalLinksStr: string | null | undefined): string | null => {
+            if (!externalLinksStr) return null;
+            try {
+                const links = typeof externalLinksStr === 'string' ? JSON.parse(externalLinksStr) : externalLinksStr;
+                return links.imdb || null;
+            } catch { return null; }
+        };
+
+        if (contentType === 'movies' || contentType === 'all') {
+            for (const movie of movies) {
+                const imdb = extractImdb(movie.externalLinks);
+                if (imdb) itemsToProcess.push({ id: movie.id, imdbId: imdb, title: movie.title, isShowTitle: false });
+            }
+        }
+
+        if (contentType === 'shows' || contentType === 'all') {
+             const showImdbMap = new Map<string, string>();
+             for (const show of shows) {
+                 const imdb = extractImdb(show.externalLinks);
+                 if (imdb) showImdbMap.set(show.id, imdb);
+             }
+             
+             for (const ep of episodes) {
+                 const parentImdb = showImdbMap.get(ep.showId);
+                 if (parentImdb && ep.season && ep.episodeNumber) {
+                     itemsToProcess.push({ id: ep.id, imdbId: parentImdb, season: ep.season, episode: ep.episodeNumber, title: ep.title, isShowTitle: true });
+                 }
+             }
+        }
+
+        if (contentType === 'anime' || contentType === 'all') {
+             const animeImdbMap = new Map<string, string>();
+             for (const a of anime) {
+                 const imdb = extractImdb(a.externalLinks);
+                 if (imdb) animeImdbMap.set(a.id, imdb);
+             }
+             
+             for (const ep of animeEpisodes) {
+                 const parentImdb = animeImdbMap.get(ep.animeId);
+                 if (parentImdb) {
+                     itemsToProcess.push({ id: ep.id, imdbId: parentImdb, season: ep.season || 1, episode: ep.episodeNumber, title: ep.title, isShowTitle: true });
+                 }
+             }
+        }
+
+        subtitleAutoAssignJob.total = itemsToProcess.length;
+
+        const pathMod = await import('path');
+
+        for (let i = 0; i < itemsToProcess.length; i++) {
+            const item = itemsToProcess[i];
+            
+            try {
+                // Ensure correct exact IMDB match (tt prefix)
+                const imdbStr = item.imdbId.startsWith('tt') ? item.imdbId : `tt${item.imdbId}`;
+                const result = await searchSubtitles(imdbStr, item.season, item.episode, language);
+                
+                if (result.subtitles && result.subtitles.length > 0) {
+                    const best = result.subtitles.sort((a,b) => (b.downloads || 0) - (a.downloads || 0))[0];
+                    if (best && best.url) {
+                        const cachedPath = await downloadSubtitle(best.url);
+                        if (cachedPath) {
+                            const baseName = pathMod.basename(cachedPath);
+                            const fileHash = baseName.split('.')[0];
+                            const localUrl = `/api/subtitles/file/${fileHash}`;
+                            await storage.saveSubtitle({
+                                imdbId: imdbStr,
+                                season: item.season,
+                                episode: item.episode,
+                                language: best.language || language,
+                                url: localUrl,
+                                fileName: baseName
+                            });
+                            subtitleAutoAssignJob.assignedCount++;
+                        } else {
+                            subtitleAutoAssignJob.failedCount++;
+                        }
+                    } else { subtitleAutoAssignJob.failedCount++; }
+                } else {
+                    subtitleAutoAssignJob.failedCount++;
+                }
+            } catch (err) {
+                console.error(`Error auto-assigning for ${item.title}:`, err);
+                subtitleAutoAssignJob.failedCount++;
+            }
+
+            subtitleAutoAssignJob.checked++;
+            
+            // Wait 1000ms before next request to avoid rate limits
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        subtitleAutoAssignJob.status = 'done';
+        subtitleAutoAssignJob.completedAt = new Date();
+        console.log(`✅ Bulk Subtitle Job Complete. Assigned: ${subtitleAutoAssignJob.assignedCount}`);
+
+      } catch (err: any) {
+         subtitleAutoAssignJob.status = 'error';
+         subtitleAutoAssignJob.error = err.message || 'Unknown error';
+         console.error('❌ Bulk Subtitle Job Failed:', err);
+      }
+    })();
+
+    res.json({ message: "Started background subtitle assignment", status: "running" });
+  });
+
+  app.get("/api/admin/subtitles/auto-assign/status", requireAdmin, async (_req, res) => {
+    res.json(subtitleAutoAssignJob);
+  });
+
   // Check a single URL
   app.post("/api/admin/url-health/check-single", requireAdmin, async (req, res) => {
     try {

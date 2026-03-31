@@ -79,15 +79,13 @@ export async function searchSubtitles(
 ): Promise<SubtitleSearchResponse> {
     console.log(`🔍 Subtitle search: imdbId=${imdbId}, season=${season}, episode=${episode}, lang=${language}`);
 
-
-    // Try each API in order, prioritizing APIs with keys if available
-    for (let i = 0; i < SUBTITLE_APIS.length; i++) {
-        const provider = SUBTITLE_APIS[i];
+    // Fetch from all providers in parallel and merge results
+    const providerPromises = SUBTITLE_APIS.map(async (provider) => {
         const baseUrl = provider.url;
 
         // Skip providers that strictly require API keys if we don't have them
         if (provider.type === 'opensubtitles' && !process.env.OPENSUBTITLES_API_KEY) {
-            continue;
+            return [];
         }
 
         try {
@@ -106,21 +104,18 @@ export async function searchSubtitles(
                 if (process.env.SUBDL_API_KEY) {
                     url += `&api_key=${process.env.SUBDL_API_KEY}`;
                 } else {
-                    // fallback to old open endpoint if no key
                     url = `https://api.subdl.com/subtitle/search?imdb_id=${imdbId}&languages=${language}`;
                     if (season !== undefined && episode !== undefined) {
                         url += `&season_number=${season}&episode_number=${episode}`;
                     }
                 }
             } else if (provider.type === 'opensubtitles') {
-                // OpenSubtitles uses 0-padded imdb ids sometimes, but accepts format without tt
                 const osImdbId = imdbId.replace('tt', '');
                 url = `${baseUrl}?imdb_id=${osImdbId}&languages=${language}`;
                 if (season !== undefined && episode !== undefined) {
                     url += `&season_number=${season}&episode_number=${episode}`;
                 }
                 headers['Api-Key'] = process.env.OPENSUBTITLES_API_KEY;
-                // Add a unique User-Agent as required by OpenSubtitles
                 headers['User-Agent'] = 'StreamVault v1.0';
             } else {
                 // Wyzie format
@@ -133,34 +128,28 @@ export async function searchSubtitles(
                 }
             }
 
-            console.log(`🔍 Trying provider ${i + 1}/${SUBTITLE_APIS.length} (${provider.type}): ${url.split('api_key')[0]}`); // Hide API keys in logs
+            console.log(`🔍 Querying provider ${provider.type}: ${url.split('api_key')[0]}`);
 
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000);
-            
-            const response = await fetch(url, {
-                signal: controller.signal,
-                headers
-            });
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+            const response = await fetch(url, { signal: controller.signal, headers });
             clearTimeout(timeoutId);
 
             if (!response.ok) {
-                console.log(`⚠️ Provider ${i + 1} (${baseUrl}) returned ${response.status} ${response.statusText}, trying next...`);
-                continue;
+                console.log(`⚠️ Provider ${provider.type} returned ${response.status}, skipping...`);
+                return [];
             }
 
             const data = await response.json();
-
-            // Parse response based on provider format
             let subtitles: SubtitleResult[] = [];
 
             if (provider.type === 'opensubtitles' && data.data && Array.isArray(data.data)) {
-                // OpenSubtitles format
                 subtitles = data.data.map((item: any, index: number) => {
                     const attrs = item.attributes;
-                    const file = attrs?.files?.[0]; // Get first file associated
+                    const file = attrs?.files?.[0];
                     return {
-                        id: item.id || `sub_${index}`,
+                        id: item.id || `os_${index}`,
                         url: file ? `https://api.opensubtitles.com/api/v1/download/${file.file_id}` : (attrs.url || ''),
                         downloadUrl: file ? file.file_id : attrs.url,
                         lang: attrs.language || language,
@@ -174,9 +163,9 @@ export async function searchSubtitles(
                     };
                 });
             } else if (Array.isArray(data)) {
-                // Wyzie format - array of subtitles
+                // Wyzie format
                 subtitles = data.map((sub: any, index: number) => ({
-                    id: sub.id || `sub_${index}`,
+                    id: sub.id || `wyzie_${index}`,
                     url: sub.url || sub.SubDownloadLink || '',
                     downloadUrl: sub.url || sub.SubDownloadLink || '',
                     lang: sub.lang || sub.LanguageId || language,
@@ -189,9 +178,9 @@ export async function searchSubtitles(
                     rating: sub.SubRating ? parseFloat(sub.SubRating) : (sub.rating || 0)
                 }));
             } else if (data.subtitles && Array.isArray(data.subtitles)) {
-                // SubDL format - { subtitles: [] }
+                // SubDL format
                 subtitles = data.subtitles.map((sub: any, index: number) => ({
-                    id: sub.id || sub.subtitle_id || `sub_${index}`,
+                    id: sub.id || sub.subtitle_id || `subdl_${index}`,
                     url: sub.url || sub.download_url || '',
                     downloadUrl: sub.url || sub.download_url || '',
                     lang: sub.lang || sub.language || language,
@@ -205,25 +194,42 @@ export async function searchSubtitles(
                 }));
             }
 
-            // Filter out empty URLs or OS files that need separate download step
+            // Filter out empty/invalid URLs
             subtitles = subtitles.filter(s => s.url && s.url.startsWith('http'));
-
-            if (subtitles.length > 0) {
-                console.log(`✅ Found ${subtitles.length} subtitles from provider ${i + 1}`);
-                return { subtitles };
-            } else {
-                console.log(`⚠️ No valid subtitles found from provider ${i + 1}, trying next...`);
-            }
+            console.log(`✅ ${provider.type}: found ${subtitles.length} subtitles`);
+            return subtitles;
 
         } catch (error: any) {
-            console.log(`⚠️ Provider ${i + 1} (${baseUrl}) failed: ${error.message}, trying next...`);
-            continue;
+            console.log(`⚠️ Provider ${provider.type} failed: ${error.message}`);
+            return [];
+        }
+    });
+
+    // Wait for all providers (don't let one failure kill the rest)
+    const results = await Promise.allSettled(providerPromises);
+
+    const allSubtitles: SubtitleResult[] = [];
+    const seenUrls = new Set<string>();
+
+    for (const result of results) {
+        if (result.status === 'fulfilled') {
+            for (const sub of result.value) {
+                // De-duplicate by URL
+                if (!seenUrls.has(sub.url)) {
+                    seenUrls.add(sub.url);
+                    allSubtitles.push(sub);
+                }
+            }
         }
     }
 
-    // All providers failed
-    console.error('❌ All subtitle providers failed');
-    return { subtitles: [], error: 'All subtitle providers failed' };
+    if (allSubtitles.length === 0) {
+        console.error('❌ All subtitle providers returned no results');
+        return { subtitles: [], error: 'No subtitles found from any provider' };
+    }
+
+    console.log(`✅ Total subtitles from all providers: ${allSubtitles.length}`);
+    return { subtitles: allSubtitles };
 }
 
 /**

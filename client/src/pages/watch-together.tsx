@@ -809,7 +809,7 @@ function WatchTogetherContent() {
         // Only attach listener for non-host viewers
         if (!socket || isHost) return;
 
-        const handleVideoSync = (state: { isPlaying: boolean; currentTime: number; playbackRate: number }) => {
+        const handleVideoSync = (state: { isPlaying: boolean; currentTime: number; playbackRate: number; currentSubtitleIndex?: number }) => {
             console.log('🎬 Received video sync:', state);
 
             const player = videoPlayerRef.current;
@@ -838,6 +838,13 @@ function WatchTogetherContent() {
             } else if (!state.isPlaying && !player.isPaused()) {
                 console.log('🎬 Pausing video (sync)');
                 player.pause();
+            }
+            
+            // Sync subtitles from state
+            if (state.currentSubtitleIndex !== undefined) {
+                // To avoid redundant calls, we could add a check if we had a getter, 
+                // but setting the same index on JWPlayer is harmless.
+                player.setCaptions(state.currentSubtitleIndex);
             }
         };
 
