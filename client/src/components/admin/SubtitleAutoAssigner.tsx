@@ -27,7 +27,7 @@ export function SubtitleAutoAssigner() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/admin/subtitles/auto-assign/status', { headers: getAuthHeaders() });
+        const res = await fetch('/api/admin/subtitles/auto-assign/status', { headers: getAuthHeaders(), credentials: 'include' });
         if (!res.ok) return;
         const data = await res.json();
         
@@ -46,7 +46,7 @@ export function SubtitleAutoAssigner() {
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(async () => {
       try {
-        const res = await fetch('/api/admin/subtitles/auto-assign/status', { headers: getAuthHeaders() });
+        const res = await fetch('/api/admin/subtitles/auto-assign/status', { headers: getAuthHeaders(), credentials: 'include' });
         if (!res.ok) return;
         const data = await res.json();
         
@@ -83,6 +83,7 @@ export function SubtitleAutoAssigner() {
       const res = await fetch('/api/admin/subtitles/auto-assign/start', {
         method: 'POST',
         headers: getAuthHeaders(),
+        credentials: 'include',
         body: JSON.stringify({ contentType, language })
       });
       
