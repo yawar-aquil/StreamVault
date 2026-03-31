@@ -12,8 +12,7 @@ import crypto from 'crypto';
 
 // API URLs (in order of preference)
 const SUBTITLE_APIS = [
-    { url: 'https://subs.wyzie.ru', type: 'wyzie' },           // Primary free
-    { url: 'https://sub.wyzie.ru/v2', type: 'wyzie' },         // Alternative mirror
+    { url: 'https://sub.wyzie.io', type: 'wyzie' },           // Primary free
     { url: 'https://api.subdl.com/api/v1/subtitles', type: 'subdl' }, // SubDL API
     { url: 'https://api.opensubtitles.com/api/v1/subtitles', type: 'opensubtitles' } // OpenSubtitles standard REST API
 ];
@@ -120,12 +119,13 @@ export async function searchSubtitles(
                 headers['User-Agent'] = 'StreamVault v1.0';
             } else {
                 // Wyzie format
-                url = `${baseUrl}/search?id=${imdbId}&language=${language}`;
-                if (season !== undefined && episode !== undefined) {
-                    url += `&season=${season}&episode=${episode}`;
-                }
-                if (process.env.WYZIE_API_KEY) {
-                    url += `&apikey=${process.env.WYZIE_API_KEY}`;
+                if (!process.env.WYZIE_API_KEY) {
+                    url = 'invalid'; // Skip if no key
+                } else {
+                    url = `${baseUrl}/search?key=${process.env.WYZIE_API_KEY}&id=${imdbId}&language=${language}`;
+                    if (season !== undefined && episode !== undefined) {
+                        url += `&season=${season}&episode=${episode}`;
+                    }
                 }
             }
 
@@ -137,8 +137,8 @@ export async function searchSubtitles(
             const response = await fetch(url, { signal: controller.signal, headers });
             clearTimeout(timeoutId);
 
-            if (!response.ok) {
-                console.log(`⚠️ Provider ${provider.type} returned ${response.status}, skipping...`);
+            if (url === 'invalid' || !response.ok) {
+                if (url !== 'invalid') console.log(`⚠️ Provider ${provider.type} returned ${response.status}, skipping...`);
                 return [];
             }
 
@@ -167,16 +167,16 @@ export async function searchSubtitles(
                 // Wyzie format
                 subtitles = data.map((sub: any, index: number) => ({
                     id: sub.id || `wyzie_${index}`,
-                    url: sub.url || sub.SubDownloadLink || '',
-                    downloadUrl: sub.url || sub.SubDownloadLink || '',
-                    lang: sub.lang || sub.LanguageId || language,
-                    language: sub.language || sub.LanguageName || 'English',
-                    format: sub.format || 'srt',
-                    hearingImpaired: sub.hearingImpaired || sub.SubHearingImpaired === '1' || false,
+                    url: `https://sub.wyzie.io/download?key=${process.env.WYZIE_API_KEY}&id=${sub.id}`,
+                    downloadUrl: `https://sub.wyzie.io/download?key=${process.env.WYZIE_API_KEY}&id=${sub.id}`,
+                    lang: sub.language || language,
+                    language: sub.display || 'English',
+                    format: 'srt',
+                    hearingImpaired: false,
                     provider: 'wyzie',
-                    releaseName: sub.MovieReleaseName || sub.release || undefined,
-                    downloads: sub.SubDownloadsCnt ? parseInt(sub.SubDownloadsCnt) : (sub.downloads || 0),
-                    rating: sub.SubRating ? parseFloat(sub.SubRating) : (sub.rating || 0)
+                    releaseName: sub.media || undefined,
+                    downloads: sub.downloadCount || 0,
+                    rating: 0
                 }));
             } else if ((data.subtitles && Array.isArray(data.subtitles)) || (data.results && Array.isArray(data.results))) {
                 // SubDL format
@@ -274,13 +274,12 @@ export async function downloadSubtitle(subtitleUrl: string): Promise<string | nu
                 console.error(`❌ Cannot download from OpenSubtitles: Missing API Key or invalid file_id`);
                 return null;
             }
-        } else if (subtitleUrl.includes('sub.wyzie.') && process.env.WYZIE_API_KEY) {
-            // Append Wyzie API key for authorization
+        } else if (subtitleUrl.includes('sub.wyzie.io') && process.env.WYZIE_API_KEY) {
+            // Ensure Wyzie API key is appended securely
             const urlObj = new URL(subtitleUrl);
             if (!urlObj.searchParams.has('key')) {
                 urlObj.searchParams.append('key', process.env.WYZIE_API_KEY);
                 subtitleUrl = urlObj.toString();
-                console.log(`🔑 Appended official Wyzie API Key to URL`);
             }
         }
 
