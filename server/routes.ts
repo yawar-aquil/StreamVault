@@ -7192,15 +7192,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`[Admin] ⬇️ Downloading & Saving Subtitle: ${language} for ${imdbId} ${season ? `S${season}` : ''} ${episode ? `E${episode}` : ''}`);
 
+      // Try to download and cache the subtitle as a local .vtt file
       const cachedPath = await downloadSubtitle(subtitleUrl);
 
       if (!cachedPath) {
-        return res.status(404).json({ error: "Subtitle not found or download failed" });
+        return res.status(400).json({ 
+          error: "Provider link is protected",
+          details: "This provider returned a webpage or protected link instead of a raw subtitle file. Please use the manual 'Upload File' tab for this specific subtitle."
+        });
       }
 
-      const path = await import('path');
-      const fileName = path.basename(cachedPath);
-      const fileHash = fileName.split('.')[0];
+      console.log(`[Admin] ✅ Subtitle downloaded and cached locally`);
+      const pathMod = await import('path');
+      const baseName = pathMod.basename(cachedPath);
+      const fileHash = baseName.split('.')[0];
       const localUrl = `/api/subtitles/file/${fileHash}`;
 
       const savedData = {
@@ -7209,7 +7214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         episode: episode ? parseInt(episode as string) : undefined,
         language,
         url: localUrl,
-        fileName
+        fileName: baseName
       };
 
       const savedSub = await storage.saveSubtitle(savedData);
