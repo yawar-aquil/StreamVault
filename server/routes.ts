@@ -8259,8 +8259,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     total: number;
     assignedCount: number;
     failedCount: number;
+    failedItems: Array<{ id: number; imdbId: string; season?: number; episode?: number; title: string; isShowTitle: boolean }>;
     error?: string;
-  } = { status: 'idle', checked: 0, total: 0, assignedCount: 0, failedCount: 0 };
+  } = { status: 'idle', checked: 0, total: 0, assignedCount: 0, failedCount: 0, failedItems: [] };
 
   app.post("/api/admin/subtitles/auto-assign/start", requireAdmin, async (req, res) => {
     if (subtitleAutoAssignJob.status === 'running') {
@@ -8272,7 +8273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ error: "Language is required" });
     }
 
-    subtitleAutoAssignJob = { status: 'running', startedAt: new Date(), checked: 0, total: 0, assignedCount: 0, failedCount: 0 };
+    subtitleAutoAssignJob = { status: 'running', startedAt: new Date(), checked: 0, total: 0, assignedCount: 0, failedCount: 0, failedItems: [] };
 
     (async () => {
       try {
@@ -8380,13 +8381,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
                         subtitleAutoAssignJob.assignedCount++;
                     } else {
                         subtitleAutoAssignJob.failedCount++;
+                        subtitleAutoAssignJob.failedItems.push(item);
                     }
                 } else {
                     subtitleAutoAssignJob.failedCount++;
+                    subtitleAutoAssignJob.failedItems.push(item);
                 }
             } catch (err) {
                 console.error(`Error auto-assigning for ${item.title}:`, err);
                 subtitleAutoAssignJob.failedCount++;
+                subtitleAutoAssignJob.failedItems.push(item);
             }
 
             subtitleAutoAssignJob.checked++;

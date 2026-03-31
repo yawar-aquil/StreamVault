@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { getAuthHeaders } from "@/lib/auth";
-import { Loader2, PlayCircle, Info } from "lucide-react";
+import { Loader2, PlayCircle, Info, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export function SubtitleAutoAssigner() {
@@ -165,13 +165,37 @@ export function SubtitleAutoAssigner() {
             </div>
 
             {jobState.status === 'done' && (
-                <Alert className="mt-4 bg-green-500/10 text-green-600 border-none">
-                   <Info className="h-4 w-4 shrink-0 mr-2 opacity-50 text-green-600" />
-                   <AlertTitle>Job Completed successfully</AlertTitle>
-                   <AlertDescription className="text-xs">
-                     Finished checking {jobState.total} items. Downloaded {jobState.assignedCount} new subtitles. It's safe to run this again anytime.
-                   </AlertDescription>
-                </Alert>
+                <div className="space-y-4 shadow-sm pb-2">
+                   <Alert className="mt-4 bg-green-500/10 text-green-600 border-none">
+                     <Info className="h-4 w-4 shrink-0 mr-2 opacity-50 text-green-600" />
+                     <AlertTitle>Job Completed successfully</AlertTitle>
+                     <AlertDescription className="text-xs">
+                       Finished checking {jobState.total} items. Downloaded {jobState.assignedCount} new subtitles. It's safe to run this again anytime.
+                     </AlertDescription>
+                   </Alert>
+                   
+                   {jobState.failedItems && jobState.failedItems.length > 0 && (
+                     <div className="border border-red-500/20 rounded-md p-4 bg-red-500/5 max-h-[300px] overflow-y-auto">
+                        <div className="flex items-center gap-2 mb-3">
+                           <AlertTriangle className="w-4 h-4 text-orange-500" />
+                           <h4 className="font-semibold text-sm text-orange-500">Failed / Missing ({jobState.failedItems.length})</h4>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-4">The following items could not be matched automatically. You can use the Subtitle Manager above to search for them manually and select an exact match.</p>
+                        <ul className="space-y-2">
+                          {jobState.failedItems.map((item: any) => (
+                             <li key={item.id} className="text-xs flex items-center justify-between border-b border-border/50 pb-2">
+                                <span className="font-medium text-foreground truncate w-2/3">
+                                   {item.title} {item.isShowTitle ? `S${item.season}E${item.episode}` : ''}
+                                </span>
+                                <span className="text-muted-foreground font-mono bg-muted/50 px-2 py-0.5 rounded">
+                                   {item.imdbId}
+                                </span>
+                             </li>
+                          ))}
+                        </ul>
+                     </div>
+                   )}
+                </div>
             )}
              {jobState.error && (
                  <div className="p-3 bg-red-500/10 text-red-500 text-sm mt-3 rounded-md line-clamp-2">
