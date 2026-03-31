@@ -158,7 +158,7 @@ export async function searchSubtitles(
                     const file = attrs?.files?.[0]; // Get first file associated
                     return {
                         id: item.id || `sub_${index}`,
-                        url: attrs.url || attrs.download_url || (file ? `https://api.opensubtitles.com/api/v1/download/${file.file_id}` : ''),
+                        url: file ? `https://api.opensubtitles.com/api/v1/download/${file.file_id}` : (attrs.url || ''),
                         downloadUrl: file ? file.file_id : attrs.url,
                         lang: attrs.language || language,
                         language: attrs.language || 'English',
@@ -221,6 +221,49 @@ export async function searchSubtitles(
  */
 export async function downloadSubtitle(subtitleUrl: string): Promise<string | null> {
     try {
+        // Intercept OpenSubtitles API download links
+        if (subtitleUrl.includes('api.opensubtitles.com/api/v1/download/')) {
+            const match = subtitleUrl.match(/download\/(\d+)$/);
+            const fileId = match ? parseInt(match[1]) : null;
+            
+            if (fileId && process.env.OPENSUBTITLES_API_KEY) {
+                console.log(`🔑 Requesting official OpenSubtitles download link for file ${fileId}...`);
+                const tokenRes = await fetch('https://api.opensubtitles.com/api/v1/download', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'Api-Key': process.env.OPENSUBTITLES_API_KEY
+                    },
+                    body: JSON.stringify({ file_id: fileId })
+                });
+
+                if (tokenRes.ok) {
+                    const data = await tokenRes.json();
+                    if (data.link) {
+                        subtitleUrl = data.link;
+                        console.log(`✅ Got official download link from OpenSubtitles.`);
+                    } else {
+                        throw new Error("OpenSubtitles didn't return a link. Possibly reached quota.");
+                    }
+                } else {
+                    console.error(`❌ Failed to get OpenSubtitle token: ${tokenRes.status} ${tokenRes.statusText}`);
+                    return null;
+                }
+            } else {
+                console.error(`❌ Cannot download from OpenSubtitles: Missing API Key or invalid file_id`);
+                return null;
+            }
+        } else if (subtitleUrl.includes('sub.wyzie.') && process.env.WYZIE_API_KEY) {
+            // Append Wyzie API key for authorization
+            const urlObj = new URL(subtitleUrl);
+            if (!urlObj.searchParams.has('key')) {
+                urlObj.searchParams.append('key', process.env.WYZIE_API_KEY);
+                subtitleUrl = urlObj.toString();
+                console.log(`🔑 Appended official Wyzie API Key to URL`);
+            }
+        }
+
         // Generate cache filename from URL hash
         const urlHash = crypto.createHash('md5').update(subtitleUrl).digest('hex');
         const cachedPath = path.join(SUBTITLE_CACHE_DIR, `${urlHash}.vtt`);
