@@ -404,25 +404,48 @@ export function SubtitleManager({ shows, movies, anime }: SubtitleManagerProps) 
               </div>
             ) : (
              <div className="space-y-2">
-                {searchResults.map((sub, i) => (
-                  <div key={sub.id || i} className="flex items-center justify-between p-3 border rounded-lg bg-card hover:bg-muted/50 transition-colors">
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-sm">
-                        Format: {sub.format.toUpperCase()} | Provider: {sub.provider}
-                      </span>
-                      <span className="text-xs text-muted-foreground mt-1 truncate max-w-[300px] md:max-w-[500px]" title={sub.url}>
-                        {subUrlToFilename(sub.url)}
-                      </span>
-                      {sub.hearingImpaired && (
-                        <Badge variant="outline" className="mt-1 w-fit text-xs border-orange-500/50 text-orange-500">
-                          Hearing Impaired (HI)
-                        </Badge>
+                {[...searchResults].sort((a,b) => (b.downloads || 0) - (a.downloads || 0)).map((sub, i) => (
+                  <div key={sub.id || i} className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 border rounded-lg transition-colors ${i === 0 ? 'bg-primary/5 border-primary/30' : 'bg-card hover:bg-muted/50'}`}>
+                    <div className="flex flex-col flex-1 mb-2 sm:mb-0 mr-4">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {i === 0 && (
+                          <Badge variant="default" className="text-[10px] h-5">Top Match</Badge>
+                        )}
+                        <span className="font-semibold text-sm">
+                          {sub.provider.toUpperCase()}
+                        </span>
+                        {(sub.downloads || sub.downloads === 0) && (
+                          <Badge variant="secondary" className="text-[10px] h-5 bg-blue-500/10 text-blue-500 border-none">
+                            {sub.downloads.toLocaleString()} downloads
+                          </Badge>
+                        )}
+                        {(sub.rating && sub.rating > 0) ? (
+                          <Badge variant="secondary" className="text-[10px] h-5 bg-green-500/10 text-green-500 border-none">
+                            ★ {sub.rating}
+                          </Badge>
+                        ) : null}
+                        {sub.hearingImpaired && (
+                          <Badge variant="outline" className="h-5 text-[10px] border-orange-500/50 text-orange-500">
+                            HI
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      {sub.releaseName && (
+                        <span className="text-xs font-medium text-foreground mt-1.5 break-all line-clamp-2">
+                          {sub.releaseName}
+                        </span>
                       )}
+                      
+                      <span className="text-[10px] text-muted-foreground mt-1 truncate" title={sub.url}>
+                         File: {subUrlToFilename(sub.url)}
+                      </span>
                     </div>
                     <Button 
                       size="sm" 
                       onClick={() => saveMutation.mutate(sub.url)}
                       disabled={saveMutation.isPending}
+                      className="shrink-0"
                     >
                       {saveMutation.isPending ? (
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />

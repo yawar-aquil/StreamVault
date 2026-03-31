@@ -35,6 +35,9 @@ export interface SubtitleResult {
     format: string;
     hearingImpaired: boolean;
     provider: string;
+    releaseName?: string;
+    downloads?: number;
+    rating?: number;
 }
 
 export interface SubtitleSearchResponse {
@@ -164,7 +167,10 @@ export async function searchSubtitles(
                         language: attrs.language || 'English',
                         format: 'srt',
                         hearingImpaired: attrs.hearing_impaired || false,
-                        provider: 'opensubtitles'
+                        provider: 'opensubtitles',
+                        releaseName: attrs.release || file?.file_name || undefined,
+                        downloads: attrs.download_count || 0,
+                        rating: attrs.ratings || 0
                     };
                 });
             } else if (Array.isArray(data)) {
@@ -177,7 +183,10 @@ export async function searchSubtitles(
                     language: sub.language || sub.LanguageName || 'English',
                     format: sub.format || 'srt',
                     hearingImpaired: sub.hearingImpaired || sub.SubHearingImpaired === '1' || false,
-                    provider: 'wyzie'
+                    provider: 'wyzie',
+                    releaseName: sub.MovieReleaseName || sub.release || undefined,
+                    downloads: sub.SubDownloadsCnt ? parseInt(sub.SubDownloadsCnt) : (sub.downloads || 0),
+                    rating: sub.SubRating ? parseFloat(sub.SubRating) : (sub.rating || 0)
                 }));
             } else if (data.subtitles && Array.isArray(data.subtitles)) {
                 // SubDL format - { subtitles: [] }
@@ -189,7 +198,10 @@ export async function searchSubtitles(
                     language: sub.language_name || sub.language || 'English',
                     format: sub.format || 'srt',
                     hearingImpaired: sub.hi || sub.hearing_impaired || false,
-                    provider: 'subdl'
+                    provider: 'subdl',
+                    releaseName: sub.release_name || sub.name || undefined,
+                    downloads: sub.download_count || sub.downloads || 0,
+                    rating: sub.rating || 0
                 }));
             }
 
