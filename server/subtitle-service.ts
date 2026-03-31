@@ -9,6 +9,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import AdmZip from 'adm-zip';
 
 // API URLs (in order of preference)
 const SUBTITLE_APIS = [
@@ -102,6 +103,7 @@ export async function searchSubtitles(
                     url += `&season_number=${season}&episode_number=${episode}`;
                 }
                 if (process.env.SUBDL_API_KEY) {
+                    url += `&type=${(season !== undefined) ? 'tv' : 'movie'}`;
                     url += `&api_key=${process.env.SUBDL_API_KEY}`;
                 } else {
                     url = `https://api.subdl.com/subtitle/search?imdb_id=${imdbId}&languages=${language}`;
@@ -177,15 +179,16 @@ export async function searchSubtitles(
                     downloads: sub.SubDownloadsCnt ? parseInt(sub.SubDownloadsCnt) : (sub.downloads || 0),
                     rating: sub.SubRating ? parseFloat(sub.SubRating) : (sub.rating || 0)
                 }));
-            } else if (data.subtitles && Array.isArray(data.subtitles)) {
+            } else if ((data.subtitles && Array.isArray(data.subtitles)) || (data.results && Array.isArray(data.results))) {
                 // SubDL format
-                subtitles = data.subtitles.map((sub: any, index: number) => ({
-                    id: sub.id || sub.subtitle_id || `subdl_${index}`,
-                    url: sub.url || sub.download_url || '',
-                    downloadUrl: sub.url || sub.download_url || '',
+                const items = data.subtitles || data.results;
+                subtitles = items.map((sub: any, index: number) => ({
+                    id: sub.id || sub.subtitle_id || sub.sd_id || `subdl_${index}`,
+                    url: sub.url ? `https://dl.subdl.com${sub.url}` : sub.download_url || '',
+                    downloadUrl: sub.url ? `https://dl.subdl.com${sub.url}` : sub.download_url || '',
                     lang: sub.lang || sub.language || language,
                     language: sub.language_name || sub.language || 'English',
-                    format: sub.format || 'srt',
+                    format: sub.format || (sub.url && sub.url.endsWith('zip') ? 'zip' : 'srt'),
                     hearingImpaired: sub.hi || sub.hearing_impaired || false,
                     provider: 'subdl',
                     releaseName: sub.release_name || sub.name || undefined,
@@ -306,7 +309,26 @@ export async function downloadSubtitle(subtitleUrl: string): Promise<string | nu
             return null;
         }
 
-        let content = await response.text();
+        let content = '';
+
+        const isZip = subtitleUrl.endsWith('.zip') || response.headers.get('content-type')?.includes('zip');
+        if (isZip) {
+            console.log(`📦 Unzipping downloaded file...`);
+            const arrayBuffer = await response.arrayBuffer();
+            const zip = new AdmZip(Buffer.from(arrayBuffer));
+            const zipEntries = zip.getEntries();
+            const srtEntry = zipEntries.find(e => e.entryName.endsWith('.srt') || e.entryName.endsWith('.vtt'));
+            
+            if (srtEntry) {
+                 content = zip.readAsText(srtEntry, 'utf8');
+                 // Update so the convert logic runs if it's an SRT
+                 subtitleUrl = srtEntry.entryName;
+            } else {
+                 throw new Error("No subtitle found in zip");
+            }
+        } else {
+            content = await response.text();
+        }
 
         // Convert SRT to VTT if needed
         if (subtitleUrl.endsWith('.srt') || content.includes('-->') && !content.startsWith('WEBVTT')) {
