@@ -493,7 +493,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
         } else if (isJWPlayerUrl(videoUrl)) {
             setPlayerType('jwplayer');
             setProcessedUrl(videoUrl);
-        } else if (isDirectVideoUrl(videoUrl)) {
+        } else if (isDirectVideoUrl(videoUrl) || isProxyRequiredUrl(videoUrl)) {
             setPlayerType('direct');
             setProcessedUrl(videoUrl);
         } else if (isEmbedUrl(videoUrl)) {
@@ -578,6 +578,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
     if (playerType === 'direct') {
         return (
             <JWPlayerWrapper
+                key={`jw-${subtitleTracks.length}`}
                 ref={jwPlayerRef}
                 videoUrl={processedUrl!}
                 className={className}
