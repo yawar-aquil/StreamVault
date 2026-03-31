@@ -8282,53 +8282,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const anime = await storage.getAllAnime();
         const animeEpisodes = await storage.getAllAnimeEpisodes();
 
+        // Build IMDB lookup map from blog posts (contentId -> imdbId)
+        // This is the same approach SubtitleManager uses on the frontend
+        const allBlogPosts = await storage.getAllBlogPosts();
+        const contentImdbMap = new Map<string, string>(); // contentId -> "tt1234567"
+        for (const post of allBlogPosts) {
+            if (!post.contentId || !post.externalLinks) continue;
+            try {
+                const links = typeof post.externalLinks === 'string' ? JSON.parse(post.externalLinks) : post.externalLinks;
+                if (links?.imdb) {
+                    const match = links.imdb.match(/tt\d+/);
+                    if (match) contentImdbMap.set(post.contentId, match[0]);
+                }
+            } catch { /* skip malformed */ }
+        }
+
         // Collect all items to process
         const itemsToProcess: { id: string, imdbId: string, season?: number, episode?: number, title: string, isShowTitle: boolean }[] = [];
 
-        // Helper to extract IMDB
-        const extractImdb = (externalLinksStr: string | null | undefined): string | null => {
-            if (!externalLinksStr) return null;
-            try {
-                const links = typeof externalLinksStr === 'string' ? JSON.parse(externalLinksStr) : externalLinksStr;
-                return links.imdb || null;
-            } catch { return null; }
-        };
-
         if (contentType === 'movies' || contentType === 'all') {
             for (const movie of movies) {
-                const imdb = extractImdb(movie.externalLinks);
+                const imdb = contentImdbMap.get(movie.id);
                 if (imdb) itemsToProcess.push({ id: movie.id, imdbId: imdb, title: movie.title, isShowTitle: false });
             }
         }
 
         if (contentType === 'shows' || contentType === 'all') {
-             const showImdbMap = new Map<string, string>();
-             for (const show of shows) {
-                 const imdb = extractImdb(show.externalLinks);
-                 if (imdb) showImdbMap.set(show.id, imdb);
-             }
-             
-             for (const ep of episodes) {
-                 const parentImdb = showImdbMap.get(ep.showId);
-                 if (parentImdb && ep.season && ep.episodeNumber) {
-                     itemsToProcess.push({ id: ep.id, imdbId: parentImdb, season: ep.season, episode: ep.episodeNumber, title: ep.title, isShowTitle: true });
-                 }
-             }
+            // Build a map of showId -> imdbId using the blog posts
+            const showImdbMap = new Map<string, string>();
+            for (const show of shows) {
+                const imdb = contentImdbMap.get(show.id);
+                if (imdb) showImdbMap.set(show.id, imdb);
+            }
+
+            for (const ep of episodes) {
+                const parentImdb = showImdbMap.get(ep.showId);
+                if (parentImdb && ep.season && ep.episodeNumber) {
+                    itemsToProcess.push({ id: ep.id, imdbId: parentImdb, season: ep.season, episode: ep.episodeNumber, title: ep.title, isShowTitle: true });
+                }
+            }
         }
 
         if (contentType === 'anime' || contentType === 'all') {
-             const animeImdbMap = new Map<string, string>();
-             for (const a of anime) {
-                 const imdb = extractImdb(a.externalLinks);
-                 if (imdb) animeImdbMap.set(a.id, imdb);
-             }
-             
-             for (const ep of animeEpisodes) {
-                 const parentImdb = animeImdbMap.get(ep.animeId);
-                 if (parentImdb) {
-                     itemsToProcess.push({ id: ep.id, imdbId: parentImdb, season: ep.season || 1, episode: ep.episodeNumber, title: ep.title, isShowTitle: true });
-                 }
-             }
+            const animeImdbMap = new Map<string, string>();
+            for (const a of anime) {
+                const imdb = contentImdbMap.get(a.id);
+                if (imdb) animeImdbMap.set(a.id, imdb);
+            }
+
+            for (const ep of animeEpisodes) {
+                const parentImdb = animeImdbMap.get(ep.animeId);
+                if (parentImdb) {
+                    itemsToProcess.push({ id: ep.id, imdbId: parentImdb, season: ep.season || 1, episode: ep.episodeNumber, title: ep.title, isShowTitle: true });
+                }
+            }
         }
 
         subtitleAutoAssignJob.total = itemsToProcess.length;
