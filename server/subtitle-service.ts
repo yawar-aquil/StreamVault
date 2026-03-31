@@ -9,7 +9,6 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import AdmZip from 'adm-zip';
 
 // API URLs (in order of preference)
 const SUBTITLE_APIS = [
@@ -315,9 +314,20 @@ export async function downloadSubtitle(subtitleUrl: string): Promise<string | nu
         if (isZip) {
             console.log(`📦 Unzipping downloaded file...`);
             const arrayBuffer = await response.arrayBuffer();
+            
+            // Fix ESM/CommonJS AdmZip import issue
+            let AdmZip: any;
+            try {
+                const mod = await import('adm-zip');
+                AdmZip = mod.default || mod;
+            } catch (e) {
+                console.error("Failed to load adm-zip", e);
+                return null;
+            }
+
             const zip = new AdmZip(Buffer.from(arrayBuffer));
             const zipEntries = zip.getEntries();
-            const srtEntry = zipEntries.find(e => e.entryName.endsWith('.srt') || e.entryName.endsWith('.vtt'));
+            const srtEntry = zipEntries.find((e: any) => e.entryName.endsWith('.srt') || e.entryName.endsWith('.vtt'));
             
             if (srtEntry) {
                  content = zip.readAsText(srtEntry, 'utf8');

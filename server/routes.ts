@@ -8351,26 +8351,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const result = await searchSubtitles(imdbStr, item.season, item.episode, language);
                 
                 if (result.subtitles && result.subtitles.length > 0) {
-                    const best = result.subtitles.sort((a,b) => (b.downloads || 0) - (a.downloads || 0))[0];
-                    if (best && best.url) {
-                        const cachedPath = await downloadSubtitle(best.url);
-                        if (cachedPath) {
-                            const baseName = pathMod.basename(cachedPath);
-                            const fileHash = baseName.split('.')[0];
-                            const localUrl = `/api/subtitles/file/${fileHash}`;
-                            await storage.saveSubtitle({
-                                imdbId: imdbStr,
-                                season: item.season,
-                                episode: item.episode,
-                                language: best.language || language,
-                                url: localUrl,
-                                fileName: baseName
-                            });
-                            subtitleAutoAssignJob.assignedCount++;
-                        } else {
-                            subtitleAutoAssignJob.failedCount++;
+                    const sorted = result.subtitles.sort((a,b) => (b.downloads || 0) - (a.downloads || 0));
+                    let cachedPath = null;
+                    let best = null;
+                    
+                    for (const sub of sorted) {
+                        if (sub && sub.url) {
+                             cachedPath = await downloadSubtitle(sub.url);
+                             if (cachedPath) {
+                                 best = sub;
+                                 break;
+                             }
                         }
-                    } else { subtitleAutoAssignJob.failedCount++; }
+                    }
+
+                    if (cachedPath && best) {
+                        const baseName = pathMod.basename(cachedPath);
+                        const fileHash = baseName.split('.')[0];
+                        const localUrl = `/api/subtitles/file/${fileHash}`;
+                        await storage.saveSubtitle({
+                            imdbId: imdbStr,
+                            season: item.season,
+                            episode: item.episode,
+                            language: best.language || language,
+                            url: localUrl,
+                            fileName: baseName
+                        });
+                        subtitleAutoAssignJob.assignedCount++;
+                    } else {
+                        subtitleAutoAssignJob.failedCount++;
+                    }
                 } else {
                     subtitleAutoAssignJob.failedCount++;
                 }
