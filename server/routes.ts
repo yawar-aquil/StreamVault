@@ -14,7 +14,7 @@ import { searchShow, getShowDetails } from "./utils/tmdb";
 import { sendContentRequestEmail, sendIssueReportEmail, sendPasswordResetEmail, sendCoinPurchaseReceiptEmail, sendEmailVerificationEmail, sendContentRequestCompletedEmail, sendIssueReportResolvedEmail, sendFeedbackEmail, sendFeedbackResolvedEmail } from "./email-service";
 import { createRazorpayOrder, verifyRazorpaySignature } from "./payment";
 import { convertCurrency } from "./currency";
-import { getCachedSubtitle, searchSubtitles, downloadSubtitle, getFirstSubtitle, convertSrtToVtt, convertAssToVtt } from "./subtitle-service";
+import { getCachedSubtitle, searchSubtitles, downloadSubtitle, getFirstSubtitle, convertSrtToVtt } from "./subtitle-service";
 import { checkAndAwardAchievements, ACHIEVEMENTS } from "./achievements";
 import { getActiveRooms, checkRoomExists } from "./watch-together";
 import { sendNotificationToUser, sendInventoryUpdate, logAndBroadcastActivity, emitDMReceived } from "./social";
@@ -7255,10 +7255,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Format as VTT if needed
-      const lowerFile = fileName.toLowerCase();
-      if (lowerFile.endsWith('.ass') || lowerFile.endsWith('.ssa') || content.includes('[Script Info]') || content.includes('Dialogue:')) {
-        content = convertAssToVtt(content);
-      } else if (lowerFile.endsWith('.srt') || (content.includes('-->') && !content.startsWith('WEBVTT'))) {
+      if (fileName.endsWith('.srt') || (content.includes('-->') && !content.startsWith('WEBVTT'))) {
         content = convertSrtToVtt(content);
       }
 
@@ -7332,7 +7329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Subtitle not found in cache" });
       }
 
-      res.setHeader('Content-Type', 'text/vtt; charset=utf-8');
+      res.setHeader('Content-Type', 'text/vtt');
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Cache-Control', 'public, max-age=86400');
 
@@ -8262,9 +8259,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     total: number;
     assignedCount: number;
     failedCount: number;
-    failedItems: Array<{ id: number; imdbId: string; season?: number; episode?: number; title: string; isShowTitle: boolean }>;
     error?: string;
-  } = { status: 'idle', checked: 0, total: 0, assignedCount: 0, failedCount: 0, failedItems: [] };
+  } = { status: 'idle', checked: 0, total: 0, assignedCount: 0, failedCount: 0 };
 
   app.post("/api/admin/subtitles/auto-assign/start", requireAdmin, async (req, res) => {
     if (subtitleAutoAssignJob.status === 'running') {
@@ -8276,7 +8272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ error: "Language is required" });
     }
 
-    subtitleAutoAssignJob = { status: 'running', startedAt: new Date(), checked: 0, total: 0, assignedCount: 0, failedCount: 0, failedItems: [] };
+    subtitleAutoAssignJob = { status: 'running', startedAt: new Date(), checked: 0, total: 0, assignedCount: 0, failedCount: 0 };
 
     (async () => {
       try {
@@ -8286,60 +8282,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const anime = await storage.getAllAnime();
         const animeEpisodes = await storage.getAllAnimeEpisodes();
 
-        // Build IMDB lookup map from blog posts (contentId -> imdbId)
-        // This is the same approach SubtitleManager uses on the frontend
-        const allBlogPosts = await storage.getAllBlogPosts();
-        const contentImdbMap = new Map<string, string>(); // contentId -> "tt1234567"
-        for (const post of allBlogPosts) {
-            if (!post.contentId || !post.externalLinks) continue;
-            try {
-                const links = typeof post.externalLinks === 'string' ? JSON.parse(post.externalLinks) : post.externalLinks;
-                if (links?.imdb) {
-                    const match = links.imdb.match(/tt\d+/);
-                    if (match) contentImdbMap.set(post.contentId, match[0]);
-                }
-            } catch { /* skip malformed */ }
-        }
-
         // Collect all items to process
         const itemsToProcess: { id: string, imdbId: string, season?: number, episode?: number, title: string, isShowTitle: boolean }[] = [];
 
+        // Helper to extract IMDB
+        const extractImdb = (externalLinksStr: string | null | undefined): string | null => {
+            if (!externalLinksStr) return null;
+            try {
+                const links = typeof externalLinksStr === 'string' ? JSON.parse(externalLinksStr) : externalLinksStr;
+                return links.imdb || null;
+            } catch { return null; }
+        };
+
         if (contentType === 'movies' || contentType === 'all') {
             for (const movie of movies) {
-                const imdb = contentImdbMap.get(movie.id);
+                const imdb = extractImdb(movie.externalLinks);
                 if (imdb) itemsToProcess.push({ id: movie.id, imdbId: imdb, title: movie.title, isShowTitle: false });
             }
         }
 
         if (contentType === 'shows' || contentType === 'all') {
-            // Build a map of showId -> imdbId using the blog posts
-            const showImdbMap = new Map<string, string>();
-            for (const show of shows) {
-                const imdb = contentImdbMap.get(show.id);
-                if (imdb) showImdbMap.set(show.id, imdb);
-            }
-
-            for (const ep of episodes) {
-                const parentImdb = showImdbMap.get(ep.showId);
-                if (parentImdb && ep.season && ep.episodeNumber) {
-                    itemsToProcess.push({ id: ep.id, imdbId: parentImdb, season: ep.season, episode: ep.episodeNumber, title: ep.title, isShowTitle: true });
-                }
-            }
+             const showImdbMap = new Map<string, string>();
+             for (const show of shows) {
+                 const imdb = extractImdb(show.externalLinks);
+                 if (imdb) showImdbMap.set(show.id, imdb);
+             }
+             
+             for (const ep of episodes) {
+                 const parentImdb = showImdbMap.get(ep.showId);
+                 if (parentImdb && ep.season && ep.episodeNumber) {
+                     itemsToProcess.push({ id: ep.id, imdbId: parentImdb, season: ep.season, episode: ep.episodeNumber, title: ep.title, isShowTitle: true });
+                 }
+             }
         }
 
         if (contentType === 'anime' || contentType === 'all') {
-            const animeImdbMap = new Map<string, string>();
-            for (const a of anime) {
-                const imdb = contentImdbMap.get(a.id);
-                if (imdb) animeImdbMap.set(a.id, imdb);
-            }
-
-            for (const ep of animeEpisodes) {
-                const parentImdb = animeImdbMap.get(ep.animeId);
-                if (parentImdb) {
-                    itemsToProcess.push({ id: ep.id, imdbId: parentImdb, season: ep.season || 1, episode: ep.episodeNumber, title: ep.title, isShowTitle: true });
-                }
-            }
+             const animeImdbMap = new Map<string, string>();
+             for (const a of anime) {
+                 const imdb = extractImdb(a.externalLinks);
+                 if (imdb) animeImdbMap.set(a.id, imdb);
+             }
+             
+             for (const ep of animeEpisodes) {
+                 const parentImdb = animeImdbMap.get(ep.animeId);
+                 if (parentImdb) {
+                     itemsToProcess.push({ id: ep.id, imdbId: parentImdb, season: ep.season || 1, episode: ep.episodeNumber, title: ep.title, isShowTitle: true });
+                 }
+             }
         }
 
         subtitleAutoAssignJob.total = itemsToProcess.length;
@@ -8355,45 +8344,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const result = await searchSubtitles(imdbStr, item.season, item.episode, language);
                 
                 if (result.subtitles && result.subtitles.length > 0) {
-                    const sorted = result.subtitles.sort((a,b) => (b.downloads || 0) - (a.downloads || 0));
-                    let cachedPath = null;
-                    let best = null;
-                    
-                    for (const sub of sorted) {
-                        if (sub && sub.url) {
-                             cachedPath = await downloadSubtitle(sub.url);
-                             if (cachedPath) {
-                                 best = sub;
-                                 break;
-                             }
+                    const best = result.subtitles.sort((a,b) => (b.downloads || 0) - (a.downloads || 0))[0];
+                    if (best && best.url) {
+                        const cachedPath = await downloadSubtitle(best.url);
+                        if (cachedPath) {
+                            const baseName = pathMod.basename(cachedPath);
+                            const fileHash = baseName.split('.')[0];
+                            const localUrl = `/api/subtitles/file/${fileHash}`;
+                            await storage.saveSubtitle({
+                                imdbId: imdbStr,
+                                season: item.season,
+                                episode: item.episode,
+                                language: best.language || language,
+                                url: localUrl,
+                                fileName: baseName
+                            });
+                            subtitleAutoAssignJob.assignedCount++;
+                        } else {
+                            subtitleAutoAssignJob.failedCount++;
                         }
-                    }
-
-                    if (cachedPath && best) {
-                        const baseName = pathMod.basename(cachedPath);
-                        const fileHash = baseName.split('.')[0];
-                        const localUrl = `/api/subtitles/file/${fileHash}`;
-                        await storage.saveSubtitle({
-                            imdbId: imdbStr,
-                            season: item.season,
-                            episode: item.episode,
-                            language: best.language || language,
-                            url: localUrl,
-                            fileName: baseName
-                        });
-                        subtitleAutoAssignJob.assignedCount++;
-                    } else {
-                        subtitleAutoAssignJob.failedCount++;
-                        subtitleAutoAssignJob.failedItems.push(item);
-                    }
+                    } else { subtitleAutoAssignJob.failedCount++; }
                 } else {
                     subtitleAutoAssignJob.failedCount++;
-                    subtitleAutoAssignJob.failedItems.push(item);
                 }
             } catch (err) {
                 console.error(`Error auto-assigning for ${item.title}:`, err);
                 subtitleAutoAssignJob.failedCount++;
-                subtitleAutoAssignJob.failedItems.push(item);
             }
 
             subtitleAutoAssignJob.checked++;

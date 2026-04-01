@@ -248,14 +248,20 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
             captions: {
                 color: '#FFFFFF',
                 fontSize: 14,
-                fontFamily: 'Arial, sans-serif'
+                fontFamily: 'Arial, sans-serif',
+                fontOpacity: 100,
+                backgroundColor: '#000000',
+                backgroundOpacity: 0,
+                edgeStyle: 'uniform',
+                windowColor: '#000000',
+                windowOpacity: 0
             },
             tracks: subtitleTracks.length > 0
                 ? subtitleTracks.map((track, index) => ({
-                    file: track.file.includes('?') ? track.file : `${track.file}?v=${Date.now()}`,
+                    file: track.file,
                     label: track.label,
-                    kind: 'captions',
-                    'default': track.default === true
+                    kind: track.kind,
+                    'default': index === 0
                 }))
                 : [
                     {

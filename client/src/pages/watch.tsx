@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute, useLocation, Link } from "wouter";
 import { useEffect, useState, useRef } from "react";
-import { ChevronLeft, Play, SkipForward, Download, Loader2 } from "lucide-react";
+import { ChevronLeft, Play, SkipForward, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -105,7 +105,6 @@ export default function Watch() {
     kind: 'captions' | 'subtitles';
     default?: boolean;
   }>>([]);
-  const [subsLoaded, setSubsLoaded] = useState(false);
 
   // Fetch subtitles when episode loads
   useEffect(() => {
@@ -156,27 +155,14 @@ export default function Watch() {
             'ko': 'Korean', 'zh': 'Chinese', 'ar': 'Arabic', 'hi': 'Hindi',
             'tr': 'Turkish', 'pl': 'Polish', 'nl': 'Dutch', 'sv': 'Swedish'
           };
-          // Reverse map: full name -> code (for DB entries that stored full names)
-          const nameToCode: Record<string, string> = {};
-          Object.entries(langNames).forEach(([code, name]) => { nameToCode[name.toLowerCase()] = code; });
-
-          // Normalize any stored language (could be 'English', 'EN', 'en-US', 'en') to 2-letter code
-          const normalizeLang = (lang: string) => {
-            if (!lang) return 'en';
-            const lower = lang.toLowerCase().replace(/-.*$/, '').trim();
-            return nameToCode[lower] || lower.substring(0, 2);
-          };
 
           // Convert to VideoPlayer format
-          const tracks = data.subtitles.map((sub: any, index: number) => {
-            const langCode = normalizeLang(sub.language);
-            return {
-              file: sub.url,
-              label: langNames[langCode] || sub.language || 'Unknown',
-              kind: 'subtitles' as const,
-              default: langCode === 'en' || index === 0
-            };
-          });
+          const tracks = data.subtitles.map((sub: any, index: number) => ({
+            file: sub.url,
+            label: langNames[sub.language] || sub.language || 'Unknown',
+            kind: 'subtitles' as const,
+            default: sub.language === 'en' || index === 0
+          }));
 
           setSubtitleTracks(tracks);
         } else {
@@ -184,8 +170,6 @@ export default function Watch() {
         }
       } catch (error) {
         console.error('Error fetching subtitles:', error);
-      } finally {
-        setSubsLoaded(true);
       }
     };
 
@@ -439,23 +423,17 @@ export default function Watch() {
           {/* Video Player */}
           <div className="lg:col-span-2">
             <div className="aspect-video bg-black rounded-md overflow-hidden relative">
-              {!subsLoaded ? (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Loader2 className="w-8 h-8 text-[#6961ff] animate-spin" />
-                </div>
-              ) : (
-                <VideoPlayer
-                  ref={videoPlayerRef}
-                  videoUrl={videoUrl}
-                  onTimeUpdate={handleTimeUpdate}
-                  subtitleTracks={subtitleTracks}
-                  title={show.title}
-                  description={currentEpisodeData.description}
-                  season={currentSeason}
-                  episode={currentEpisode}
-                  episodeTitle={currentEpisodeData.title}
-                />
-              )}
+              <VideoPlayer
+                ref={videoPlayerRef}
+                videoUrl={videoUrl}
+                onTimeUpdate={handleTimeUpdate}
+                subtitleTracks={subtitleTracks}
+                title={show.title}
+                description={currentEpisodeData.description}
+                season={currentSeason}
+                episode={currentEpisode}
+                episodeTitle={currentEpisodeData.title}
+              />
 
               {/* Netflix-style Next Episode Button with Progress Bar - Only for direct video players */}
               {isDirectVideoUrl(videoUrl) && showNextEpisode && nextEpisode && (

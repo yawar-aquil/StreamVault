@@ -20,7 +20,6 @@ interface VideoState {
     currentTime: number;
     lastUpdate: number;
     playbackRate: number;
-    currentSubtitleIndex: number;
 }
 
 interface Room {
@@ -261,8 +260,7 @@ export function setupWatchTogether(httpServer: HttpServer): Server {
                     isPlaying: false,
                     currentTime: 0,
                     lastUpdate: Date.now(),
-                    playbackRate: 1,
-                    currentSubtitleIndex: 0 // Default to first subtitle track
+                    playbackRate: 1
                 },
                 createdAt: new Date()
             };
@@ -478,8 +476,7 @@ export function setupWatchTogether(httpServer: HttpServer): Server {
                 isPlaying: true,
                 currentTime: data.currentTime,
                 lastUpdate: Date.now(),
-                playbackRate: room.videoState.playbackRate,
-                currentSubtitleIndex: room.videoState.currentSubtitleIndex
+                playbackRate: room.videoState.playbackRate
             };
 
             console.log('🎬 Broadcasting video:sync to room', roomCode, room.videoState);
@@ -496,8 +493,7 @@ export function setupWatchTogether(httpServer: HttpServer): Server {
                 isPlaying: false,
                 currentTime: data.currentTime,
                 lastUpdate: Date.now(),
-                playbackRate: room.videoState.playbackRate,
-                currentSubtitleIndex: room.videoState.currentSubtitleIndex
+                playbackRate: room.videoState.playbackRate
             };
 
             socket.to(roomCode).emit('video:sync', room.videoState);
@@ -545,8 +541,6 @@ export function setupWatchTogether(httpServer: HttpServer): Server {
             if (!room || room.hostId !== socket.id) return;
 
             console.log(`🎬 Host changed subtitle to index ${data.subtitleIndex} in room ${roomCode}`);
-            // Update the room state so new joiners get it
-            room.videoState.currentSubtitleIndex = data.subtitleIndex;
             // Broadcast to all other users in room
             socket.to(roomCode).emit('video:subtitle', { subtitleIndex: data.subtitleIndex });
         });
@@ -578,8 +572,7 @@ export function setupWatchTogether(httpServer: HttpServer): Server {
                 isPlaying: false,
                 currentTime: 0,
                 lastUpdate: Date.now(),
-                playbackRate: 1,
-                currentSubtitleIndex: 0 // Reset to first subtitle track
+                playbackRate: 1
             };
 
             // Broadcast content change to all users including host

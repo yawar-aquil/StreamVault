@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, Play, Download, Loader2 } from "lucide-react";
+import { ChevronLeft, Play, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getGoogleDriveDownloadUrl } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
@@ -52,7 +52,6 @@ export default function WatchMovie() {
     kind: 'captions' | 'subtitles';
     default?: boolean;
   }>>([]);
-  const [subsLoaded, setSubsLoaded] = useState(false);
 
   // Fetch subtitles when movie loads
   useEffect(() => {
@@ -103,24 +102,14 @@ export default function WatchMovie() {
             'ko': 'Korean', 'zh': 'Chinese', 'ar': 'Arabic', 'hi': 'Hindi',
             'tr': 'Turkish', 'pl': 'Polish', 'nl': 'Dutch', 'sv': 'Swedish'
           };
-          const nameToCode: Record<string, string> = {};
-          Object.entries(langNames).forEach(([code, name]) => { nameToCode[name.toLowerCase()] = code; });
-          const normalizeLang = (lang: string) => {
-            if (!lang) return 'en';
-            const lower = lang.toLowerCase().replace(/-.*$/, '').trim();
-            return nameToCode[lower] || lower.substring(0, 2);
-          };
 
           // Convert to VideoPlayer format
-          const tracks = data.subtitles.map((sub: any, index: number) => {
-            const langCode = normalizeLang(sub.language);
-            return {
-              file: sub.url,
-              label: langNames[langCode] || sub.language || 'Unknown',
-              kind: 'subtitles' as const,
-              default: langCode === 'en' || index === 0
-            };
-          });
+          const tracks = data.subtitles.map((sub: any, index: number) => ({
+            file: sub.url,
+            label: langNames[sub.language] || sub.language || 'Unknown',
+            kind: 'subtitles' as const,
+            default: sub.language === 'en' || index === 0
+          }));
 
           setSubtitleTracks(tracks);
         } else {
@@ -128,8 +117,6 @@ export default function WatchMovie() {
         }
       } catch (error) {
         console.error('Error fetching movie subtitles:', error);
-      } finally {
-        setSubsLoaded(true);
       }
     };
 
@@ -369,21 +356,15 @@ export default function WatchMovie() {
         <div className="grid grid-cols-1 gap-6">
           {/* Video Player */}
           <div className="bg-card rounded-lg overflow-hidden shadow-lg">
-            <div className="aspect-video bg-black relative">
-              {!subsLoaded ? (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Loader2 className="w-8 h-8 text-[#6961ff] animate-spin" />
-                </div>
-              ) : (
-                <VideoPlayer
-                  ref={videoPlayerRef}
-                  videoUrl={movie.googleDriveUrl}
-                  subtitleTracks={subtitleTracks}
-                  onTimeUpdate={handleTimeUpdate}
-                  title={movie.title}
-                  description={movie.description}
-                />
-              )}
+            <div className="aspect-video bg-black">
+              <VideoPlayer
+                ref={videoPlayerRef}
+                videoUrl={movie.googleDriveUrl}
+                subtitleTracks={subtitleTracks}
+                onTimeUpdate={handleTimeUpdate}
+                title={movie.title}
+                description={movie.description}
+              />
             </div>
 
             {/* Movie Info Below Player */}

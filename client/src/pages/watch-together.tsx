@@ -597,7 +597,6 @@ function WatchTogetherContent() {
         kind: 'captions' | 'subtitles';
         default?: boolean;
     }>>([]);
-    const [subsLoaded, setSubsLoaded] = useState(false);
 
     // Fetch subtitles when content loads
     useEffect(() => {
@@ -653,24 +652,14 @@ function WatchTogetherContent() {
                         'ko': 'Korean', 'zh': 'Chinese', 'ar': 'Arabic', 'hi': 'Hindi',
                         'tr': 'Turkish', 'pl': 'Polish', 'nl': 'Dutch', 'sv': 'Swedish'
                     };
-                    const nameToCode: Record<string, string> = {};
-                    Object.entries(langNames).forEach(([code, name]) => { nameToCode[name.toLowerCase()] = code; });
-                    const normalizeLang = (lang: string) => {
-                        if (!lang) return 'en';
-                        const lower = lang.toLowerCase().replace(/-.*$/, '').trim();
-                        return nameToCode[lower] || lower.substring(0, 2);
-                    };
 
                     // Convert to VideoPlayer format
-                    const tracks = data.subtitles.map((sub: any, index: number) => {
-                        const langCode = normalizeLang(sub.language);
-                        return {
-                            file: sub.url,
-                            label: langNames[langCode] || sub.language || 'Unknown',
-                            kind: 'subtitles' as const,
-                            default: langCode === 'en' || index === 0
-                        };
-                    });
+                    const tracks = data.subtitles.map((sub: any, index: number) => ({
+                        file: sub.url,
+                        label: langNames[sub.language] || sub.language || 'Unknown',
+                        kind: 'subtitles' as const,
+                        default: sub.language === 'en' || index === 0
+                    }));
 
                     setSubtitleTracks(tracks);
                 } else {
@@ -678,8 +667,6 @@ function WatchTogetherContent() {
                 }
             } catch (error) {
                 console.error('Error fetching Watch Together subtitles:', error);
-            } finally {
-                setSubsLoaded(true);
             }
         };
 
@@ -822,7 +809,7 @@ function WatchTogetherContent() {
         // Only attach listener for non-host viewers
         if (!socket || isHost) return;
 
-        const handleVideoSync = (state: { isPlaying: boolean; currentTime: number; playbackRate: number; currentSubtitleIndex?: number }) => {
+        const handleVideoSync = (state: { isPlaying: boolean; currentTime: number; playbackRate: number }) => {
             console.log('🎬 Received video sync:', state);
 
             const player = videoPlayerRef.current;
@@ -851,13 +838,6 @@ function WatchTogetherContent() {
             } else if (!state.isPlaying && !player.isPaused()) {
                 console.log('🎬 Pausing video (sync)');
                 player.pause();
-            }
-            
-            // Sync subtitles from state
-            if (state.currentSubtitleIndex !== undefined) {
-                // To avoid redundant calls, we could add a check if we had a getter, 
-                // but setting the same index on JWPlayer is harmless.
-                player.setCaptions(state.currentSubtitleIndex);
             }
         };
 
@@ -1730,17 +1710,12 @@ function WatchTogetherContent() {
 
                             {/* Video Player - only render when ready */}
                             {isScheduledRoomReady && (
-                                !subsLoaded ? (
-                                    <div className="absolute inset-0 flex items-center justify-center bg-black">
-                                        <Loader2 className="w-8 h-8 text-[#6961ff] animate-spin" />
-                                    </div>
-                                ) : (
-                                    <VideoPlayer
-                                        ref={videoPlayerRef}
-                                        videoUrl={episode?.googleDriveUrl || movie?.googleDriveUrl}
-                                        className="w-full h-full"
-                                        isHost={isHost}
-                                        syncMode={true}
+                                <VideoPlayer
+                                    ref={videoPlayerRef}
+                                    videoUrl={episode?.googleDriveUrl || movie?.googleDriveUrl}
+                                    className="w-full h-full"
+                                    isHost={isHost}
+                                    syncMode={true}
                                     subtitleTracks={subtitleTracks}
                                     onPlay={() => {
                                         console.log('🎬 onPlay handler called - isHost:', isHost);
@@ -1777,7 +1752,7 @@ function WatchTogetherContent() {
                                         }
                                     }}
                                 />
-                            ))}
+                            )}
                         </div>
 
                         {/* Host indicator */}

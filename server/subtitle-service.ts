@@ -12,7 +12,8 @@ import crypto from 'crypto';
 
 // API URLs (in order of preference)
 const SUBTITLE_APIS = [
-    { url: 'https://sub.wyzie.io', type: 'wyzie' },           // Primary free
+    { url: 'https://subs.wyzie.ru', type: 'wyzie' },           // Primary free
+    { url: 'https://sub.wyzie.ru/v2', type: 'wyzie' },         // Alternative mirror
     { url: 'https://api.subdl.com/api/v1/subtitles', type: 'subdl' }, // SubDL API
     { url: 'https://api.opensubtitles.com/api/v1/subtitles', type: 'opensubtitles' } // OpenSubtitles standard REST API
 ];
@@ -23,24 +24,6 @@ const SUBTITLE_CACHE_DIR = path.join(process.cwd(), 'data', 'subtitles');
 // Ensure cache directory exists
 if (!fs.existsSync(SUBTITLE_CACHE_DIR)) {
     fs.mkdirSync(SUBTITLE_CACHE_DIR, { recursive: true });
-}
-
-/**
- * Normalize any language name/code to a standard 2-letter ISO 639-1 code.
- * e.g. 'English' -> 'en', 'EN' -> 'en', 'en-US' -> 'en'
- */
-function normalizeLanguage(lang: string | undefined, fallback = 'en'): string {
-    if (!lang) return fallback;
-    const nameToCode: Record<string, string> = {
-        'english': 'en', 'spanish': 'es', 'french': 'fr', 'german': 'de',
-        'italian': 'it', 'portuguese': 'pt', 'russian': 'ru', 'japanese': 'ja',
-        'korean': 'ko', 'chinese': 'zh', 'arabic': 'ar', 'hindi': 'hi',
-        'turkish': 'tr', 'polish': 'pl', 'dutch': 'nl', 'swedish': 'sv',
-        'norwegian': 'no', 'danish': 'da', 'finnish': 'fi', 'greek': 'el',
-        'czech': 'cs', 'hungarian': 'hu', 'romanian': 'ro', 'ukrainian': 'uk'
-    };
-    const lower = lang.toLowerCase().replace(/-.*$/, '').trim(); // strip region e.g. en-US -> en
-    return nameToCode[lower] || lower.substring(0, 2); // use map or first 2 chars
 }
 
 export interface SubtitleResult {
@@ -119,7 +102,6 @@ export async function searchSubtitles(
                     url += `&season_number=${season}&episode_number=${episode}`;
                 }
                 if (process.env.SUBDL_API_KEY) {
-                    url += `&type=${(season !== undefined) ? 'tv' : 'movie'}`;
                     url += `&api_key=${process.env.SUBDL_API_KEY}`;
                 } else {
                     url = `https://api.subdl.com/subtitle/search?imdb_id=${imdbId}&languages=${language}`;
@@ -137,13 +119,12 @@ export async function searchSubtitles(
                 headers['User-Agent'] = 'StreamVault v1.0';
             } else {
                 // Wyzie format
-                if (!process.env.WYZIE_API_KEY) {
-                    url = 'invalid'; // Skip if no key
-                } else {
-                    url = `${baseUrl}/search?key=${process.env.WYZIE_API_KEY}&id=${imdbId}&language=${language}`;
-                    if (season !== undefined && episode !== undefined) {
-                        url += `&season=${season}&episode=${episode}`;
-                    }
+                url = `${baseUrl}/search?id=${imdbId}&language=${language}`;
+                if (season !== undefined && episode !== undefined) {
+                    url += `&season=${season}&episode=${episode}`;
+                }
+                if (process.env.WYZIE_API_KEY) {
+                    url += `&apikey=${process.env.WYZIE_API_KEY}`;
                 }
             }
 
@@ -155,8 +136,8 @@ export async function searchSubtitles(
             const response = await fetch(url, { signal: controller.signal, headers });
             clearTimeout(timeoutId);
 
-            if (url === 'invalid' || !response.ok) {
-                if (url !== 'invalid') console.log(`⚠️ Provider ${provider.type} returned ${response.status}, skipping...`);
+            if (!response.ok) {
+                console.log(`⚠️ Provider ${provider.type} returned ${response.status}, skipping...`);
                 return [];
             }
 
@@ -182,30 +163,29 @@ export async function searchSubtitles(
                     };
                 });
             } else if (Array.isArray(data)) {
-                // Wyzie format - use direct url from response (more reliable than /download endpoint)
+                // Wyzie format
                 subtitles = data.map((sub: any, index: number) => ({
                     id: sub.id || `wyzie_${index}`,
-                    url: sub.url || '',  // Direct .srt URL from wyzie search response
-                    downloadUrl: sub.url || '',
-                    lang: normalizeLanguage(sub.language, language),
-                    language: normalizeLanguage(sub.language, language),
+                    url: sub.url || sub.SubDownloadLink || '',
+                    downloadUrl: sub.url || sub.SubDownloadLink || '',
+                    lang: sub.lang || sub.LanguageId || language,
+                    language: sub.language || sub.LanguageName || 'English',
                     format: sub.format || 'srt',
-                    hearingImpaired: sub.isHearingImpaired || false,
+                    hearingImpaired: sub.hearingImpaired || sub.SubHearingImpaired === '1' || false,
                     provider: 'wyzie',
-                    releaseName: sub.media || sub.release || undefined,
-                    downloads: sub.downloadCount || 0,
-                    rating: 0
+                    releaseName: sub.MovieReleaseName || sub.release || undefined,
+                    downloads: sub.SubDownloadsCnt ? parseInt(sub.SubDownloadsCnt) : (sub.downloads || 0),
+                    rating: sub.SubRating ? parseFloat(sub.SubRating) : (sub.rating || 0)
                 }));
-            } else if ((data.subtitles && Array.isArray(data.subtitles)) || (data.results && Array.isArray(data.results))) {
+            } else if (data.subtitles && Array.isArray(data.subtitles)) {
                 // SubDL format
-                const items = data.subtitles || data.results;
-                subtitles = items.map((sub: any, index: number) => ({
-                    id: sub.id || sub.subtitle_id || sub.sd_id || `subdl_${index}`,
-                    url: sub.url ? `https://dl.subdl.com${sub.url}` : sub.download_url || '',
-                    downloadUrl: sub.url ? `https://dl.subdl.com${sub.url}` : sub.download_url || '',
-                    lang: normalizeLanguage(sub.lang || sub.language, language),
-                    language: normalizeLanguage(sub.lang || sub.language, language),
-                    format: sub.format || (sub.url && sub.url.endsWith('zip') ? 'zip' : 'srt'),
+                subtitles = data.subtitles.map((sub: any, index: number) => ({
+                    id: sub.id || sub.subtitle_id || `subdl_${index}`,
+                    url: sub.url || sub.download_url || '',
+                    downloadUrl: sub.url || sub.download_url || '',
+                    lang: sub.lang || sub.language || language,
+                    language: sub.language_name || sub.language || 'English',
+                    format: sub.format || 'srt',
                     hearingImpaired: sub.hi || sub.hearing_impaired || false,
                     provider: 'subdl',
                     releaseName: sub.release_name || sub.name || undefined,
@@ -292,12 +272,13 @@ export async function downloadSubtitle(subtitleUrl: string): Promise<string | nu
                 console.error(`❌ Cannot download from OpenSubtitles: Missing API Key or invalid file_id`);
                 return null;
             }
-        } else if (subtitleUrl.includes('sub.wyzie.io') && process.env.WYZIE_API_KEY) {
-            // Ensure Wyzie API key is appended securely
+        } else if (subtitleUrl.includes('sub.wyzie.') && process.env.WYZIE_API_KEY) {
+            // Append Wyzie API key for authorization
             const urlObj = new URL(subtitleUrl);
             if (!urlObj.searchParams.has('key')) {
                 urlObj.searchParams.append('key', process.env.WYZIE_API_KEY);
                 subtitleUrl = urlObj.toString();
+                console.log(`🔑 Appended official Wyzie API Key to URL`);
             }
         }
 
@@ -325,47 +306,10 @@ export async function downloadSubtitle(subtitleUrl: string): Promise<string | nu
             return null;
         }
 
-        let content = '';
+        let content = await response.text();
 
-        const isZip = subtitleUrl.endsWith('.zip') || response.headers.get('content-type')?.includes('zip');
-        if (isZip) {
-            console.log(`📦 Unzipping downloaded file...`);
-            const arrayBuffer = await response.arrayBuffer();
-            
-            // Fix ESM/CommonJS AdmZip import issue
-            let AdmZip: any;
-            try {
-                const mod = await import('adm-zip');
-                AdmZip = mod.default || mod;
-            } catch (e) {
-                console.error("Failed to load adm-zip", e);
-                return null;
-            }
-
-            const zip = new AdmZip(Buffer.from(arrayBuffer));
-            const zipEntries = zip.getEntries();
-            const subtitleEntry = zipEntries.find((e: any) => {
-                const name = e.entryName.toLowerCase();
-                return name.endsWith('.srt') || name.endsWith('.vtt') || name.endsWith('.ass') || name.endsWith('.ssa');
-            });
-            
-            if (subtitleEntry) {
-                 content = zip.readAsText(subtitleEntry, 'utf8');
-                 // Update so the convert logic runs if it's an SRT/ASS
-                 subtitleUrl = subtitleEntry.entryName;
-            } else {
-                 throw new Error("No subtitle found in zip");
-            }
-        } else {
-            content = await response.text();
-        }
-
-        const lowerUrl = subtitleUrl.toLowerCase();
-
-        // Check format and convert to VTT if necessary
-        if (lowerUrl.endsWith('.ass') || lowerUrl.endsWith('.ssa') || content.includes('[Script Info]') || content.includes('Dialogue:')) {
-            content = convertAssToVtt(content);
-        } else if (lowerUrl.endsWith('.srt') || (content.includes('-->') && !content.startsWith('WEBVTT'))) {
+        // Convert SRT to VTT if needed
+        if (subtitleUrl.endsWith('.srt') || content.includes('-->') && !content.startsWith('WEBVTT')) {
             content = convertSrtToVtt(content);
         }
 
@@ -421,53 +365,6 @@ export function convertSrtToVtt(srt: string): string {
         }
     }
 
-    return vtt;
-}
-
-/**
- * Convert simple ASS/SSA format to WebVTT format
- */
-export function convertAssToVtt(ass: string): string {
-    let vtt = 'WEBVTT\n\n';
-    const lines = ass.split(/\r?\n/);
-    
-    for (const line of lines) {
-        if (line.startsWith('Dialogue:')) {
-            const parts = line.substring(9).trim().split(',');
-            if (parts.length >= 10) {
-                const startRaw = parts[1].trim();
-                const endRaw = parts[2].trim();
-                
-                const formatTime = (time: string) => {
-                    const [h, m, s] = time.split(':');
-                    const [sec, cs] = (s || '00.00').split('.');
-                    const padH = h.padStart(2, '0');
-                    const padM = (m || '00').padStart(2, '0');
-                    const padS = (sec || '00').padStart(2, '0');
-                    const padMs = (cs || '00').padEnd(3, '0').substring(0, 3);
-                    return `${padH}:${padM}:${padS}.${padMs}`;
-                };
-                
-                try {
-                    const start = formatTime(startRaw);
-                    const end = formatTime(endRaw);
-                    
-                    let text = parts.slice(9).join(',');
-                    // Strip ASS override tags like {\pos(400,500)} or {\i1}
-                    text = text.replace(/\{[^}]+\}/g, '');
-                    // Convert line breaks
-                    text = text.replace(/\\N/gi, '\n').replace(/\\h/gi, ' ');
-                    
-                    if (text.trim()) {
-                        vtt += `${start} --> ${end}\n${text.trim()}\n\n`;
-                    }
-                } catch (e) {
-                    continue; // Skip malformed lines
-                }
-            }
-        }
-    }
-    
     return vtt;
 }
 
