@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute, useLocation, Link } from "wouter";
 import { useEffect, useState, useRef } from "react";
-import { Download, ChevronLeft, ChevronRight, Share2, MessageSquare, Play } from "lucide-react";
+import { Download, ChevronLeft, ChevronRight, Share2, MessageSquare, Play, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getGoogleDriveDownloadUrl } from "@/lib/utils";
@@ -82,6 +82,7 @@ export default function WatchAnime() {
         kind: 'captions' | 'subtitles';
         default?: boolean;
     }>>([]);
+    const [subsLoaded, setSubsLoaded] = useState(false);
 
     // Fetch subtitles when episode loads
     useEffect(() => {
@@ -157,6 +158,8 @@ export default function WatchAnime() {
                 }
             } catch (error) {
                 console.error('Error fetching subtitles:', error);
+            } finally {
+                setSubsLoaded(true);
             }
         };
 
@@ -394,17 +397,23 @@ export default function WatchAnime() {
                     {/* Video Player */}
                     <div className="lg:col-span-2">
                         <div className="aspect-video bg-black rounded-md overflow-hidden relative">
-                            <VideoPlayer
-                                ref={videoPlayerRef}
-                                videoUrl={videoUrl}
-                                onTimeUpdate={handleTimeUpdate}
-                                subtitleTracks={subtitleTracks}
-                                title={anime.title}
-                                description={currentEpisodeData.description}
-                                season={currentSeason}
-                                episode={currentEpisode}
-                                episodeTitle={currentEpisodeData.title}
-                            />
+                            {!subsLoaded ? (
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <Loader2 className="w-8 h-8 text-[#6961ff] animate-spin" />
+                                </div>
+                            ) : (
+                                <VideoPlayer
+                                    ref={videoPlayerRef}
+                                    videoUrl={videoUrl}
+                                    onTimeUpdate={handleTimeUpdate}
+                                    subtitleTracks={subtitleTracks}
+                                    title={anime.title}
+                                    description={currentEpisodeData.description}
+                                    season={currentSeason}
+                                    episode={currentEpisode}
+                                    episodeTitle={currentEpisodeData.title}
+                                />
+                            )}
 
                             {/* Netflix-style Next Episode Button with Progress Bar - Only for direct video players */}
                             {isDirectVideoUrl(videoUrl) && showNextEpisode && nextEpisode && (

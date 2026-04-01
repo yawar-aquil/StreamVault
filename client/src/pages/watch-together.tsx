@@ -597,6 +597,7 @@ function WatchTogetherContent() {
         kind: 'captions' | 'subtitles';
         default?: boolean;
     }>>([]);
+    const [subsLoaded, setSubsLoaded] = useState(false);
 
     // Fetch subtitles when content loads
     useEffect(() => {
@@ -677,6 +678,8 @@ function WatchTogetherContent() {
                 }
             } catch (error) {
                 console.error('Error fetching Watch Together subtitles:', error);
+            } finally {
+                setSubsLoaded(true);
             }
         };
 
@@ -1727,12 +1730,17 @@ function WatchTogetherContent() {
 
                             {/* Video Player - only render when ready */}
                             {isScheduledRoomReady && (
-                                <VideoPlayer
-                                    ref={videoPlayerRef}
-                                    videoUrl={episode?.googleDriveUrl || movie?.googleDriveUrl}
-                                    className="w-full h-full"
-                                    isHost={isHost}
-                                    syncMode={true}
+                                !subsLoaded ? (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black">
+                                        <Loader2 className="w-8 h-8 text-[#6961ff] animate-spin" />
+                                    </div>
+                                ) : (
+                                    <VideoPlayer
+                                        ref={videoPlayerRef}
+                                        videoUrl={episode?.googleDriveUrl || movie?.googleDriveUrl}
+                                        className="w-full h-full"
+                                        isHost={isHost}
+                                        syncMode={true}
                                     subtitleTracks={subtitleTracks}
                                     onPlay={() => {
                                         console.log('🎬 onPlay handler called - isHost:', isHost);
@@ -1769,7 +1777,7 @@ function WatchTogetherContent() {
                                         }
                                     }}
                                 />
-                            )}
+                            ))}
                         </div>
 
                         {/* Host indicator */}
