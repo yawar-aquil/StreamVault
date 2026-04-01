@@ -652,14 +652,24 @@ function WatchTogetherContent() {
                         'ko': 'Korean', 'zh': 'Chinese', 'ar': 'Arabic', 'hi': 'Hindi',
                         'tr': 'Turkish', 'pl': 'Polish', 'nl': 'Dutch', 'sv': 'Swedish'
                     };
+                    const nameToCode: Record<string, string> = {};
+                    Object.entries(langNames).forEach(([code, name]) => { nameToCode[name.toLowerCase()] = code; });
+                    const normalizeLang = (lang: string) => {
+                        if (!lang) return 'en';
+                        const lower = lang.toLowerCase().replace(/-.*$/, '').trim();
+                        return nameToCode[lower] || lower.substring(0, 2);
+                    };
 
                     // Convert to VideoPlayer format
-                    const tracks = data.subtitles.map((sub: any, index: number) => ({
-                        file: sub.url,
-                        label: langNames[sub.language] || sub.language || 'Unknown',
-                        kind: 'subtitles' as const,
-                        default: sub.language === 'en' || index === 0
-                    }));
+                    const tracks = data.subtitles.map((sub: any, index: number) => {
+                        const langCode = normalizeLang(sub.language);
+                        return {
+                            file: sub.url,
+                            label: langNames[langCode] || sub.language || 'Unknown',
+                            kind: 'subtitles' as const,
+                            default: langCode === 'en' || index === 0
+                        };
+                    });
 
                     setSubtitleTracks(tracks);
                 } else {
