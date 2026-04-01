@@ -14,7 +14,7 @@ import { searchShow, getShowDetails } from "./utils/tmdb";
 import { sendContentRequestEmail, sendIssueReportEmail, sendPasswordResetEmail, sendCoinPurchaseReceiptEmail, sendEmailVerificationEmail, sendContentRequestCompletedEmail, sendIssueReportResolvedEmail, sendFeedbackEmail, sendFeedbackResolvedEmail } from "./email-service";
 import { createRazorpayOrder, verifyRazorpaySignature } from "./payment";
 import { convertCurrency } from "./currency";
-import { getCachedSubtitle, searchSubtitles, downloadSubtitle, getFirstSubtitle, convertSrtToVtt } from "./subtitle-service";
+import { getCachedSubtitle, searchSubtitles, downloadSubtitle, getFirstSubtitle, convertSrtToVtt, convertAssToVtt } from "./subtitle-service";
 import { checkAndAwardAchievements, ACHIEVEMENTS } from "./achievements";
 import { getActiveRooms, checkRoomExists } from "./watch-together";
 import { sendNotificationToUser, sendInventoryUpdate, logAndBroadcastActivity, emitDMReceived } from "./social";
@@ -7255,7 +7255,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Format as VTT if needed
-      if (fileName.endsWith('.srt') || (content.includes('-->') && !content.startsWith('WEBVTT'))) {
+      const lowerFile = fileName.toLowerCase();
+      if (lowerFile.endsWith('.ass') || lowerFile.endsWith('.ssa') || content.includes('[Script Info]') || content.includes('Dialogue:')) {
+        content = convertAssToVtt(content);
+      } else if (lowerFile.endsWith('.srt') || (content.includes('-->') && !content.startsWith('WEBVTT'))) {
         content = convertSrtToVtt(content);
       }
 

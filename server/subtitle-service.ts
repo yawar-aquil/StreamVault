@@ -344,12 +344,15 @@ export async function downloadSubtitle(subtitleUrl: string): Promise<string | nu
 
             const zip = new AdmZip(Buffer.from(arrayBuffer));
             const zipEntries = zip.getEntries();
-            const srtEntry = zipEntries.find((e: any) => e.entryName.endsWith('.srt') || e.entryName.endsWith('.vtt'));
+            const subtitleEntry = zipEntries.find((e: any) => {
+                const name = e.entryName.toLowerCase();
+                return name.endsWith('.srt') || name.endsWith('.vtt') || name.endsWith('.ass') || name.endsWith('.ssa');
+            });
             
-            if (srtEntry) {
-                 content = zip.readAsText(srtEntry, 'utf8');
-                 // Update so the convert logic runs if it's an SRT
-                 subtitleUrl = srtEntry.entryName;
+            if (subtitleEntry) {
+                 content = zip.readAsText(subtitleEntry, 'utf8');
+                 // Update so the convert logic runs if it's an SRT/ASS
+                 subtitleUrl = subtitleEntry.entryName;
             } else {
                  throw new Error("No subtitle found in zip");
             }
@@ -357,8 +360,12 @@ export async function downloadSubtitle(subtitleUrl: string): Promise<string | nu
             content = await response.text();
         }
 
-        // Convert SRT to VTT if needed
-        if (subtitleUrl.endsWith('.srt') || content.includes('-->') && !content.startsWith('WEBVTT')) {
+        const lowerUrl = subtitleUrl.toLowerCase();
+
+        // Check format and convert to VTT if necessary
+        if (lowerUrl.endsWith('.ass') || lowerUrl.endsWith('.ssa') || content.includes('[Script Info]') || content.includes('Dialogue:')) {
+            content = convertAssToVtt(content);
+        } else if (lowerUrl.endsWith('.srt') || (content.includes('-->') && !content.startsWith('WEBVTT'))) {
             content = convertSrtToVtt(content);
         }
 
@@ -414,6 +421,53 @@ export function convertSrtToVtt(srt: string): string {
         }
     }
 
+    return vtt;
+}
+
+/**
+ * Convert simple ASS/SSA format to WebVTT format
+ */
+export function convertAssToVtt(ass: string): string {
+    let vtt = 'WEBVTT\n\n';
+    const lines = ass.split(/\r?\n/);
+    
+    for (const line of lines) {
+        if (line.startsWith('Dialogue:')) {
+            const parts = line.substring(9).trim().split(',');
+            if (parts.length >= 10) {
+                const startRaw = parts[1].trim();
+                const endRaw = parts[2].trim();
+                
+                const formatTime = (time: string) => {
+                    const [h, m, s] = time.split(':');
+                    const [sec, cs] = (s || '00.00').split('.');
+                    const padH = h.padStart(2, '0');
+                    const padM = (m || '00').padStart(2, '0');
+                    const padS = (sec || '00').padStart(2, '0');
+                    const padMs = (cs || '00').padEnd(3, '0').substring(0, 3);
+                    return `${padH}:${padM}:${padS}.${padMs}`;
+                };
+                
+                try {
+                    const start = formatTime(startRaw);
+                    const end = formatTime(endRaw);
+                    
+                    let text = parts.slice(9).join(',');
+                    // Strip ASS override tags like {\pos(400,500)} or {\i1}
+                    text = text.replace(/\{[^}]+\}/g, '');
+                    // Convert line breaks
+                    text = text.replace(/\\N/gi, '\n').replace(/\\h/gi, ' ');
+                    
+                    if (text.trim()) {
+                        vtt += `${start} --> ${end}\n${text.trim()}\n\n`;
+                    }
+                } catch (e) {
+                    continue; // Skip malformed lines
+                }
+            }
+        }
+    }
+    
     return vtt;
 }
 
