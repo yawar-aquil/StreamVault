@@ -261,7 +261,7 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
                     file: track.file,
                     label: track.label,
                     kind: track.kind,
-                    'default': index === 0
+                    'default': track.default === true  // Respect the default flag set by the watch pages
                 }))
                 : [
                     {
@@ -345,6 +345,32 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
             } catch (e) { }
         };
     }, [videoUrl, autoplay, isHost, syncMode, subtitleTracks.length]);
+
+    // When subtitle tracks load AFTER the player is already running (async fetch), load them in
+    useEffect(() => {
+        if (!playerRef.current || subtitleTracks.length === 0) return;
+        try {
+            // Load the tracks into the running player
+            playerRef.current.load([{
+                file: (playerRef.current.getConfig?.()?.file) || videoUrl,
+                tracks: subtitleTracks.map((track) => ({
+                    file: track.file,
+                    label: track.label,
+                    kind: track.kind,
+                    'default': track.default === true
+                }))
+            }]);
+            // Auto-enable the default (English) track after a short delay
+            const defaultIdx = subtitleTracks.findIndex(t => t.default);
+            if (defaultIdx >= 0) {
+                setTimeout(() => {
+                    playerRef.current?.setCurrentCaptions?.(defaultIdx + 1);
+                }, 500);
+            }
+        } catch (e) {
+            // Player may not be fully ready, ignore
+        }
+    }, [subtitleTracks]);
 
     // Format helpers
     const formatSeasonEp = () => {
