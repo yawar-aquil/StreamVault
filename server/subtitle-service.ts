@@ -25,6 +25,24 @@ if (!fs.existsSync(SUBTITLE_CACHE_DIR)) {
     fs.mkdirSync(SUBTITLE_CACHE_DIR, { recursive: true });
 }
 
+/**
+ * Normalize any language name/code to a standard 2-letter ISO 639-1 code.
+ * e.g. 'English' -> 'en', 'EN' -> 'en', 'en-US' -> 'en'
+ */
+function normalizeLanguage(lang: string | undefined, fallback = 'en'): string {
+    if (!lang) return fallback;
+    const nameToCode: Record<string, string> = {
+        'english': 'en', 'spanish': 'es', 'french': 'fr', 'german': 'de',
+        'italian': 'it', 'portuguese': 'pt', 'russian': 'ru', 'japanese': 'ja',
+        'korean': 'ko', 'chinese': 'zh', 'arabic': 'ar', 'hindi': 'hi',
+        'turkish': 'tr', 'polish': 'pl', 'dutch': 'nl', 'swedish': 'sv',
+        'norwegian': 'no', 'danish': 'da', 'finnish': 'fi', 'greek': 'el',
+        'czech': 'cs', 'hungarian': 'hu', 'romanian': 'ro', 'ukrainian': 'uk'
+    };
+    const lower = lang.toLowerCase().replace(/-.*$/, '').trim(); // strip region e.g. en-US -> en
+    return nameToCode[lower] || lower.substring(0, 2); // use map or first 2 chars
+}
+
 export interface SubtitleResult {
     id: string;
     url: string;
@@ -169,8 +187,8 @@ export async function searchSubtitles(
                     id: sub.id || `wyzie_${index}`,
                     url: sub.url || '',  // Direct .srt URL from wyzie search response
                     downloadUrl: sub.url || '',
-                    lang: sub.language || language,
-                    language: sub.display || 'English',
+                    lang: normalizeLanguage(sub.language, language),
+                    language: normalizeLanguage(sub.language, language),
                     format: sub.format || 'srt',
                     hearingImpaired: sub.isHearingImpaired || false,
                     provider: 'wyzie',
@@ -185,8 +203,8 @@ export async function searchSubtitles(
                     id: sub.id || sub.subtitle_id || sub.sd_id || `subdl_${index}`,
                     url: sub.url ? `https://dl.subdl.com${sub.url}` : sub.download_url || '',
                     downloadUrl: sub.url ? `https://dl.subdl.com${sub.url}` : sub.download_url || '',
-                    lang: sub.lang || sub.language || language,
-                    language: sub.language_name || sub.language || 'English',
+                    lang: normalizeLanguage(sub.lang || sub.language, language),
+                    language: normalizeLanguage(sub.lang || sub.language, language),
                     format: sub.format || (sub.url && sub.url.endsWith('zip') ? 'zip' : 'srt'),
                     hearingImpaired: sub.hi || sub.hearing_impaired || false,
                     provider: 'subdl',
