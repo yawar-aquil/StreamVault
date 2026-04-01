@@ -164,17 +164,17 @@ export async function searchSubtitles(
                     };
                 });
             } else if (Array.isArray(data)) {
-                // Wyzie format
+                // Wyzie format - use direct url from response (more reliable than /download endpoint)
                 subtitles = data.map((sub: any, index: number) => ({
                     id: sub.id || `wyzie_${index}`,
-                    url: `https://sub.wyzie.io/download?key=${process.env.WYZIE_API_KEY}&id=${sub.id}`,
-                    downloadUrl: `https://sub.wyzie.io/download?key=${process.env.WYZIE_API_KEY}&id=${sub.id}`,
+                    url: sub.url || '',  // Direct .srt URL from wyzie search response
+                    downloadUrl: sub.url || '',
                     lang: sub.language || language,
                     language: sub.display || 'English',
-                    format: 'srt',
-                    hearingImpaired: false,
+                    format: sub.format || 'srt',
+                    hearingImpaired: sub.isHearingImpaired || false,
                     provider: 'wyzie',
-                    releaseName: sub.media || undefined,
+                    releaseName: sub.media || sub.release || undefined,
                     downloads: sub.downloadCount || 0,
                     rating: 0
                 }));
