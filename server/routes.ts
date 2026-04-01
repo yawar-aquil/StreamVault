@@ -7332,7 +7332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Subtitle not found in cache" });
       }
 
-      res.setHeader('Content-Type', 'text/vtt');
+      res.setHeader('Content-Type', 'text/vtt; charset=utf-8');
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Cache-Control', 'public, max-age=86400');
 
