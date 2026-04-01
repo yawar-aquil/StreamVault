@@ -47,7 +47,6 @@ import StreamCoin from "@/components/stream-coin";
 import type { Show, Episode, Movie, BlogPost, Anime, AnimeEpisode, Review } from "@shared/schema";
 import { getAuthHeaders, logout as authLogout } from "@/lib/auth";
 import { SubtitleManager } from "@/components/admin/SubtitleManager";
-import { SubtitleAutoAssigner } from "@/components/admin/SubtitleAutoAssigner";
 
 export default function AdminPage() {
   const { toast } = useToast();
@@ -204,10 +203,6 @@ export default function AdminPage() {
               <Settings className="w-4 h-4" />
               Subtitles
             </TabsTrigger>
-            <TabsTrigger value="auto-assign" className="gap-2">
-              <Bot className="w-4 h-4" />
-              Auto-Assign Subs
-            </TabsTrigger>
           </TabsList>
 
 
@@ -334,11 +329,6 @@ export default function AdminPage() {
           {/* Subtitles Management Tab */}
           <TabsContent value="subtitles">
             <SubtitleManager shows={shows} movies={movies} anime={anime} />
-          </TabsContent>
-
-          {/* Bulk Subtitle Auto Assigner Tab */}
-          <TabsContent value="auto-assign">
-            <SubtitleAutoAssigner />
           </TabsContent>
         </Tabs>
       </div>
