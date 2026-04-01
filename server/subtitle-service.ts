@@ -12,8 +12,7 @@ import crypto from 'crypto';
 
 // API URLs (in order of preference)
 const SUBTITLE_APIS = [
-    { url: 'https://subs.wyzie.ru', type: 'wyzie' },           // Primary free
-    { url: 'https://sub.wyzie.ru/v2', type: 'wyzie' },         // Alternative mirror
+    { url: 'https://sub.wyzie.io', type: 'wyzie' },           // Primary free
     { url: 'https://api.subdl.com/api/v1/subtitles', type: 'subdl' }, // SubDL API
     { url: 'https://api.opensubtitles.com/api/v1/subtitles', type: 'opensubtitles' } // OpenSubtitles standard REST API
 ];
@@ -119,13 +118,12 @@ export async function searchSubtitles(
                 headers['User-Agent'] = 'StreamVault v1.0';
             } else {
                 // Wyzie format
+                const wyzieKey = process.env.WYZIE_API_KEY || 'wyzie-364a68778105f1310fafb98178662901';
                 url = `${baseUrl}/search?id=${imdbId}&language=${language}`;
                 if (season !== undefined && episode !== undefined) {
                     url += `&season=${season}&episode=${episode}`;
                 }
-                if (process.env.WYZIE_API_KEY) {
-                    url += `&apikey=${process.env.WYZIE_API_KEY}`;
-                }
+                url += `&key=${wyzieKey}`;
             }
 
             console.log(`🔍 Querying provider ${provider.type}: ${url.split('api_key')[0]}`);
@@ -171,10 +169,10 @@ export async function searchSubtitles(
                     lang: sub.lang || sub.LanguageId || language,
                     language: sub.language || sub.LanguageName || 'English',
                     format: sub.format || 'srt',
-                    hearingImpaired: sub.hearingImpaired || sub.SubHearingImpaired === '1' || false,
-                    provider: 'wyzie',
-                    releaseName: sub.MovieReleaseName || sub.release || undefined,
-                    downloads: sub.SubDownloadsCnt ? parseInt(sub.SubDownloadsCnt) : (sub.downloads || 0),
+                    hearingImpaired: sub.isHearingImpaired || sub.hearingImpaired || sub.SubHearingImpaired === '1' || false,
+                    provider: sub.source || 'wyzie',
+                    releaseName: sub.release || sub.MovieReleaseName || undefined,
+                    downloads: parseInt(sub.downloadCount || sub.SubDownloadsCnt || sub.downloads || 0),
                     rating: sub.SubRating ? parseFloat(sub.SubRating) : (sub.rating || 0)
                 }));
             } else if (data.subtitles && Array.isArray(data.subtitles)) {
@@ -272,11 +270,12 @@ export async function downloadSubtitle(subtitleUrl: string): Promise<string | nu
                 console.error(`❌ Cannot download from OpenSubtitles: Missing API Key or invalid file_id`);
                 return null;
             }
-        } else if (subtitleUrl.includes('sub.wyzie.') && process.env.WYZIE_API_KEY) {
+        } else if (subtitleUrl.includes('sub.wyzie.')) {
+            const wyzieKey = process.env.WYZIE_API_KEY || 'wyzie-364a68778105f1310fafb98178662901';
             // Append Wyzie API key for authorization
             const urlObj = new URL(subtitleUrl);
             if (!urlObj.searchParams.has('key')) {
-                urlObj.searchParams.append('key', process.env.WYZIE_API_KEY);
+                urlObj.searchParams.append('key', wyzieKey);
                 subtitleUrl = urlObj.toString();
                 console.log(`🔑 Appended official Wyzie API Key to URL`);
             }
@@ -374,6 +373,24 @@ export function convertSrtToVtt(srt: string): string {
 export function getCachedSubtitle(hash: string): string | null {
     const cachedPath = path.join(SUBTITLE_CACHE_DIR, `${hash}.vtt`);
     return fs.existsSync(cachedPath) ? cachedPath : null;
+}
+
+/**
+ * Delete a cached subtitle file by hash
+ */
+export function deleteSubtitleFile(hash: string): boolean {
+    const cachedPath = path.join(SUBTITLE_CACHE_DIR, `${hash}.vtt`);
+    if (fs.existsSync(cachedPath)) {
+        try {
+            fs.unlinkSync(cachedPath);
+            console.log(`🗑️ Deleted cached subtitle: ${hash}`);
+            return true;
+        } catch (e) {
+            console.error(`❌ Failed to delete cached subtitle: ${hash}`, e);
+            return false;
+        }
+    }
+    return false;
 }
 
 /**

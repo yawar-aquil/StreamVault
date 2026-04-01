@@ -208,6 +208,52 @@ export function SubtitleManager({ shows, movies, anime }: SubtitleManagerProps) 
     }
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      let url = `/api/admin/subtitles/${id}?imdbId=${customImdbId}`;
+      if (season) url += `&season=${season}`;
+      if (episode) url += `&episode=${episode}`;
+
+      const res = await fetch(url, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to delete subtitle");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Subtitle deleted." });
+      refetchSaved();
+      queryClient.invalidateQueries();
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  });
+
+  const deleteAllMutation = useMutation({
+    mutationFn: async () => {
+      let url = `/api/admin/subtitles?imdbId=${customImdbId}`;
+      if (season) url += `&season=${season}`;
+      if (episode) url += `&episode=${episode}`;
+
+      const res = await fetch(url, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to delete all subtitles");
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      toast({ title: "Success", description: `Deleted ${data.deleted} subtitle(s).` });
+      refetchSaved();
+      queryClient.invalidateQueries();
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  });
+
   const getOptions = () => {
     if (contentType === 'movie') return movies;
     if (contentType === 'show') return shows;
@@ -363,21 +409,48 @@ export function SubtitleManager({ shows, movies, anime }: SubtitleManagerProps) 
       {/* Current Saved Subtitles for this target */}
       {selectedId && customImdbId && (contentType === 'movie' || (season && episode)) && (
         <Card className="border-primary/20 bg-primary/5">
-          <CardHeader className="py-4">
+          <CardHeader className="py-4 flex flex-row items-center justify-between">
             <CardTitle className="text-md flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-primary" />
               Assigned Subtitles for this Content
             </CardTitle>
+            {savedSubtitles?.subtitles?.length > 0 && (
+                <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    onClick={() => {
+                        if (confirm("Are you sure you want to delete ALL subtitles assigned to this content?")) {
+                            deleteAllMutation.mutate();
+                        }
+                    }}
+                    disabled={deleteAllMutation.isPending}
+                >
+                    {deleteAllMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                    Delete All
+                </Button>
+            )}
           </CardHeader>
           <CardContent className="py-2 pb-4">
             {savedSubtitles?.subtitles?.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {savedSubtitles.subtitles.map((sub: any, i: number) => (
-                  <Badge key={i} variant="secondary" className="px-3 py-1 flex items-center gap-1">
-                    {sub.language.toUpperCase()}
-                    <span title={sub.url}>
+                  <Badge key={i} variant="secondary" className="px-3 py-1 flex items-center gap-1 group relative overflow-hidden transition-colors cursor-pointer" title="Click to delete">
+                    <span className="group-hover:opacity-20 transition-opacity">
+                        {sub.language.toUpperCase()}
+                    </span>
+                    <span className="group-hover:opacity-20 transition-opacity">
                       <Info className="w-3 h-3 ml-1 opacity-50 text-muted-foreground" />
                     </span>
+                    <div 
+                        className="absolute inset-0 flex items-center justify-center bg-destructive/10 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => {
+                            if (confirm(`Delete '${sub.language.toUpperCase()}' subtitle?`)) {
+                                deleteMutation.mutate(sub.id);
+                            }
+                        }}
+                    >
+                        {deleteMutation.isPending && deleteMutation.variables === sub.id ? <Loader2 className="w-3 h-3 animate-spin text-destructive"/> : <Trash2 className="w-3 h-3" />}
+                    </div>
                   </Badge>
                 ))}
               </div>

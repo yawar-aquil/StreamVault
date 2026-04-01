@@ -14,7 +14,7 @@ import { searchShow, getShowDetails } from "./utils/tmdb";
 import { sendContentRequestEmail, sendIssueReportEmail, sendPasswordResetEmail, sendCoinPurchaseReceiptEmail, sendEmailVerificationEmail, sendContentRequestCompletedEmail, sendIssueReportResolvedEmail, sendFeedbackEmail, sendFeedbackResolvedEmail } from "./email-service";
 import { createRazorpayOrder, verifyRazorpaySignature } from "./payment";
 import { convertCurrency } from "./currency";
-import { getCachedSubtitle, searchSubtitles, downloadSubtitle, getFirstSubtitle, convertSrtToVtt } from "./subtitle-service";
+import { getCachedSubtitle, searchSubtitles, downloadSubtitle, getFirstSubtitle, convertSrtToVtt, deleteSubtitleFile } from "./subtitle-service";
 import { checkAndAwardAchievements, ACHIEVEMENTS } from "./achievements";
 import { getActiveRooms, checkRoomExists } from "./watch-together";
 import { sendNotificationToUser, sendInventoryUpdate, logAndBroadcastActivity, emitDMReceived } from "./social";
@@ -7287,10 +7287,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/admin/subtitles/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
+      const imdbId = req.query.imdbId as string;
+      const season = req.query.season as string;
+      const episode = req.query.episode as string;
+
+      if (imdbId) {
+        // Find it first to delete cache file
+        const eps = episode ? parseInt(episode) : undefined;
+        const ssn = season ? parseInt(season) : undefined;
+        const subs = await storage.getSavedSubtitles(imdbId, ssn, eps);
+        const sub = subs.find(s => s.id === id);
+        
+        if (sub && sub.url) {
+            const hash = sub.url.split('/').pop();
+            if (hash) deleteSubtitleFile(hash);
+        }
+      }
+
       await storage.deleteSavedSubtitle(id);
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: "Failed to delete subtitle" });
+    }
+  });
+
+  // Admin endpoint to delete ALL subtitles for a content
+  app.delete("/api/admin/subtitles", requireAdmin, async (req, res) => {
+    try {
+      const imdbId = req.query.imdbId as string;
+      const season = req.query.season as string;
+      const episode = req.query.episode as string;
+      
+      if (!imdbId) return res.status(400).json({ error: "imdbId required for bulk delete" });
+
+      const eps = episode ? parseInt(episode) : undefined;
+      const ssn = season ? parseInt(season) : undefined;
+      const subs = await storage.getSavedSubtitles(imdbId, ssn, eps);
+
+      let deletedCount = 0;
+      for (const sub of subs) {
+          await storage.deleteSavedSubtitle(sub.id);
+          if (sub.url) {
+              const hash = sub.url.split('/').pop();
+              if (hash) deleteSubtitleFile(hash);
+          }
+          deletedCount++;
+      }
+      
+      res.json({ success: true, deleted: deletedCount });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to delete all subtitles" });
     }
   });
 
