@@ -471,7 +471,15 @@ MIT License - feel free to use for personal or commercial projects
 
 ## 🎉 What's New
 
-### Latest Updates (v5.4) - February 14, 2026
+### Latest Updates (v6.0) - April 2, 2026
+- ✅ **"Liquid Glass" UI Update** - Frontend retrofitted with premium liquid glassmorphism, completely restyling the UI using Google Material Symbols Outlined and the `#6961ff` dark mode accent.
+- ✅ **Universal Subtitle Sync** - Watch Together parties now synchronize subtitle events flawlessly - enabling, disabling, or changing language perfectly replicates to all room participants natively.
+- ✅ **Speaking Indicators** - Added animated visual noise feedback for Voice Chat in Watch Together rooms.
+- ✅ **Total Subtitle Management** - Rebuilt subtitle proxy scraping (Wyzie/OpenSubtitles/Subdl). Added Admin controls to completely delete single tracks or purge whole episode caches seamlessly.
+- ✅ **Community & Recruitment** - Standardized inquiries to `contact@streamvault.live` and launched an interactive API-Docs style `/join-team` page to attract Full Stack Developers and Content Moderators.
+- ✅ **Anime Enhancements** - Extended full Anime tracking logic to Admin Dashboard episodes management.
+
+### Previous Updates (v5.4) - February 14, 2026
 - ✅ **Domain & SSL** - `streamvault.live` live with HTTPS & automated setup
 - ✅ **Advanced Chat** - Message reactions, replies, link previews, & jumbo emojis
 - ✅ **Voice 2.0** - Real-time audio visualizers & compact player UI
