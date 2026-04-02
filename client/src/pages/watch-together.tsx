@@ -809,7 +809,7 @@ function WatchTogetherContent() {
         // Only attach listener for non-host viewers
         if (!socket || isHost) return;
 
-        const handleVideoSync = (state: { isPlaying: boolean; currentTime: number; playbackRate: number }) => {
+        const handleVideoSync = (state: { isPlaying: boolean; currentTime: number; playbackRate: number; currentSubtitleIndex?: number }) => {
             console.log('🎬 Received video sync:', state);
 
             const player = videoPlayerRef.current;
@@ -839,6 +839,12 @@ function WatchTogetherContent() {
                 console.log('🎬 Pausing video (sync)');
                 player.pause();
             }
+
+            // Sync subtitle state if present
+            if (state.currentSubtitleIndex !== undefined) {
+                console.log('🎬 Applying subtitle index (sync):', state.currentSubtitleIndex);
+                player.setCaptions(state.currentSubtitleIndex);
+            }
         };
 
         console.log('🎬 Attaching video:sync listener for viewer');
@@ -863,6 +869,33 @@ function WatchTogetherContent() {
             socket.off('video:subtitle', handleSubtitleSync);
         };
     }, [socket, isHost]);
+
+    // Initial sync for viewers
+    useEffect(() => {
+        if (!isHost && isConnected && videoState && videoPlayerRef.current) {
+            console.log('🎬 Performing initial video state sync from context:', videoState);
+            const player = videoPlayerRef.current;
+            
+            // Apply speed
+            if (videoState.playbackRate !== player.getPlaybackRate()) {
+                player.setPlaybackRate(videoState.playbackRate);
+            }
+            // Apply time
+            if (Math.abs(player.getCurrentTime() - videoState.currentTime) > 2) {
+                player.seek(videoState.currentTime);
+            }
+            // Apply subtitles
+            if (videoState.currentSubtitleIndex !== undefined) {
+                player.setCaptions(videoState.currentSubtitleIndex);
+            }
+            // Apply play state
+            if (videoState.isPlaying && player.isPaused()) {
+                player.play();
+            } else if (!videoState.isPlaying && !player.isPaused()) {
+                player.pause();
+            }
+        }
+    }, [isHost, isConnected, videoState, roomInfo?.contentId, roomInfo?.episodeId]);
 
     // Listen for extension messages (for syncing with external Google Drive tabs)
     useEffect(() => {

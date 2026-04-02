@@ -58,6 +58,7 @@ export function Footer() {
     { name: t('nav.anime'), path: "/anime" },
     { name: t('footer.blog'), path: "/blog" },
     { name: t('footer.about'), path: "/about" },
+    { name: "Join Team", path: "/join-team" },
     { name: t('footer.contact'), path: "/contact" },
     { name: t('footer.sitemap'), path: "/sitemap" },
     { name: t('footer.terms'), path: "/terms" },

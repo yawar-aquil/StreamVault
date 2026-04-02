@@ -78,7 +78,7 @@ export default function DMCA() {
                   <h3 className="text-lg font-semibold mb-2">Copyright Agent Contact</h3>
                   <p className="mb-2">Send your DMCA notice to:</p>
                   <div className="space-y-1 text-sm">
-                    <p><strong>Email:</strong> <a href="mailto:streamvault.live@gmail.com" className="text-primary hover:underline">streamvault.live@gmail.com</a></p>
+                    <p><strong>Email:</strong> <a href="mailto:contact@streamvault.live" className="text-primary hover:underline">contact@streamvault.live</a></p>
                     <p><strong>Subject Line:</strong> DMCA Takedown Request</p>
                   </div>
                 </div>

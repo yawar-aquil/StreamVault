@@ -162,7 +162,7 @@ export default function RefundPage() {
 
                             <div className="pt-4 flex justify-center">
                                 <Button size="lg" className="gap-2 w-full md:w-auto" asChild>
-                                    <a href="mailto:streamvault.live@gmail.com?subject=Refund Request&body=Username:%0A%0ATransaction ID:%0A%0AIssue Description:%0A%0A(Please attach screenshot)">
+                                    <a href="mailto:contact@streamvault.live?subject=Refund Request&body=Username:%0A%0ATransaction ID:%0A%0AIssue Description:%0A%0A(Please attach screenshot)">
                                         <Mail className="w-4 h-4" />
                                         Compose Refund Email
                                     </a>

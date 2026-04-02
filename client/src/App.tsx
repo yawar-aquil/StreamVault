@@ -76,6 +76,7 @@ import InventoryPage from "@/pages/inventory";
 import ReferralProgram from "@/pages/referral-program";
 import CommunityFeed from "@/pages/community-feed";
 import ApiDocs from "@/pages/api-docs";
+import JoinTeam from "@/pages/join-team";
 import { AuthProvider } from "@/contexts/auth-context";
 import { NotificationsProvider } from "@/contexts/notifications-context";
 import { FriendsProvider } from "@/contexts/friends-context";
@@ -158,6 +159,7 @@ function Router() {
           <ProtectedRoute path="/inventory" component={InventoryPage} />
           <ProtectedRoute path="/referral-program" component={ReferralProgram} />
           <Route path="/api-docs" component={ApiDocs} />
+          <Route path="/join-team" component={JoinTeam} />
           <Route path="/refund" component={Refund} />
           <ProtectedRoute path="/calendar" component={Calendar} />
           <Route component={NotFound} />

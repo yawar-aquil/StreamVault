@@ -17,6 +17,7 @@ export interface VideoState {
     isPlaying: boolean;
     currentTime: number;
     lastUpdate: number;
+    playbackRate: number;
     currentSubtitleIndex: number; // -1 = off, 0+ = subtitle track index
 }
 
