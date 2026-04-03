@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./client/public/streamvault-logo-glow.png" alt="StreamVault Logo" width="400"/>
+</p>
+
 # 🎬 StreamVault - Premium Streaming Platform
 
 A professional Netflix-inspired streaming platform for both TV shows and movies, built with modern web technologies and featuring Google Drive video integration.
