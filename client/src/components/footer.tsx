@@ -58,7 +58,6 @@ export function Footer() {
     { name: t('nav.anime'), path: "/anime" },
     { name: t('footer.blog'), path: "/blog" },
     { name: t('footer.about'), path: "/about" },
-    { name: "Join Team", path: "/join-team" },
     { name: t('footer.contact'), path: "/contact" },
     { name: t('footer.sitemap'), path: "/sitemap" },
     { name: t('footer.terms'), path: "/terms" },
@@ -151,6 +150,15 @@ export function Footer() {
                     data-testid="link-footer-feedback"
                   >
                     Feedback
+                  </span>
+                </li>
+                <li key="join-team-initiative">
+                  <span
+                    onClick={() => window.dispatchEvent(new Event('open-join-team-modal'))}
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors cursor-pointer flex items-center gap-1.5"
+                    data-testid="link-footer-join-team-modal"
+                  >
+                    Join Team <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span></span>
                   </span>
                 </li>
             </ul>

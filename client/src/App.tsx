@@ -85,6 +85,7 @@ import { ProtectedRoute } from "@/lib/protected-route";
 import { WatchTogetherProvider } from "@/contexts/watch-together-context";
 import { ShareGrowthModal } from "@/components/share-growth-modal";
 import { FeedbackModal } from "@/components/feedback-modal";
+import { JoinTeamModal } from "@/components/join-team-modal";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 
 function Router() {
@@ -177,6 +178,7 @@ function Router() {
       <IncomingCallOverlay />
       <ShareGrowthModal />
       <FeedbackModal />
+      <JoinTeamModal />
     </>
   );
 }
