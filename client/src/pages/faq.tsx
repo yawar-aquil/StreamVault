@@ -1,6 +1,9 @@
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Mail, MessageCircleQuestion } from "lucide-react";
 import { SEO } from "@/components/seo";
 import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export default function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
@@ -132,69 +135,103 @@ export default function FAQ() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <SEO 
         title="FAQ - Frequently Asked Questions"
         description="Get answers to frequently asked questions about StreamVault. Learn about streaming, account features, content availability, and troubleshooting."
         canonical="https://streamvault.live/faq"
       />
-      <div className="container mx-auto px-4 py-12">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl font-bold mb-4">Frequently Asked Questions</h1>
-          <p className="text-xl text-muted-foreground mb-12">
+      <div className="container mx-auto px-4 py-12 space-y-16">
+        
+        {/* Header */}
+        <div className="text-center max-w-3xl mx-auto space-y-4">
+          <Badge variant="outline" className="mb-4 bg-primary/10 border-primary/20 text-primary px-4 py-1">
+            Questions?
+          </Badge>
+          <div className="flex justify-center mb-6">
+            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center shadow-lg shadow-primary/20">
+              <MessageCircleQuestion className="w-10 h-10 text-primary" />
+            </div>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
+            Frequently Asked Questions
+          </h1>
+          <p className="text-xl text-muted-foreground pt-2">
             Find quick answers to common questions about StreamVault
           </p>
+        </div>
 
-          <div className="space-y-8">
+        {/* Categories & Accordions */}
+        <div className="max-w-4xl mx-auto">
+          <div className="space-y-12">
             {faqs.map((category, categoryIndex) => (
-              <div key={category.category}>
-                <h2 className="text-2xl font-bold mb-4">{category.category}</h2>
-                <div className="space-y-3">
+              <div key={category.category} className="space-y-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-1.5 h-8 bg-gradient-to-b from-primary to-purple-500 rounded-full"></div>
+                  <h2 className="text-3xl font-bold">{category.category}</h2>
+                </div>
+                
+                <div className="space-y-4 shadow-xl shadow-primary/5 rounded-2xl">
                   {category.questions.map((faq, questionIndex) => {
                     const index = categoryIndex * 100 + questionIndex;
                     const isOpen = openIndex === index;
 
                     return (
-                      <div
+                      <Card
                         key={questionIndex}
-                        className="rounded-lg bg-card border border-border overflow-hidden"
+                        className={`bg-card/60 border border-border/50 backdrop-blur-sm transition-all duration-300 overflow-hidden ${
+                          isOpen ? 'border-primary/40 shadow-lg shadow-primary/10 bg-card/80' : 'hover:border-primary/30'
+                        }`}
                       >
                         <button
                           onClick={() => toggleQuestion(categoryIndex, questionIndex)}
-                          className="w-full p-6 text-left flex items-center justify-between hover:bg-muted/50 transition-colors"
+                          className="w-full p-6 text-left flex items-center justify-between hover:bg-muted/30 transition-colors"
                         >
-                          <span className="font-semibold pr-4">{faq.q}</span>
-                          <ChevronDown
-                            className={`w-5 h-5 text-muted-foreground flex-shrink-0 transition-transform ${
-                              isOpen ? "transform rotate-180" : ""
-                            }`}
-                          />
-                        </button>
-                        {isOpen && (
-                          <div className="px-6 pb-6">
-                            <p className="text-muted-foreground">{faq.a}</p>
+                          <span className="font-semibold pr-4 text-lg">{faq.q}</span>
+                          <div className={`p-2 rounded-full flex-shrink-0 transition-colors ${isOpen ? 'bg-primary/20 text-primary' : 'bg-secondary text-muted-foreground hover:bg-primary/10 hover:text-primary'}`}>
+                            <ChevronDown
+                              className={`w-5 h-5 transition-transform duration-300 ${
+                                isOpen ? "transform rotate-180" : ""
+                              }`}
+                            />
                           </div>
-                        )}
-                      </div>
+                        </button>
+                        <div
+                          className={`grid transition-all duration-300 ease-in-out ${
+                            isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                          }`}
+                        >
+                          <div className="overflow-hidden">
+                            <div className="px-6 pb-6 pt-0">
+                              <p className="text-muted-foreground leading-relaxed pl-2 border-l-2 border-primary/30 ml-2">
+                                {faq.a}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
                     );
                   })}
                 </div>
               </div>
             ))}
           </div>
+        </div>
 
-          <div className="mt-16 p-8 rounded-lg bg-card border border-border text-center">
-            <h2 className="text-2xl font-bold mb-4">Still have questions?</h2>
-            <p className="text-muted-foreground mb-6">
-              Can't find the answer you're looking for? Reach out to our support team.
-            </p>
-            <a
-              href="/contact"
-              className="inline-block px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              Contact Support
-            </a>
+        {/* Contact CTA */}
+        <div className="max-w-3xl mx-auto text-center bg-card/40 border border-border/50 rounded-3xl p-10 backdrop-blur-sm shadow-xl mt-16 mb-8">
+          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Mail className="w-8 h-8 text-primary" />
           </div>
+          <h2 className="text-3xl font-bold mb-4">Still have questions?</h2>
+          <p className="text-muted-foreground mb-8 text-lg max-w-xl mx-auto">
+            Can't find the answer you're looking for? Reach out to our support team and we'll be happy to help.
+          </p>
+          <a href="/contact">
+            <Button size="lg" className="px-8 rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all font-semibold">
+              Get in Touch
+            </Button>
+          </a>
         </div>
       </div>
     </div>

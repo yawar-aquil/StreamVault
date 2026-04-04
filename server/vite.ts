@@ -564,6 +564,35 @@ export function serveStatic(app: Express) {
       return;
     }
 
+    // Handle join-team page with custom OG image
+    if (requestPath === '/join-team') {
+      console.log(`[Meta Tags] Join Team page`);
+      let html = fs.readFileSync(indexPath, 'utf-8');
+      const title = 'Join the StreamVault Team';
+      const description = 'We\'re looking for passionate individuals to join our growing team. Explore open roles in engineering, design, content, and more at StreamVault.';
+      const url = 'https://streamvault.live/join-team';
+      const image = 'https://streamvault.live/og-join-team.png';
+
+      const metaTags = `
+    <meta property="og:title" content="${title} | StreamVault">
+    <meta property="og:description" content="${description}">
+    <meta property="og:image" content="${image}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:url" content="${url}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="StreamVault">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="${title} | StreamVault">
+    <meta name="twitter:description" content="${description}">
+    <meta name="twitter:image" content="${image}">
+    <meta name="description" content="${description}">
+    <title>${title} | StreamVault</title>`;
+
+      injectMetaAndServe(html, metaTags);
+      return;
+    }
+
     // Handle watch-together pages
     const watchTogetherMatch = requestPath.match(/^\/watch-together\/([^\/]+)/);
     if (watchTogetherMatch) {

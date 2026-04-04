@@ -1,7 +1,10 @@
-import { Search, Play, Bookmark, Settings, HelpCircle, Mail } from "lucide-react";
+import { Search, Play, Bookmark, Settings, HelpCircle, Mail, LifeBuoy } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { SEO } from "@/components/seo";
 import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export default function HelpCenter() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -157,65 +160,78 @@ export default function HelpCenter() {
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <SEO 
         title="Help Center"
         description="Get help with StreamVault. Find answers to common questions about streaming, playback issues, watchlist management, and more."
         canonical="https://streamvault.live/help"
       />
-      <div className="container mx-auto px-4 py-12">
+      <div className="container mx-auto px-4 py-12 space-y-16">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Help Center</h1>
-          <p className="text-xl text-muted-foreground mb-8">
+        <div className="text-center max-w-3xl mx-auto space-y-4">
+          <Badge variant="outline" className="mb-4 bg-primary/10 border-primary/20 text-primary px-4 py-1">
+            Support
+          </Badge>
+          <div className="flex justify-center mb-6">
+            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center shadow-lg shadow-primary/20">
+              <LifeBuoy className="w-10 h-10 text-primary" />
+            </div>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
+            Help Center
+          </h1>
+          <p className="text-xl text-muted-foreground pt-2">
             Find answers to common questions and learn how to use StreamVault
           </p>
 
           {/* Search */}
-          <div className="max-w-2xl mx-auto relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+          <div className="max-w-2xl mx-auto relative mt-8">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5 group-focus-within:text-primary transition-colors z-10" />
             <Input
               type="text"
               placeholder="Search for help..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-12"
+              className="pl-12 h-14 rounded-full bg-card/60 border-border/50 backdrop-blur-sm text-lg shadow-lg focus-visible:ring-primary/50"
             />
           </div>
         </div>
 
         {/* Help Topics */}
         {searchQuery === "" && (
-          <div className="mb-16">
-            <h2 className="text-2xl font-bold mb-6">Browse Topics</h2>
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl font-bold">Browse Topics</h2>
+            </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
               {helpTopics.map((topic) => (
-                <div
+                <Card 
                   key={topic.title}
-                  className="p-6 rounded-lg bg-card border border-border hover:border-primary transition-colors"
+                  className="border-border/50 bg-card/60 backdrop-blur-sm shadow-xl hover:border-primary/30 transition-all duration-300 hover:shadow-primary/5 flex flex-col"
                 >
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <topic.icon className="w-6 h-6 text-primary" />
+                  <CardContent className="p-6">
+                    <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 border border-primary/10">
+                      <topic.icon className="w-7 h-7 text-primary" />
                     </div>
-                    <h3 className="font-semibold">{topic.title}</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {topic.description}
-                  </p>
-                  <ul className="space-y-2">
-                    {topic.articles.map((article) => (
-                      <li key={article}>
-                        <button
-                          onClick={() => setSearchQuery(article)}
-                          className="text-sm text-primary hover:underline text-left"
-                        >
-                          {article}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                    <h3 className="text-xl font-bold mb-2">{topic.title}</h3>
+                    <p className="text-sm text-muted-foreground mb-6">
+                      {topic.description}
+                    </p>
+                    <ul className="space-y-3">
+                      {topic.articles.map((article) => (
+                        <li key={article}>
+                          <button
+                            onClick={() => setSearchQuery(article)}
+                            className="text-sm text-muted-foreground hover:text-primary hover:underline text-left flex items-start gap-2 transition-colors"
+                          >
+                            <div className="w-1.5 h-1.5 rounded-full bg-primary/40 mt-1.5 flex-shrink-0" />
+                            {article}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </div>
@@ -223,26 +239,33 @@ export default function HelpCenter() {
 
         {/* FAQs */}
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold mb-6">
-            {searchQuery ? "Search Results" : "Frequently Asked Questions"}
-          </h2>
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold">
+              {searchQuery ? "Search Results" : "Frequently Asked Questions"}
+            </h2>
+          </div>
           <div className="space-y-4">
             {filteredFAQs.length > 0 ? (
               filteredFAQs.map((faq, index) => (
-                <div
+                <Card 
                   key={index}
-                  className="p-6 rounded-lg bg-card border border-border"
+                  className="bg-card/40 border-border/50 backdrop-blur-sm hover:border-primary/20 transition-colors shadow-md"
                 >
-                  <h3 className="text-lg font-semibold mb-2 flex items-start gap-2">
-                    <HelpCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                    {faq.question}
-                  </h3>
-                  <p className="text-muted-foreground pl-7">{faq.answer}</p>
-                </div>
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-bold mb-3 flex items-start gap-3">
+                      <div className="bg-primary/10 p-1.5 rounded-md mt-0.5 border border-primary/20 flex-shrink-0">
+                        <HelpCircle className="w-5 h-5 text-primary" />
+                      </div>
+                      <span className="mt-1">{faq.question}</span>
+                    </h3>
+                    <p className="text-muted-foreground pl-11 leading-relaxed">{faq.answer}</p>
+                  </CardContent>
+                </Card>
               ))
             ) : (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">
+              <div className="text-center py-12 bg-card/40 border border-border/50 rounded-2xl backdrop-blur-sm shadow-md">
+                <Search className="w-12 h-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                <p className="text-xl text-muted-foreground">
                   No results found for "{searchQuery}"
                 </p>
               </div>
@@ -251,17 +274,18 @@ export default function HelpCenter() {
         </div>
 
         {/* Contact Support */}
-        <div className="max-w-2xl mx-auto mt-16 text-center p-8 rounded-lg bg-card border border-border">
-          <Mail className="w-12 h-12 text-primary mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-4">Still Need Help?</h2>
-          <p className="text-muted-foreground mb-6">
-            Can't find what you're looking for? Our support team is here to help!
+        <div className="max-w-3xl mx-auto text-center bg-card/40 border border-border/50 rounded-3xl p-10 backdrop-blur-sm shadow-xl mt-16 mb-8">
+          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Mail className="w-8 h-8 text-primary" />
+          </div>
+          <h2 className="text-3xl font-bold mb-4">Still Need Help?</h2>
+          <p className="text-muted-foreground mb-8 text-lg max-w-xl mx-auto">
+            Can't find what you're looking for? Our support team is here to assist you with any questions.
           </p>
-          <a
-            href="/contact"
-            className="inline-block px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            Contact Support
+          <a href="/contact">
+            <Button size="lg" className="px-8 rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all font-semibold">
+              Get in Touch
+            </Button>
           </a>
         </div>
       </div>

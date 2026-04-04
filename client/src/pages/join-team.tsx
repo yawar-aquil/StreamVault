@@ -1,4 +1,3 @@
-import { Helmet } from "react-helmet-async";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -6,22 +5,6 @@ import { Users, Code, PenTool, Shield, Mail, Zap, Terminal, Heart } from "lucide
 
 export default function JoinTeam() {
     return (
-        <>
-        <Helmet>
-            <title>Join The Team | StreamVault</title>
-            <meta name="description" content="Join the StreamVault team! We're looking for Full Stack Developers, Community Moderators, and Content Curators to help build the next generation of streaming." />
-            <link rel="canonical" href="https://streamvault.live/join-team" />
-            <meta property="og:type" content="website" />
-            <meta property="og:title" content="Join The StreamVault Team — We're Hiring" />
-            <meta property="og:description" content="Help us build the next generation of streaming. Open roles: Full Stack Developer, Community Moderator & Content Curator. Apply now at StreamVault." />
-            <meta property="og:image" content="https://streamvault.live/og-join-team.png" />
-            <meta property="og:url" content="https://streamvault.live/join-team" />
-            <meta property="og:site_name" content="StreamVault" />
-            <meta name="twitter:card" content="summary_large_image" />
-            <meta name="twitter:title" content="Join The StreamVault Team — We're Hiring" />
-            <meta name="twitter:description" content="Help us build the next generation of streaming. Open roles: Full Stack Dev, Community Mod & Content Curator." />
-            <meta name="twitter:image" content="https://streamvault.live/og-join-team.png" />
-        </Helmet>
         <div className="container mx-auto px-4 py-12 space-y-12">
             {/* Header */}
             <div className="text-center max-w-3xl mx-auto space-y-4">
@@ -170,7 +153,6 @@ export default function JoinTeam() {
                 </a>
             </div>
         </div>
-        </>
     );
 }
 
