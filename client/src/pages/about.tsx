@@ -1,4 +1,4 @@
-import { Play, Users, Tv, Heart, Shield, Globe, Star, Zap, Gamepad2, MonitorPlay, MessageSquare, Download, Code } from "lucide-react";
+import { Play, Users, Tv, Heart, Shield, Star, Zap, Gamepad2, MonitorPlay, MessageSquare, Download, Code } from "lucide-react";
 import { SEO } from "@/components/seo";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,8 +36,8 @@ export default function About() {
         {/* Mission Section */}
         <Card className="max-w-4xl mx-auto border-border/50 bg-card/60 backdrop-blur-sm shadow-xl text-center overflow-hidden">
           <CardContent className="p-8 md:p-12 space-y-6">
-            <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-               <Globe className="w-8 h-8 text-blue-500" />
+            <div className="w-24 h-24 mx-auto mb-6 relative group overflow-hidden rounded-3xl shadow-lg shadow-primary/20">
+               <img src="/streamvault-animated-logo-png.svg" alt="StreamVault Animated Logo" className="w-full h-full object-cover" />
             </div>
             <h2 className="text-3xl font-bold">Our Mission</h2>
             <p className="text-lg text-muted-foreground leading-relaxed max-w-3xl mx-auto">
