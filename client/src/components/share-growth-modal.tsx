@@ -103,7 +103,7 @@ export function ShareGrowthModal() {
                         {/* Logo */}
                         <div className="relative z-10 flex flex-col items-center p-4">
                             <img
-                                src="/streamvault-animated-logo-png.svg"
+                                src="/streamvault-animated-logo-png.svg?v=2"
                                 alt="StreamVault"
                                 className="w-16 h-16 object-contain drop-shadow-2xl"
                             />

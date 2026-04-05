@@ -74,7 +74,7 @@ export function JoinTeamModal() {
                         {/* Streamvault Animated Logo */}
                         <div className="relative z-10 flex items-center justify-center -mt-4">
                             <img
-                                src="/streamvault-animated-logo-png.svg"
+                                src="/streamvault-animated-logo-png.svg?v=2"
                                 alt="StreamVault"
                                 className="w-24 h-24 drop-shadow-xl"
                             />

@@ -37,7 +37,7 @@ export default function About() {
         <Card className="max-w-4xl mx-auto border-border/50 bg-card/60 backdrop-blur-sm shadow-xl text-center overflow-hidden">
           <CardContent className="p-8 md:p-12 space-y-6">
             <div className="w-24 h-24 mx-auto mb-6 relative group overflow-hidden rounded-3xl shadow-lg shadow-primary/20">
-               <img src="/streamvault-animated-logo-png.svg" alt="StreamVault Animated Logo" className="w-full h-full object-cover" />
+               <img src="/streamvault-animated-logo-png.svg?v=2" alt="StreamVault Animated Logo" className="w-full h-full object-cover" />
             </div>
             <h2 className="text-3xl font-bold">Our Mission</h2>
             <p className="text-lg text-muted-foreground leading-relaxed max-w-3xl mx-auto">
