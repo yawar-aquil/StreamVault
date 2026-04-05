@@ -1,4 +1,4 @@
-<svg width="250" height="250" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+<svg width="250" height="250" viewBox="-40 -40 280 280" overflow="visible" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <!-- Intense pure red volumetric glow -->
     <filter id="pure-red-glow" x="-50%" y="-50%" width="200%" height="200%">

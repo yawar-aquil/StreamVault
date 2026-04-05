@@ -131,11 +131,11 @@ export function FeedbackModal() {
                         <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay" />
                         
                         {/* Logo */}
-                        <div className="relative z-10 flex flex-col items-center">
+                        <div className="relative z-10 flex flex-col items-center p-4">
                             <img
-                                src="/streamvault-logo.png"
+                                src="/streamvault-animated-logo-png.svg"
                                 alt="StreamVault"
-                                className="w-auto h-12 drop-shadow-xl"
+                                className="w-16 h-16 object-contain drop-shadow-2xl"
                             />
                         </div>
                         
