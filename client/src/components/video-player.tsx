@@ -1,5 +1,6 @@
+import { AudioLines, Check } from 'lucide-react';
 
-import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
+import { useEffect, useRef, useState, forwardRef, useImperativeHandle, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
@@ -441,6 +442,39 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
     const jwPlayerRef = useRef<VideoPlayerRef>(null);
     const [playerType, setPlayerType] = useState<'drive' | 'jwplayer' | 'direct' | 'embed' | 'local' | 'none'>('none');
     const [processedUrl, setProcessedUrl] = useState<string | null>(null);
+    const [selectedLanguage, setSelectedLanguage] = useState<string>("Default");
+    const [showAudioMenu, setShowAudioMenu] = useState(false);
+    const lastTimeRef = useRef(0);
+
+    useEffect(() => {
+        const saved = localStorage.getItem("sv_audio_lang");
+        if (saved) setSelectedLanguage(saved);
+        
+        const handleClickOutside = (e: MouseEvent) => {
+            if (showAudioMenu && !((e.target as Element).closest('#audio-menu-container'))) {
+                setShowAudioMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showAudioMenu]);
+
+    const effectiveVideoUrl = useMemo(() => {
+        if (!audioTracks || audioTracks.length === 0 || selectedLanguage === "Default") return videoUrl;
+        const track = audioTracks.find(t => t.language === selectedLanguage);
+        return track && track.url ? track.url : videoUrl;
+    }, [videoUrl, audioTracks, selectedLanguage]);
+
+    const handleLanguageChange = (lang: string) => {
+        // Save current time before switching
+        if (playerType === 'direct') {
+            lastTimeRef.current = jwPlayerRef.current?.getCurrentTime() || 0;
+        }
+        setSelectedLanguage(lang);
+        localStorage.setItem("sv_audio_lang", lang);
+        setShowAudioMenu(false);
+    };
+
 
     useImperativeHandle(ref, () => ({
         play: () => jwPlayerRef.current?.play(),
@@ -455,21 +489,21 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
 
     useEffect(() => {
         // ... (URL detection logic unchanged) ...
-        if (!videoUrl) {
+        if (!effectiveVideoUrl) {
             setPlayerType('none');
             setProcessedUrl(null);
             return;
         }
 
-        const isPlaceholder = PLACEHOLDER_IDS.some(id => videoUrl.includes(id));
+        const isPlaceholder = PLACEHOLDER_IDS.some(id => effectiveVideoUrl.includes(id));
         if (isPlaceholder) {
             setPlayerType('none');
             setProcessedUrl(null);
             return;
         }
 
-        const isAbsoluteUrl = videoUrl.startsWith('http://') || videoUrl.startsWith('https://') || videoUrl.startsWith('blob:');
-        const isDriveId = /^[a-zA-Z0-9_-]{20,60}$/.test(videoUrl);
+        const isAbsoluteUrl = effectiveVideoUrl.startsWith('http://') || videoUrl.startsWith('https://') || videoUrl.startsWith('blob:');
+        const isDriveId = /^[a-zA-Z0-9_-]{20,60}$/.test(effectiveVideoUrl as string);
 
         if (isDriveId && !isAbsoluteUrl) {
             setPlayerType('drive');
@@ -483,27 +517,27 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
             return;
         }
 
-        if (videoUrl.startsWith('blob:')) {
+        if (effectiveVideoUrl!.startsWith('blob:')) {
             setPlayerType('local');
-            setProcessedUrl(videoUrl);
-        } else if (isGoogleDriveUrl(videoUrl)) {
+            setProcessedUrl(effectiveVideoUrl as string);
+        } else if (isGoogleDriveUrl(effectiveVideoUrl as string)) {
             setPlayerType('drive');
-            const driveId = extractDriveId(videoUrl);
+            const driveId = extractDriveId(effectiveVideoUrl as string);
             setProcessedUrl(`https://drive.google.com/file/d/${driveId}/preview?autoplay=0&controls=1&modestbranding=1`);
-        } else if (isJWPlayerUrl(videoUrl)) {
+        } else if (isJWPlayerUrl(effectiveVideoUrl as string)) {
             setPlayerType('jwplayer');
-            setProcessedUrl(videoUrl);
-        } else if (isDirectVideoUrl(videoUrl) || isProxyRequiredUrl(videoUrl)) {
+            setProcessedUrl(effectiveVideoUrl as string);
+        } else if (isDirectVideoUrl(effectiveVideoUrl as string) || isProxyRequiredUrl(effectiveVideoUrl as string)) {
             setPlayerType('direct');
-            setProcessedUrl(videoUrl);
-        } else if (isEmbedUrl(videoUrl)) {
+            setProcessedUrl(effectiveVideoUrl as string);
+        } else if (isEmbedUrl(effectiveVideoUrl as string)) {
             setPlayerType('embed');
-            setProcessedUrl(videoUrl);
+            setProcessedUrl(effectiveVideoUrl as string);
         } else {
             setPlayerType('embed');
-            setProcessedUrl(videoUrl);
+            setProcessedUrl(effectiveVideoUrl as string);
         }
-    }, [videoUrl]);
+    }, [effectiveVideoUrl]);
 
     if (playerType === 'none' || !processedUrl) {
         // ... (placeholder render unchanged) ...
@@ -528,9 +562,52 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
         );
     }
 
+
+    const renderAudioMenu = () => {
+        if (!audioTracks || audioTracks.length === 0) return null;
+        return (
+            <div id="audio-menu-container" className="absolute top-4 right-4 z-[9999]">
+                <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    className="bg-black/80 hover:bg-black/90 text-white border border-white/20 gap-2 backdrop-blur-md"
+                    onClick={() => setShowAudioMenu(!showAudioMenu)}
+                >
+                    <AudioLines className="w-4 h-4" />
+                    <span>Language: {selectedLanguage}</span>
+                </Button>
+                
+                {showAudioMenu && (
+                    <div className="absolute right-0 mt-2 w-48 bg-black/95 border border-white/10 rounded-md shadow-xl overflow-hidden backdrop-blur-lg animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-2 text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-white/10">Audio Tracks</div>
+                        <button 
+                            className={`w-full text-left px-4 py-3 text-sm flex items-center justify-between transition-colors hover:bg-white/10 ${selectedLanguage === 'Default' ? 'text-primary font-medium bg-primary/10' : 'text-gray-200'}`}
+                            onClick={() => handleLanguageChange("Default")}
+                        >
+                            Default
+                            {selectedLanguage === 'Default' && <Check className="w-4 h-4" />}
+                        </button>
+                        {audioTracks.map((track) => (
+                            <button 
+                                key={track.language}
+                                className={`w-full text-left px-4 py-3 text-sm flex items-center justify-between transition-colors hover:bg-white/10 ${selectedLanguage === track.language ? 'text-primary font-medium bg-primary/10' : 'text-gray-200'}`}
+                                onClick={() => handleLanguageChange(track.language)}
+                            >
+                                {track.language}
+                                {selectedLanguage === track.language && <Check className="w-4 h-4" />}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     if (playerType === 'drive') {
         return (
-            <iframe
+            <div className="w-full h-full relative">
+                {renderAudioMenu()}
+                <iframe
                 src={processedUrl}
                 className={`w-full h-full border-0 ${className}`}
                 allowFullScreen
@@ -538,23 +615,27 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
                 style={{ border: 'none' }}
                 data-app-iframe="gdrive"
             />
+            </div>
         );
     }
 
     if (playerType === 'local') {
         return (
-            <video
+            <div className="w-full h-full relative">
+                {renderAudioMenu()}
+                <video
                 src={processedUrl!}
                 className={`w-full h-full bg-black ${className}`}
                 controls
                 autoPlay={autoplay}
                 playsInline
                 controlsList="nodownload"
-            />
+                />
+            </div>
         );
     }
 
-    if (playerType === 'jwplayer') {
+if (playerType === 'jwplayer') {
         let embedUrl = processedUrl;
         if (!processedUrl.includes('/embed') && processedUrl.includes('cdn.jwplayer.com')) {
             const mediaIdMatch = processedUrl.match(/\/([a-zA-Z0-9]{8})-/);
@@ -564,52 +645,62 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
             }
         }
         return (
+            <div className="w-full h-full relative">
+                {renderAudioMenu()}
+                <iframe
+                    src={embedUrl}
+                    className={`w-full h-full border-0 ${className}`}
+                    allowFullScreen
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                    style={{ border: 'none' }}
+                    scrolling="no"
+                />
+            </div>
+        );
+    }
+
+    if (playerType === 'direct') {
+        return (
+            <div className="w-full h-full relative">
+                {renderAudioMenu()}
+                <JWPlayerWrapper
+                    key={`jw-${subtitleTracks.length}-${selectedLanguage}`}
+                    startTime={lastTimeRef.current}
+                    ref={jwPlayerRef}
+                    videoUrl={processedUrl!}
+                    className={className}
+                    onTimeUpdate={onTimeUpdate}
+                    onPlay={onPlay}
+                    onPause={onPause}
+                    onSeek={onSeek}
+                    onPlaybackRateChange={onPlaybackRateChange}
+                    onSubtitleChange={onSubtitleChange}
+                    autoplay={autoplay}
+                    isHost={isHost}
+                    syncMode={syncMode}
+                    subtitleTracks={subtitleTracks}
+                    title={title}
+                    description={description}
+                    season={season}
+                    episode={episode}
+                    episodeTitle={episodeTitle}
+                />
+            </div>
+        );
+    }
+
+    return (
+        <div className="w-full h-full relative">
+            {renderAudioMenu()}
             <iframe
-                src={embedUrl}
+                src={processedUrl}
                 className={`w-full h-full border-0 ${className}`}
                 allowFullScreen
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                 style={{ border: 'none' }}
                 scrolling="no"
             />
-        );
-    }
-
-    if (playerType === 'direct') {
-        return (
-            <JWPlayerWrapper
-                key={`jw-${subtitleTracks.length}`}
-                ref={jwPlayerRef}
-                videoUrl={processedUrl!}
-                className={className}
-                onTimeUpdate={onTimeUpdate}
-                onPlay={onPlay}
-                onPause={onPause}
-                onSeek={onSeek}
-                onPlaybackRateChange={onPlaybackRateChange}
-                onSubtitleChange={onSubtitleChange}
-                autoplay={autoplay}
-                isHost={isHost}
-                syncMode={syncMode}
-                subtitleTracks={subtitleTracks}
-                title={title}
-                description={description}
-                season={season}
-                episode={episode}
-                episodeTitle={episodeTitle}
-            />
-        );
-    }
-
-    return (
-        <iframe
-            src={processedUrl}
-            className={`w-full h-full border-0 ${className}`}
-            allowFullScreen
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-            style={{ border: 'none' }}
-            scrolling="no"
-        />
+        </div>
     );
 });
 

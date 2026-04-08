@@ -354,7 +354,8 @@ export default function WatchAnime() {
 
     const episodeTitle = currentEpisodeData.title || `Episode ${currentEpisode}`;
 
-    return (
+    const parsedAudioTracks = episode?.audioTracks ? JSON.parse(episode.audioTracks) : [];
+  return (
         <div className="min-h-screen bg-background">
             <Helmet>
                 <title>{`${episodeTitle} - ${anime.title} S${currentSeason}E${currentEpisode} | StreamVault`}</title>
@@ -385,6 +386,7 @@ export default function WatchAnime() {
                     <div className="lg:col-span-2">
                         <div className="aspect-video bg-black rounded-md overflow-hidden relative">
                             <VideoPlayer
+                audioTracks={parsedAudioTracks}
                                 ref={videoPlayerRef}
                                 videoUrl={videoUrl}
                                 onTimeUpdate={handleTimeUpdate}

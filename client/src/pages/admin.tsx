@@ -47,6 +47,7 @@ import StreamCoin from "@/components/stream-coin";
 import type { Show, Episode, Movie, BlogPost, Anime, AnimeEpisode, Review } from "@shared/schema";
 import { getAuthHeaders, logout as authLogout } from "@/lib/auth";
 import { SubtitleManager } from "@/components/admin/SubtitleManager";
+import { AudioTracksInput } from "@/components/admin/audio-tracks-input";
 
 export default function AdminPage() {
   const { toast } = useToast();
@@ -2922,7 +2923,8 @@ function AddMovieForm({ onSuccess }: { onSuccess: () => void }) {
     duration: 120,
     cast: "",
     directors: "",
-    googleDriveUrl: "",
+    googleDriveUrl: "", // Original link
+    audioTracks: "", // For multi-audio
     featured: false,
     trending: false,
     category: "action",

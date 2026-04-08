@@ -328,6 +328,7 @@ export default function WatchMovie() {
     })
     .slice(0, 8) || [];
 
+  const parsedAudioTracks = movie?.audioTracks ? JSON.parse(movie.audioTracks) : [];
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
@@ -358,6 +359,7 @@ export default function WatchMovie() {
           <div className="bg-card rounded-lg overflow-hidden shadow-lg">
             <div className="aspect-video bg-black">
               <VideoPlayer
+                audioTracks={parsedAudioTracks}
                 ref={videoPlayerRef}
                 videoUrl={movie.googleDriveUrl}
                 subtitleTracks={subtitleTracks}

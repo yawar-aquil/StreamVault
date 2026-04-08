@@ -393,6 +393,7 @@ export default function Watch() {
 
   const episodeTitle = currentEpisodeData.title || `Episode ${currentEpisode}`;
 
+  const parsedAudioTracks = episode?.audioTracks ? JSON.parse(episode.audioTracks) : [];
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
@@ -424,6 +425,7 @@ export default function Watch() {
           <div className="lg:col-span-2">
             <div className="aspect-video bg-black rounded-md overflow-hidden relative">
               <VideoPlayer
+                audioTracks={parsedAudioTracks}
                 ref={videoPlayerRef}
                 videoUrl={videoUrl}
                 onTimeUpdate={handleTimeUpdate}

@@ -296,6 +296,7 @@ export const episodes = pgTable("episodes", {
   duration: integer("duration").notNull(), // in minutes
   googleDriveUrl: text("google_drive_url").notNull(),
   videoUrl: text("video_url"), // New field for video URLs (Archive.org, etc.)
+  audioTracks: text("audio_tracks"), // JSON array: [{ language: string, url: string }]
   airDate: text("air_date"),
 });
 
@@ -317,6 +318,7 @@ export const movies = pgTable("movies", {
   castDetails: text("cast_details"), // JSON string with cast photos and character names
   directors: text("directors"), // comma-separated string
   googleDriveUrl: text("google_drive_url").notNull(),
+  audioTracks: text("audio_tracks"), // JSON array: [{ language: string, url: string }]
   featured: boolean("featured").default(false),
   trending: boolean("trending").default(false),
   category: text("category"), // "action", "drama", "comedy", etc.
@@ -363,6 +365,7 @@ export const animeEpisodes = pgTable("anime_episodes", {
   duration: integer("duration").notNull(), // in minutes
   googleDriveUrl: text("google_drive_url").notNull(),
   videoUrl: text("video_url"), // Archive.org or other video URLs
+  audioTracks: text("audio_tracks"), // JSON array: [{ language: string, url: string }]
   airDate: text("air_date"),
   dubbed: boolean("dubbed").default(false), // English dub available
 });
