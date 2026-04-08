@@ -1641,6 +1641,24 @@ function AddEpisodeForm({ shows, anime }: { shows: Show[], anime: Anime[] }) {
             </p>
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="videoUrl">Archive.org / Alternative Video URL</Label>
+            <Input
+              id="videoUrl"
+              type="url"
+              value={formData.videoUrl || ""}
+              onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
+              placeholder="https://archive.org/download/..."
+            />
+          </div>
+
+          <div className="space-y-4 pt-2">
+            <AudioTracksInput
+              value={formData.audioTracks || ""}
+              onChange={(v) => setFormData({ ...formData, audioTracks: v })}
+            />
+          </div>
+
           <div className="flex gap-4">
             <Button type="submit" disabled={addEpisodeMutation.isPending}>
               <Plus className="w-4 h-4 mr-2" />
@@ -2046,6 +2064,13 @@ function EditEpisodeForm({ episode, onSave, onCancel, isLoading }: {
         <p className="text-xs text-muted-foreground">
           Optional: Used as an alternative video source (e.g., Archive.org)
         </p>
+      </div>
+
+      <div className="space-y-4 pt-2">
+        <AudioTracksInput
+          value={formData.audioTracks || ""}
+          onChange={(v) => setFormData({ ...formData, audioTracks: v })}
+        />
       </div>
 
       <DialogFooter>
@@ -3113,6 +3138,13 @@ function AddMovieForm({ onSuccess }: { onSuccess: () => void }) {
         />
       </div>
 
+      <div className="space-y-4 pt-2">
+        <AudioTracksInput
+          value={formData.audioTracks || ""}
+          onChange={(v) => setFormData({ ...formData, audioTracks: v })}
+        />
+      </div>
+
       <div className="flex gap-4">
         <label className="flex items-center gap-2">
           <input
@@ -3299,6 +3331,13 @@ function EditMovieForm({
           id="edit-googleDriveUrl"
           value={formData.googleDriveUrl}
           onChange={(e) => setFormData({ ...formData, googleDriveUrl: e.target.value })}
+        />
+      </div>
+
+      <div className="space-y-4 pt-2">
+        <AudioTracksInput
+          value={formData.audioTracks || ""}
+          onChange={(v) => setFormData({ ...formData, audioTracks: v })}
         />
       </div>
 
