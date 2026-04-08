@@ -1642,6 +1642,12 @@ function AddEpisodeForm({ shows, anime }: { shows: Show[], anime: Anime[] }) {
               Get File ID from Google Drive share link and use format: https://drive.google.com/file/d/FILE_ID/preview
             </p>
           </div>
+      <div className="space-y-4 pt-2">
+        <AudioTracksInput
+          value={formData.audioTracks || ""}
+          onChange={(v) => setFormData({ ...formData, audioTracks: v })}
+        />
+      </div>
 
           <div className="flex gap-4">
             <Button type="submit" disabled={addEpisodeMutation.isPending}>
@@ -2035,6 +2041,12 @@ function EditEpisodeForm({ episode, onSave, onCancel, isLoading }: {
           required
         />
       </div>
+      <div className="space-y-4 pt-2">
+        <AudioTracksInput
+          value={formData.audioTracks || ""}
+          onChange={(v) => setFormData({ ...formData, audioTracks: v })}
+        />
+      </div>
 
       <div className="space-y-2">
         <Label htmlFor="edit-videoUrl">Archive.org / Alternative Video URL</Label>
@@ -2048,6 +2060,12 @@ function EditEpisodeForm({ episode, onSave, onCancel, isLoading }: {
         <p className="text-xs text-muted-foreground">
           Optional: Used as an alternative video source (e.g., Archive.org)
         </p>
+      </div>
+      <div className="space-y-4 pt-2">
+        <AudioTracksInput
+          value={formData.audioTracks || ""}
+          onChange={(v) => setFormData({ ...formData, audioTracks: v })}
+        />
       </div>
 
       <DialogFooter>
