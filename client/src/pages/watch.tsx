@@ -393,7 +393,7 @@ export default function Watch() {
 
   const episodeTitle = currentEpisodeData.title || `Episode ${currentEpisode}`;
 
-  const parsedAudioTracks = episode?.audioTracks ? JSON.parse(episode.audioTracks) : [];
+  const parsedAudioTracks = currentEpisodeData?.audioTracks ? JSON.parse(currentEpisodeData.audioTracks) : [];
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
