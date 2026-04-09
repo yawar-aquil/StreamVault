@@ -77,7 +77,7 @@ export default function WatchAnime() {
     const [isCinemaMode, setIsCinemaMode] = useState(false);
 
     // State for Cinema Mode
-    const [isCinemaMode, setIsCinemaMode] = useState(false);
+
 
     // State for subtitle tracks
     const [subtitleTracks, setSubtitleTracks] = useState<Array<{
@@ -177,7 +177,7 @@ export default function WatchAnime() {
     // Handle time update from video player - shows Next Episode button 30s before end AND saves progress
     const lastSaveTimeRef = useRef(0);
     const hasResumedRef = useRef(false);
-  const [isCinemaMode, setIsCinemaMode] = useState(false);
+
 
     const handleTimeUpdate = (currentTime: number, duration: number) => {
         if (!currentEpisodeData || !anime || duration <= 0) return;

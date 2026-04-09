@@ -27,7 +27,7 @@ export default function WatchMovie() {
   const [isCinemaMode, setIsCinemaMode] = useState(false);
 
   // State for Cinema Mode
-  const [isCinemaMode, setIsCinemaMode] = useState(false);
+
 
   const { data: movie } = useQuery<Movie>({
     queryKey: [`/api/movies/${slug}`],
