@@ -579,7 +579,9 @@ export function Banner160x300({ className }: { className?: string }) {
 
 // Smartlink Button
 export function SmartlinkButton({ className, text = "Special Partner Offer" }: { className?: string, text?: string }) {
-    // Smartlinks are always visible regardless of ad-free state (per user request)
+    // Only show on streamvault.in (ad domain), not on streamvault.live
+    const isAdDomain = typeof window !== 'undefined' && (window.location.hostname.includes("streamvault.in") || window.location.hostname === 'localhost');
+    if (!isAdDomain) return null;
 
     const openSmartlink = () => {
         window.open("https://openairtowhardworking.com/r52n12yhee?key=c9e42e6265a0e4becf4bde3064060d5e", "_blank");
