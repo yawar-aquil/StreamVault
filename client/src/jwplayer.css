@@ -26,12 +26,20 @@
 }
 
 /* Cinema Mode button - match size of other controlbar icons */
-.jwplayer .jw-controlbar .jw-button-container .jw-icon-cinema-mode-button {
+.jwplayer .jw-controlbar [button="cinema-mode-button"],
+.jwplayer .jw-controlbar .jw-icon-cinema-mode-button,
+.jwplayer [button="cinema-mode-button"] {
     width: 38px !important;
     height: 38px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
-.jwplayer .jw-controlbar .jw-button-container .jw-icon-cinema-mode-button svg {
+.jwplayer .jw-controlbar [button="cinema-mode-button"] svg,
+.jwplayer .jw-controlbar .jw-icon-cinema-mode-button svg,
+.jwplayer [button="cinema-mode-button"] svg {
     width: 20px !important;
     height: 20px !important;
-    padding: 0 !important;
+    max-width: 20px !important;
+    max-height: 20px !important;
 }
