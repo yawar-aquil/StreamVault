@@ -24,6 +24,12 @@ export default function WatchMovie() {
   const videoPlayerRef = useRef<VideoPlayerRef>(null);
   const lastSaveTimeRef = useRef(0);
   const hasResumedRef = useRef(false);
+
+  useEffect(() => {
+    const handleCinemaToggle = () => setIsCinemaMode(prev => !prev);
+    window.addEventListener('toggleCinemaMode', handleCinemaToggle);
+    return () => window.removeEventListener('toggleCinemaMode', handleCinemaToggle);
+  }, []);
   const [isCinemaMode, setIsCinemaMode] = useState(false);
 
   // State for Cinema Mode
@@ -387,7 +393,7 @@ export default function WatchMovie() {
                     variant="outline" 
                     size="sm" 
                     onClick={() => setIsCinemaMode(!isCinemaMode)} 
-                    className="hidden md:flex gap-2"
+                    className="hidden"
                   >
                     <Monitor className="w-4 h-4" />
                     {isCinemaMode ? 'Default View' : 'Cinema Mode'}

@@ -201,6 +201,12 @@ export default function Watch() {
   const lastSaveTimeRef = useRef(0);
   const hasResumedRef = useRef(false);
 
+  useEffect(() => {
+    const handleCinemaToggle = () => setIsCinemaMode(prev => !prev);
+    window.addEventListener('toggleCinemaMode', handleCinemaToggle);
+    return () => window.removeEventListener('toggleCinemaMode', handleCinemaToggle);
+  }, []);
+
 
   const handleTimeUpdate = (currentTime: number, duration: number) => {
     if (!currentEpisodeData || !show || duration <= 0) return;
@@ -486,7 +492,7 @@ export default function Watch() {
                     variant="outline" 
                     size="sm" 
                     onClick={() => setIsCinemaMode(!isCinemaMode)} 
-                    className="hidden md:flex gap-2"
+                    className="hidden"
                   >
                     <Monitor className="w-4 h-4" />
                     {isCinemaMode ? 'Default View' : 'Cinema Mode'}

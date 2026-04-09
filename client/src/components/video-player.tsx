@@ -240,7 +240,7 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
         const player = window.jwplayer(playerId).setup({
             ...playerConfig,
             primary: 'html5',
-            stretching: 'fill',
+            stretching: 'uniform',
             playbackRateControls: true,
             playbackRates: [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2],
             displaytitle: false,
@@ -292,6 +292,18 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
                 // We want to be inside #id
                 setPlayerContainer(element);
             }
+            
+            // Add native cinema mode button near CC
+            try {
+                const cinemaIcon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#ffffff" d="M22,6H2C0.9,6,0,6.9,0,8v8c0,1.1,0.9,2,2,2h20c1.1,0,2-0.9,2-2V8C24,6.9,23.1,6,22,6z M22,16H2V8h20V16z"/></svg>';
+                player.addButton(
+                    cinemaIcon,
+                    "Toggle Wide View",
+                    () => { window.dispatchEvent(new CustomEvent("toggleCinemaMode")); },
+                    "cinema-mode-button",
+                    "jw-btn jw-icon"
+                );
+            } catch(e) { console.error(e); }
         });
 
         // --- Event Listeners ---
