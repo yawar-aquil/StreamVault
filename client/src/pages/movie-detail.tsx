@@ -178,6 +178,16 @@ export default function MovieDetail() {
     );
   }
 
+  // Calculate display languages from audio tracks if available
+  const availableLanguages = new Set([movie.language || "English"]);
+  if (movie.audioTracks) {
+    try {
+      const tracks = JSON.parse(movie.audioTracks);
+      tracks.forEach((t: { language: string }) => availableLanguages.add(t.language));
+    } catch (e) {}
+  }
+  const displayLanguage = Array.from(availableLanguages).join(", ");
+
   // Generate structured data for SEO
   const structuredData = {
     "@context": "https://schema.org",
@@ -205,16 +215,6 @@ export default function MovieDetail() {
     })) : undefined,
     "url": `https://streamvault.live/movie/${movie.slug}`
   };
-
-  // Calculate display languages from audio tracks if available
-  const availableLanguages = new Set([movie.language || "English"]);
-  if (movie.audioTracks) {
-    try {
-      const tracks = JSON.parse(movie.audioTracks);
-      tracks.forEach((t: { language: string }) => availableLanguages.add(t.language));
-    } catch (e) {}
-  }
-  const displayLanguage = Array.from(availableLanguages).join(", ");
 
   return (
     <div className="min-h-screen bg-background">

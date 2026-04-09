@@ -211,6 +211,18 @@ export default function AnimeDetail() {
             }
         ).slice(0, 12) || [];
 
+    // Calculate display languages from episode audio tracks if available
+    const availableLanguages = new Set([anime.language || "Japanese"]);
+    episodes?.forEach((ep) => {
+        if (ep.audioTracks) {
+            try {
+                const tracks = JSON.parse(ep.audioTracks);
+                tracks.forEach((t: { language: string }) => availableLanguages.add(t.language));
+            } catch (e) {}
+        }
+    });
+    const displayLanguage = Array.from(availableLanguages).join(", ");
+
     // Generate structured data for SEO
     const structuredData = {
         "@context": "https://schema.org",
@@ -234,18 +246,6 @@ export default function AnimeDetail() {
         })) : undefined,
         "url": `https://streamvault.live/anime/${anime.slug}`
     };
-
-    // Calculate display languages from episode audio tracks if available
-    const availableLanguages = new Set([anime.language || "Japanese"]);
-    episodes?.forEach((ep) => {
-        if (ep.audioTracks) {
-            try {
-                const tracks = JSON.parse(ep.audioTracks);
-                tracks.forEach((t: { language: string }) => availableLanguages.add(t.language));
-            } catch (e) {}
-        }
-    });
-    const displayLanguage = Array.from(availableLanguages).join(", ");
 
     return (
         <div className="min-h-screen">
