@@ -295,7 +295,7 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
             
             // Add native cinema mode button near CC
             try {
-                const cinemaIcon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#ffffff" d="M22,6H2C0.9,6,0,6.9,0,8v8c0,1.1,0.9,2,2,2h20c1.1,0,2-0.9,2-2V8C24,6.9,23.1,6,22,6z M22,16H2V8h20V16z"/></svg>';
+                const cinemaIcon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>';
                 player.addButton(
                     cinemaIcon,
                     "Toggle Wide View",
