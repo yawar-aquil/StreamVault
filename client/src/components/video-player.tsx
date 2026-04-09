@@ -46,6 +46,7 @@ interface VideoPlayerProps extends VideoMetadata {
     isHost?: boolean; // If true, shows controls; if false, hide controls for viewers
     syncMode?: boolean; // If true, disables local controls for non-hosts
     subtitleTracks?: SubtitleTrack[]; // External subtitle tracks to load
+    audioTracks?: { language: string; url: string }[];
 }
 
 // ... (keep helper functions unchanged: isGoogleDriveUrl, isJWPlayerUrl, etc.) ...
@@ -432,6 +433,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
     isHost = true,
     syncMode = false,
     subtitleTracks = [],
+    audioTracks = [],
     title,
     description,
     season,
