@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, Play, Download } from "lucide-react";
+import { ChevronLeft, Play, Download, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getGoogleDriveDownloadUrl } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
@@ -24,6 +24,10 @@ export default function WatchMovie() {
   const videoPlayerRef = useRef<VideoPlayerRef>(null);
   const lastSaveTimeRef = useRef(0);
   const hasResumedRef = useRef(false);
+  const [isCinemaMode, setIsCinemaMode] = useState(false);
+
+  // State for Cinema Mode
+  const [isCinemaMode, setIsCinemaMode] = useState(false);
 
   const { data: movie } = useQuery<Movie>({
     queryKey: [`/api/movies/${slug}`],
@@ -342,7 +346,7 @@ export default function WatchMovie() {
         <meta property="og:image" content={movie.backdropUrl} />
         <meta property="og:url" content={`https://streamvault.live/movie/${movie.slug}`} />
       </Helmet>
-      <div className="container mx-auto px-4 py-6">
+      <div className={isCinemaMode ? "w-full px-2 md:px-8 py-6 max-w-[100vw] overflow-x-hidden" : "container mx-auto px-4 py-6"}>
         {/* Back Button */}
         <Link href={`/movie/${slug}`}>
           <Button
@@ -378,7 +382,16 @@ export default function WatchMovie() {
                 >
                   {movie.title}
                 </h1>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setIsCinemaMode(!isCinemaMode)} 
+                    className="hidden md:flex gap-2"
+                  >
+                    <Monitor className="w-4 h-4" />
+                    {isCinemaMode ? 'Default View' : 'Cinema Mode'}
+                  </Button>
                   <SmartlinkButton text="Fast Download" className="h-9 px-4 py-2 text-sm" />
                   <Button
                     variant="outline"

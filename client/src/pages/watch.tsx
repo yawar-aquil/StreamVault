@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute, useLocation, Link } from "wouter";
 import { useEffect, useState, useRef } from "react";
-import { ChevronLeft, Play, SkipForward, Download } from "lucide-react";
+import { ChevronLeft, Play, SkipForward, Download, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -97,6 +97,10 @@ export default function Watch() {
   // State for Next Episode button (only for direct video/JWPlayer)
   const [showNextEpisode, setShowNextEpisode] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState(0);
+    const [isCinemaMode, setIsCinemaMode] = useState(false);
+  
+  // State for Cinema Mode
+  const [isCinemaMode, setIsCinemaMode] = useState(false);
 
   // State for subtitle tracks
   const [subtitleTracks, setSubtitleTracks] = useState<Array<{
@@ -196,6 +200,7 @@ export default function Watch() {
   // Handle time update from video player - shows Next Episode button 30s before end AND saves progress
   const lastSaveTimeRef = useRef(0);
   const hasResumedRef = useRef(false);
+  const [isCinemaMode, setIsCinemaMode] = useState(false);
 
   const handleTimeUpdate = (currentTime: number, duration: number) => {
     if (!currentEpisodeData || !show || duration <= 0) return;
@@ -407,7 +412,7 @@ export default function Watch() {
         <meta property="og:image" content={currentEpisodeData.thumbnailUrl || show.backdropUrl} />
         <meta property="og:url" content={`https://streamvault.live/show/${show.slug}`} />
       </Helmet>
-      <div className="container mx-auto px-4 py-6">
+      <div className={isCinemaMode ? "w-full px-2 md:px-8 py-6 max-w-[100vw] overflow-x-hidden" : "container mx-auto px-4 py-6"}>
         {/* Back Button */}
         <Link href={`/show/${slug}`}>
           <Button
@@ -420,9 +425,9 @@ export default function Watch() {
           </Button>
         </Link>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className={`grid grid-cols-1 ${isCinemaMode ? '' : 'lg:grid-cols-3'} gap-6`}>
           {/* Video Player */}
-          <div className="lg:col-span-2">
+          <div className={isCinemaMode ? "w-full" : "lg:col-span-2"}>
             <div className="aspect-video bg-black rounded-md overflow-hidden relative">
               <VideoPlayer
                 audioTracks={parsedAudioTracks}
@@ -476,7 +481,16 @@ export default function Watch() {
                 >
                   {show.title}
                 </h1>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setIsCinemaMode(!isCinemaMode)} 
+                    className="hidden md:flex gap-2"
+                  >
+                    <Monitor className="w-4 h-4" />
+                    {isCinemaMode ? 'Default View' : 'Cinema Mode'}
+                  </Button>
                   <SmartlinkButton text="Fast Download" className="h-9 px-4 py-2 text-sm" />
                   <Button
                     variant="outline"
@@ -520,7 +534,7 @@ export default function Watch() {
           </div>
 
           {/* Up Next Sidebar */}
-          <div className="lg:col-span-1">
+          <div className={isCinemaMode ? "w-full max-w-5xl mx-auto mt-8" : "lg:col-span-1"}>
             <h3 className="text-lg font-semibold mb-4">Up Next</h3>
             <div className="space-y-3">
               {upNextEpisodes.length > 0 ? (
