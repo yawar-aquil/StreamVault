@@ -24,3 +24,14 @@
 .jwplayer .jw-icon-bar:hover {
     color: #e50914 !important;
 }
+
+/* Cinema Mode button - match size of other controlbar icons */
+.jwplayer .jw-controlbar .jw-button-container .jw-icon-cinema-mode-button {
+    width: 38px !important;
+    height: 38px !important;
+}
+.jwplayer .jw-controlbar .jw-button-container .jw-icon-cinema-mode-button svg {
+    width: 20px !important;
+    height: 20px !important;
+    padding: 0 !important;
+}
