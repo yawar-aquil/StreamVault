@@ -127,6 +127,7 @@ interface JWPlayerWrapperProps extends VideoMetadata {
     isHost?: boolean;
     syncMode?: boolean;
     subtitleTracks?: SubtitleTrack[];
+    audioMenu?: React.ReactNode;
 }
 
 const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
@@ -142,6 +143,7 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
     isHost = true,
     syncMode = false,
     subtitleTracks = [],
+    audioMenu,
     title,
     description,
     season,
@@ -415,6 +417,12 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
                         ? createPortal(Overlay, playerContainer)
                         : Overlay
                 )}
+                {/* Render Audio Menu via Portal so it stays in fullscreen */}
+                {audioMenu && (
+                    playerContainer
+                        ? createPortal(audioMenu, playerContainer)
+                        : audioMenu
+                )}
             </div>
         </>
     );
@@ -664,7 +672,6 @@ if (playerType === 'jwplayer') {
     if (playerType === 'direct') {
         return (
             <div className="w-full h-full relative">
-                {renderAudioMenu()}
                 <JWPlayerWrapper
                     key={`jw-${subtitleTracks.length}-${selectedLanguage}`}
                     startTime={lastTimeRef.current}
@@ -681,6 +688,7 @@ if (playerType === 'jwplayer') {
                     isHost={isHost}
                     syncMode={syncMode}
                     subtitleTracks={subtitleTracks}
+                    audioMenu={renderAudioMenu()}
                     title={title}
                     description={description}
                     season={season}
