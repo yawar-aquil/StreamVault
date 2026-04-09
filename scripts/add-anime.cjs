@@ -324,6 +324,31 @@ async function main() {
                 const driveUrl = await question(`   S${seasonNum}E${epNum} - ${epTitle}: `);
 
                 if (driveUrl && driveUrl.trim()) {
+                    // Ask for alternative audio tracks
+                    const audioTracks = [];
+                    while (true) {
+                        const addAlt = await question(`   S${seasonNum}E${epNum} - Add alt language track? (y/n, Enter skips): `);
+                        if (addAlt.toLowerCase() !== 'y') break;
+                        
+                        const lang = await question('   Enter language (e.g. English, Spanish): ');
+                        if (!lang || !lang.trim()) break;
+                        
+                        const tUrl = await question(`   Enter Google Drive URL for ${lang.trim()}: `);
+                        if (tUrl && tUrl.trim()) {
+                            let fileId = tUrl.trim();
+                            if (fileId.includes('drive.google.com')) {
+                                const match = fileId.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                                if (match) fileId = match[1];
+                            }
+                            audioTracks.push({
+                                language: lang.trim(),
+                                url: fileId
+                            });
+                            console.log(`   ✅ Added ${lang.trim()} track`);
+                        }
+                    }
+                    const audioTracksStr = audioTracks.length > 0 ? JSON.stringify(audioTracks) : null;
+
                     episodes.push({
                         id: generateUUID(),
                         animeId: newAnimeId,
@@ -336,7 +361,8 @@ async function main() {
                         googleDriveUrl: driveUrl.trim(),
                         videoUrl: null,
                         airDate: ep.air_date || null,
-                        dubbed: isDubbed
+                        dubbed: isDubbed,
+                        audioTracks: audioTracksStr
                     });
                 }
             }

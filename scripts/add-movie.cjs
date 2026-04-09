@@ -198,6 +198,31 @@ async function main() {
       return;
     }
 
+    // Ask for alternative audio tracks
+    const audioTracks = [];
+    while (true) {
+      const addAlt = await question('\nAdd alternative language track? (y/n or press Enter to skip): ');
+      if (addAlt.toLowerCase() !== 'y') break;
+      
+      const lang = await question('Enter language (e.g. Hindi, Spanish): ');
+      if (!lang || !lang.trim()) break;
+      
+      const tUrl = await question(`Enter Google Drive URL for ${lang.trim()}: `);
+      if (tUrl && tUrl.trim()) {
+        let fileId = tUrl.trim();
+        if (fileId.includes('drive.google.com')) {
+          const match = fileId.match(/\/d\/([a-zA-Z0-9_-]+)/);
+          if (match) fileId = match[1];
+        }
+        audioTracks.push({
+          language: lang.trim(),
+          url: fileId
+        });
+        console.log(`✅ Added ${lang.trim()} track`);
+      }
+    }
+    const audioTracksStr = audioTracks.length > 0 ? JSON.stringify(audioTracks) : null;
+
     // Ask for featured/trending
     const featured = (await question('Featured on homepage? (y/n): ')).toLowerCase() === 'y';
     const trending = (await question('Show in trending? (y/n): ')).toLowerCase() === 'y';
@@ -235,6 +260,7 @@ async function main() {
       trending: trending,
       category: mapCategory(movie.genres),
       castDetails: JSON.stringify(castDetails),
+      audioTracks: audioTracksStr,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };

@@ -269,6 +269,31 @@ async function main() {
                     }
                 }
 
+                // Ask for alternative audio tracks
+                const audioTracks = [];
+                while (true) {
+                    const addAlt = await question(`   S${seasonNumber}E${epNum} - Add alt language track? (y/n, Enter skips): `);
+                    if (addAlt.toLowerCase() !== 'y') break;
+                    
+                    const lang = await question('   Enter language (e.g. Hindi): ');
+                    if (!lang || !lang.trim()) break;
+                    
+                    const tUrl = await question(`   Enter Google Drive URL for ${lang.trim()}: `);
+                    if (tUrl && tUrl.trim()) {
+                        let tFileId = tUrl.trim();
+                        if (tFileId.includes('drive.google.com')) {
+                            const match = tFileId.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                            if (match) tFileId = match[1];
+                        }
+                        audioTracks.push({
+                            language: lang.trim(),
+                            url: tFileId
+                        });
+                        console.log(`   ✅ Added ${lang.trim()} track`);
+                    }
+                }
+                const audioTracksStr = audioTracks.length > 0 ? JSON.stringify(audioTracks) : null;
+
                 newEpisodes.push({
                     id: generateUUID(),
                     showId: selectedShow.id,
@@ -280,7 +305,8 @@ async function main() {
                     thumbnailUrl: ep.still_path ? `https://image.tmdb.org/t/p/w300${ep.still_path}` : '',
                     googleDriveUrl: fileId,
                     videoUrl: null,
-                    airDate: ep.air_date || null
+                    airDate: ep.air_date || null,
+                    audioTracks: audioTracksStr
                 });
                 console.log(`   ✅ Added\n`);
             } else {
