@@ -220,7 +220,7 @@ export default function AnimeDetail() {
         "image": anime.backdropUrl,
         "datePublished": anime.year?.toString(),
         "genre": anime.genres?.split(',').map(g => g.trim()),
-        "inLanguage": anime.language || "Japanese",
+        "inLanguage": displayLanguage,
         "numberOfSeasons": anime.totalSeasons,
         "aggregateRating": anime.imdbRating ? {
             "@type": "AggregateRating",
@@ -234,6 +234,18 @@ export default function AnimeDetail() {
         })) : undefined,
         "url": `https://streamvault.live/anime/${anime.slug}`
     };
+
+    // Calculate display languages from episode audio tracks if available
+    const availableLanguages = new Set([anime.language || "Japanese"]);
+    episodes?.forEach((ep) => {
+        if (ep.audioTracks) {
+            try {
+                const tracks = JSON.parse(ep.audioTracks);
+                tracks.forEach((t: { language: string }) => availableLanguages.add(t.language));
+            } catch (e) {}
+        }
+    });
+    const displayLanguage = Array.from(availableLanguages).join(", ");
 
     return (
         <div className="min-h-screen">
@@ -320,7 +332,7 @@ export default function AnimeDetail() {
                                 <span>
                                     {anime.totalSeasons} Season{anime.totalSeasons > 1 ? "s" : ""}
                                 </span>
-                                <span>{anime.language}</span>
+                                <span>{displayLanguage}</span>
                                 {anime.status && <Badge variant="secondary" className="text-xs">{anime.status}</Badge>}
                             </div>
 
@@ -580,7 +592,7 @@ export default function AnimeDetail() {
                                     </div>
                                     <div>
                                         <span className="text-muted-foreground">Language:</span>{" "}
-                                        <span className="font-medium">{anime.language}</span>
+                                        <span className="font-medium">{displayLanguage}</span>
                                     </div>
                                     <div>
                                         <span className="text-muted-foreground">Seasons:</span>{" "}

@@ -187,7 +187,7 @@ export default function MovieDetail() {
     "image": movie.backdropUrl,
     "datePublished": movie.year?.toString(),
     "genre": movie.genres?.split(',').map(g => g.trim()),
-    "inLanguage": movie.language || "English",
+    "inLanguage": displayLanguage,
     "duration": `PT${movie.duration}M`,
     "aggregateRating": movie.imdbRating ? {
       "@type": "AggregateRating",
@@ -205,6 +205,16 @@ export default function MovieDetail() {
     })) : undefined,
     "url": `https://streamvault.live/movie/${movie.slug}`
   };
+
+  // Calculate display languages from audio tracks if available
+  const availableLanguages = new Set([movie.language || "English"]);
+  if (movie.audioTracks) {
+    try {
+      const tracks = JSON.parse(movie.audioTracks);
+      tracks.forEach((t: { language: string }) => availableLanguages.add(t.language));
+    } catch (e) {}
+  }
+  const displayLanguage = Array.from(availableLanguages).join(", ");
 
   return (
     <div className="min-h-screen bg-background">
@@ -413,7 +423,7 @@ export default function MovieDetail() {
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-muted-foreground">Language:</span>{" "}
-                <span className="font-medium">{movie.language}</span>
+                <span className="font-medium">{displayLanguage}</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Year:</span>{" "}

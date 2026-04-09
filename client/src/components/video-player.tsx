@@ -576,7 +576,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
     const renderAudioMenu = () => {
         if (!audioTracks || audioTracks.length === 0) return null;
         return (
-            <div id="audio-menu-container" className="absolute top-4 right-4 z-[9999]">
+            <div id="audio-menu-container" className="absolute top-4 right-4 z-40">
                 <Button 
                     variant="secondary" 
                     size="sm" 
