@@ -7904,6 +7904,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else if (shouldCheck(ep.googleDriveUrl)) {
             urlsToCheck.push({ id: ep.id, type: 'episode', title: ep.title, parentTitle: showMap.get(ep.showId) || 'Unknown Show', season: ep.season, episodeNumber: ep.episodeNumber, url: ep.googleDriveUrl, urlField: 'googleDriveUrl' });
           }
+          // Check alternative audio track URLs
+          if (ep.audioTracks) {
+            try {
+              const tracks = typeof ep.audioTracks === 'string' ? JSON.parse(ep.audioTracks) : ep.audioTracks;
+              if (Array.isArray(tracks)) {
+                for (const track of tracks) {
+                  if (track.url && shouldCheck(track.url)) {
+                    urlsToCheck.push({ id: ep.id, type: 'episode', title: `${ep.title} [${track.language || 'Alt'} Audio]`, parentTitle: showMap.get(ep.showId) || 'Unknown Show', season: ep.season, episodeNumber: ep.episodeNumber, url: track.url, urlField: `audioTrack:${track.language}` });
+                  }
+                }
+              }
+            } catch {}
+          }
         }
 
         for (const ep of animeEpisodes) {
@@ -7912,11 +7925,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else if (shouldCheck(ep.googleDriveUrl)) {
             urlsToCheck.push({ id: ep.id, type: 'animeEpisode', title: ep.title, parentTitle: animeMap.get(ep.animeId) || 'Unknown Anime', season: ep.season, episodeNumber: ep.episodeNumber, url: ep.googleDriveUrl, urlField: 'googleDriveUrl' });
           }
+          // Check alternative audio track URLs
+          if (ep.audioTracks) {
+            try {
+              const tracks = typeof ep.audioTracks === 'string' ? JSON.parse(ep.audioTracks) : ep.audioTracks;
+              if (Array.isArray(tracks)) {
+                for (const track of tracks) {
+                  if (track.url && shouldCheck(track.url)) {
+                    urlsToCheck.push({ id: ep.id, type: 'animeEpisode', title: `${ep.title} [${track.language || 'Alt'} Audio]`, parentTitle: animeMap.get(ep.animeId) || 'Unknown Anime', season: ep.season, episodeNumber: ep.episodeNumber, url: track.url, urlField: `audioTrack:${track.language}` });
+                  }
+                }
+              }
+            } catch {}
+          }
         }
 
         for (const movie of movies) {
           if (shouldCheck(movie.googleDriveUrl)) {
             urlsToCheck.push({ id: movie.id, type: 'movie', title: movie.title, parentTitle: 'Movie', url: movie.googleDriveUrl, urlField: 'googleDriveUrl' });
+          }
+          // Check alternative audio track URLs
+          if ((movie as any).audioTracks) {
+            try {
+              const tracks = typeof (movie as any).audioTracks === 'string' ? JSON.parse((movie as any).audioTracks) : (movie as any).audioTracks;
+              if (Array.isArray(tracks)) {
+                for (const track of tracks) {
+                  if (track.url && shouldCheck(track.url)) {
+                    urlsToCheck.push({ id: movie.id, type: 'movie', title: `${movie.title} [${track.language || 'Alt'} Audio]`, parentTitle: 'Movie', url: track.url, urlField: `audioTrack:${track.language}` });
+                  }
+                }
+              }
+            } catch {}
           }
         }
 
