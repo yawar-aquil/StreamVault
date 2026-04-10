@@ -123,3 +123,6 @@ dev-utils/
 
 # AI Agent skills & config
 .agent/
+
+# Scripts
+scripts/
