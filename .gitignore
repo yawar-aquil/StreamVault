@@ -125,4 +125,4 @@ dev-utils/
 .agent/
 
 # Scripts
-scripts/
+/scripts/
