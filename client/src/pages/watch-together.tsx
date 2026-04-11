@@ -54,7 +54,6 @@ import { RoomPolls } from '@/components/room-polls';
 import { useFriends } from '@/contexts/friends-context';
 import { useToast } from '@/hooks/use-toast';
 import { useSocialSocket } from '@/hooks/use-social-socket';
-import { LanguageSelector } from '@/components/language-selector';
 import type { Show, Movie, Episode } from '@shared/schema';
 
 // Emoji reactions
@@ -1487,8 +1486,6 @@ function WatchTogetherContent() {
                                 </DropdownMenuContent>
                             </DropdownMenu>
 
-                            {/* Language Selector */}
-                            <LanguageSelector />
 
 
 
