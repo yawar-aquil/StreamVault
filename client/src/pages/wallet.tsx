@@ -181,30 +181,6 @@ export default function WalletPage() {
                         email: data.email || user?.email,
                         contact: "" // Can let user fill
                     },
-                    config: {
-                        display: {
-                            blocks: {
-                                utib: { // Enable UPI block
-                                    name: "Pay using UPI",
-                                    instruments: [
-                                        { method: "upi" }
-                                    ]
-                                },
-                                other: {
-                                    name: "Other Payment Methods",
-                                    instruments: [
-                                        { method: "card" },
-                                        { method: "netbanking" },
-                                        { method: "wallet" }
-                                    ]
-                                }
-                            },
-                            sequence: ["block.utib", "block.other"],
-                            preferences: {
-                                show_default_blocks: true
-                            }
-                        }
-                    },
                     theme: {
                         color: "#EAB308" // Gold/Yellow
                     },
