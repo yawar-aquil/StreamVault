@@ -23,6 +23,7 @@ import { hashPassword, verifyPassword, generateToken, verifyToken, setAuthCookie
 import multer from "multer";
 import storeRoutes from "./store";
 import { getLinkPreview } from "./link-preview";
+import { translateText, translateBatch } from "./translate";
 
 // Helper to convert ReadableStream to async iterable for Node.js
 async function* streamToAsyncIterable(stream: ReadableStream<Uint8Array>) {
@@ -3959,6 +3960,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Link preview error:", error);
       res.status(500).json({ error: "Failed to fetch link preview" });
+    }
+  });
+
+  // Translate text (for Watch Together chat translation)
+  app.post("/api/translate", async (req, res) => {
+    try {
+      const { texts, targetLang } = req.body;
+
+      if (!targetLang) return res.status(400).json({ error: "targetLang is required" });
+
+      // Single text
+      if (typeof texts === 'string') {
+        const translated = await translateText(texts, targetLang);
+        return res.json({ translated });
+      }
+
+      // Batch texts (array)
+      if (Array.isArray(texts) && texts.length > 0) {
+        // Limit batch size to prevent abuse
+        const batch = texts.slice(0, 50);
+        const translated = await translateBatch(batch, targetLang);
+        return res.json({ translated });
+      }
+
+      return res.status(400).json({ error: "texts must be a string or array" });
+    } catch (error) {
+      console.error("Translation error:", error);
+      res.status(500).json({ error: "Translation failed" });
     }
   });
 

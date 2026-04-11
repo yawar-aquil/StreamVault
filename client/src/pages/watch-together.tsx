@@ -54,6 +54,8 @@ import { RoomPolls } from '@/components/room-polls';
 import { useFriends } from '@/contexts/friends-context';
 import { useToast } from '@/hooks/use-toast';
 import { useSocialSocket } from '@/hooks/use-social-socket';
+import { LanguageSelector } from '@/components/language-selector';
+import { useChatTranslation } from '@/hooks/use-chat-translation';
 import type { Show, Movie, Episode } from '@shared/schema';
 
 // Emoji reactions
@@ -204,6 +206,9 @@ function WatchTogetherContent() {
             setShowUnmuteRequest(true);
         }
     });
+
+    // Chat translation hook — translates messages to user's selected language
+    const { getTranslatedMessage, isTranslationActive } = useChatTranslation(messages);
 
     const [username, setUsername] = useState('');
     const [showJoinModal, setShowJoinModal] = useState(true);
@@ -1659,6 +1664,9 @@ function WatchTogetherContent() {
                                 <MessageCircle className="h-4 w-4" />
                             </Button>
 
+                            {/* Language Selector (icon only) */}
+                            <LanguageSelector iconOnly />
+
                             {/* Fullscreen Toggle */}
                             <Button
                                 variant={isFullscreen ? 'default' : 'outline'}
@@ -2079,7 +2087,7 @@ function WatchTogetherContent() {
                                                                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                                     </span>
                                                                 </div>
-                                                                <p className="mt-0.5 break-words">{formatMessageWithMedia(msg.message)}</p>
+                                                                <p className="mt-0.5 break-words">{formatMessageWithMedia(getTranslatedMessage(msg))}</p>
                                                                 {(() => {
                                                                     const urlMatch = msg.message.match(/(https?:\/\/[^\s]+)/);
                                                                     return urlMatch ? <LinkPreview url={urlMatch[0]} /> : null;
@@ -2088,7 +2096,7 @@ function WatchTogetherContent() {
                                                         </>
                                                     )}
                                                     {msg.username === 'System' && (
-                                                        <p>{formatMessageWithMedia(msg.message)}</p>
+                                                        <p>{formatMessageWithMedia(getTranslatedMessage(msg))}</p>
                                                     )}
                                                 </div>
                                             ))}

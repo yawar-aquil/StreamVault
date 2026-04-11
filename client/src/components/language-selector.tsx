@@ -29,7 +29,7 @@ const languages = [
 ];
 
 // Instagram-style footer language selector
-export function LanguageSelector() {
+export function LanguageSelector({ iconOnly = false }: { iconOnly?: boolean }) {
     const { i18n } = useTranslation();
 
     const currentLanguage = languages.find(lang => lang.code === i18n.language) || languages[0];
@@ -42,9 +42,12 @@ export function LanguageSelector() {
 
     return (
         <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
+            <DropdownMenuTrigger className={iconOnly
+                ? "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 w-9 cursor-pointer"
+                : "flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            }>
                 <Globe className="h-4 w-4" />
-                <span>{currentLanguage.name}</span>
+                {!iconOnly && <span>{currentLanguage.name}</span>}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="max-h-80 overflow-y-auto w-48">
                 {languages.map((lang) => (
