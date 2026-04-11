@@ -808,13 +808,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         basePriceUSD = packagePricesUSD[packageId];
       }
 
-      // 1. Convert USD -> Target Currency (Real-Time)
-      // Default to INR if no currency provided (safety fallback), but client should send it.
-      const targetCurrency = req.body.currency || "INR";
+      // Razorpay checkout is most reliable in INR for this account setup.
+      // Force INR to avoid unsupported checkout flows across browsers.
+      const targetCurrency = "INR";
       const finalAmount = await convertCurrency(basePriceUSD, 'USD', targetCurrency);
 
-      // Update logic to use this finalAmount for Razorpay
-      const priceInRupees = finalAmount; // naming variable specifically for clarity, though it's any currency now
+      // Amount in INR
+      const priceInRupees = finalAmount;
 
 
       // Create Razorpay Order

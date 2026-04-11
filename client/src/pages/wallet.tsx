@@ -195,7 +195,11 @@ export default function WalletPage() {
                 rzp.open();
 
                 rzp.on('payment.failed', function (response: any) {
-                    reject(new Error(response.error.description));
+                    console.error('Razorpay payment.failed:', response);
+                    const description = response?.error?.description || 'Payment failed';
+                    const code = response?.error?.code ? ` (${response.error.code})` : '';
+                    const reason = response?.error?.reason ? ` - ${response.error.reason}` : '';
+                    reject(new Error(`${description}${code}${reason}`));
                 });
             });
         },

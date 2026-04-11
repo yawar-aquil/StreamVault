@@ -12,10 +12,11 @@ const getRazorpay = () => {
     });
 };
 
-export async function createRazorpayOrder(amountInRs: number, receiptId: string) {
+export async function createRazorpayOrder(amount: number, currency: string, receiptId: string) {
+    const normalizedCurrency = (currency || 'INR').toUpperCase();
     const options = {
-        amount: Math.round(amountInRs * 100), // amount in the smallest currency unit (paise)
-        currency: "INR",
+        amount: Math.round(amount * 100), // amount in the smallest currency unit
+        currency: normalizedCurrency,
         receipt: receiptId,
     };
     try {
