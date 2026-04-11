@@ -636,6 +636,17 @@ export function setupWatchTogether(httpServer: HttpServer): Server {
             });
         });
 
+        // Voice chat: user announces they are ready for voice connections
+        socket.on('voice:ready', () => {
+            const roomCode = userToRoom.get(socket.id);
+            if (!roomCode) return;
+
+            console.log(`🎤 Voice ready from ${socket.id} — notifying room ${roomCode}`);
+
+            // Broadcast to all OTHER users in the room so they can initiate connections
+            socket.to(roomCode).emit('voice:user-ready', { userId: socket.id });
+        });
+
         // Voice chat signaling (WebRTC)
         socket.on('voice:signal', (data: { targetId: string; signal: any }) => {
             const roomCode = userToRoom.get(socket.id);

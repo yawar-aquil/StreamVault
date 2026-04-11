@@ -54,6 +54,7 @@ import { RoomPolls } from '@/components/room-polls';
 import { useFriends } from '@/contexts/friends-context';
 import { useToast } from '@/hooks/use-toast';
 import { useSocialSocket } from '@/hooks/use-social-socket';
+import { LanguageSelector } from '@/components/language-selector';
 import type { Show, Movie, Episode } from '@shared/schema';
 
 // Emoji reactions
@@ -675,6 +676,11 @@ function WatchTogetherContent() {
 
     const content = roomInfo?.contentType === 'show' ? show : movie;
     const title = content?.title || 'Watch Together';
+
+    // Parse audio tracks from episode/movie data (same as watch.tsx and watch-movie.tsx)
+    const parsedAudioTracks = (episode?.audioTracks || movie?.audioTracks)
+        ? JSON.parse((episode?.audioTracks || movie?.audioTracks) as string)
+        : [];
 
     // Debug logging
     console.log('🎬 Watch Together Debug:', {
@@ -1481,7 +1487,8 @@ function WatchTogetherContent() {
                                 </DropdownMenuContent>
                             </DropdownMenu>
 
-
+                            {/* Language Selector */}
+                            <LanguageSelector />
 
 
 
@@ -1750,6 +1757,12 @@ function WatchTogetherContent() {
                                     isHost={isHost}
                                     syncMode={true}
                                     subtitleTracks={subtitleTracks}
+                                    audioTracks={parsedAudioTracks}
+                                    title={content?.title}
+                                    description={episode?.description || movie?.description}
+                                    season={episode?.season}
+                                    episode={episode?.episodeNumber}
+                                    episodeTitle={episode?.title}
                                     onPlay={() => {
                                         console.log('🎬 onPlay handler called - isHost:', isHost);
                                         if (isHost) {

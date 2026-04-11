@@ -286,7 +286,7 @@ export function useVoiceChat({ socket, roomUsers, currentUserId, enabled = true,
         }
     }, [socket]);
 
-    // Handle incoming signals
+    // Handle incoming signals + voice:user-ready for proper mesh
     useEffect(() => {
         if (!socket || !isVoiceEnabled || !localStreamRef.current) return;
 
@@ -296,7 +296,7 @@ export function useVoiceChat({ socket, roomUsers, currentUserId, enabled = true,
             let peerConnection = peersRef.current.get(fromId);
 
             if (!peerConnection) {
-                // Create new peer for incoming connection
+                // Create new non-initiator peer for incoming connection
                 const peer = createPeer(fromId, false, localStreamRef.current!);
                 if (!peer) {
                     console.warn('Failed to create peer for incoming connection');
@@ -310,10 +310,32 @@ export function useVoiceChat({ socket, roomUsers, currentUserId, enabled = true,
                 peerConnection.peer.signal(signal);
             } catch (err) {
                 console.error('Error signaling peer:', err);
+                // If peer is destroyed or errored, recreate it
+                peersRef.current.delete(fromId);
+                const newPeer = createPeer(fromId, false, localStreamRef.current!);
+                if (newPeer) {
+                    peersRef.current.set(fromId, { peerId: fromId, peer: newPeer });
+                    try { newPeer.signal(signal); } catch (e) { console.error('Retry signal also failed:', e); }
+                }
             }
         };
 
+        // When another user broadcasts voice:ready, we (as an existing voice user)
+        // initiate a connection TO them. This ensures a clean initiator/non-initiator split.
+        const handleUserReady = ({ userId }: { userId: string }) => {
+            console.log(`🎤 User ${userId} is voice-ready, initiating connection`);
+            if (userId === socket.id) return; // Ignore self
+            // Destroy any stale peer first
+            const existing = peersRef.current.get(userId);
+            if (existing) {
+                try { existing.peer.destroy(); } catch (_) {}
+                peersRef.current.delete(userId);
+            }
+            createPeer(userId, true, localStreamRef.current!);
+        };
+
         socket.on('voice:signal', handleSignal);
+        socket.on('voice:user-ready', handleUserReady);
 
         // Handle being muted/unmuted by host
         const handleMutedByHost = ({ isMuted: shouldMute }: { isMuted: boolean }) => {
@@ -352,23 +374,31 @@ export function useVoiceChat({ socket, roomUsers, currentUserId, enabled = true,
 
         return () => {
             socket.off('voice:signal', handleSignal);
+            socket.off('voice:user-ready', handleUserReady);
             socket.off('voice:muted-by-host', handleMutedByHost);
         };
     }, [socket, isVoiceEnabled, createPeer]);
 
-    // Connect to other users when voice is enabled
+    // Clean up peers for users who left the room
     useEffect(() => {
-        if (!isVoiceEnabled || !localStreamRef.current || !currentUserId) return;
+        if (!isVoiceEnabled || !currentUserId) return;
 
-        // Connect to other users (only initiate if our ID is "greater" to avoid duplicate connections)
-        roomUsers.forEach(user => {
-            if (user.id !== currentUserId && !peersRef.current.has(user.id)) {
-                if (currentUserId > user.id) {
-                    createPeer(user.id, true, localStreamRef.current!);
+        const currentUserIds = new Set(roomUsers.map(u => u.id));
+        peersRef.current.forEach((pc, peerId) => {
+            if (!currentUserIds.has(peerId)) {
+                console.log(`🔇 Cleaning up peer for departed user ${peerId}`);
+                try { pc.peer.destroy(); } catch (_) {}
+                peersRef.current.delete(peerId);
+                const audio = audioElementsRef.current.get(peerId);
+                if (audio) {
+                    audio.srcObject = null;
+                    audio.remove();
+                    audioElementsRef.current.delete(peerId);
                 }
+                setConnectedPeers(prev => prev.filter(id => id !== peerId));
             }
         });
-    }, [roomUsers, isVoiceEnabled, currentUserId, createPeer]);
+    }, [roomUsers, isVoiceEnabled, currentUserId]);
 
     // Emit speaking state to server — now handled directly in detectSpeaking loop via socketRef
     // This effect is kept as a fallback for initial state sync
@@ -400,15 +430,13 @@ export function useVoiceChat({ socket, roomUsers, currentUserId, enabled = true,
     // Start voice chat
     const startVoice = useCallback(async () => {
         const stream = await initMicrophone();
-        if (stream) {
-            // Connect to all other users
-            roomUsers.forEach(user => {
-                if (user.id !== currentUserId && !peersRef.current.has(user.id)) {
-                    createPeer(user.id, true, stream);
-                }
-            });
+        if (stream && socket) {
+            // Broadcast to room that we're ready for voice connections.
+            // Existing voice-enabled users will initiate connections to us.
+            console.log('🎤 Broadcasting voice:ready to room');
+            socket.emit('voice:ready');
         }
-    }, [initMicrophone, roomUsers, currentUserId, createPeer]);
+    }, [initMicrophone, socket]);
 
     // Stop voice chat
     const stopVoice = useCallback(() => {
