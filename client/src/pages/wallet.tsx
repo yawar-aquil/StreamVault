@@ -181,6 +181,30 @@ export default function WalletPage() {
                         email: data.email || user?.email,
                         contact: "" // Can let user fill
                     },
+                    config: {
+                        display: {
+                            blocks: {
+                                utib: { // Enable UPI block
+                                    name: "Pay using UPI",
+                                    instruments: [
+                                        { method: "upi" }
+                                    ]
+                                },
+                                other: {
+                                    name: "Other Payment Methods",
+                                    instruments: [
+                                        { method: "card" },
+                                        { method: "netbanking" },
+                                        { method: "wallet" }
+                                    ]
+                                }
+                            },
+                            sequence: ["block.utib", "block.other"],
+                            preferences: {
+                                show_default_blocks: true
+                            }
+                        }
+                    },
                     theme: {
                         color: "#EAB308" // Gold/Yellow
                     },
@@ -195,11 +219,7 @@ export default function WalletPage() {
                 rzp.open();
 
                 rzp.on('payment.failed', function (response: any) {
-                    console.error('Razorpay payment.failed:', response);
-                    const description = response?.error?.description || 'Payment failed';
-                    const code = response?.error?.code ? ` (${response.error.code})` : '';
-                    const reason = response?.error?.reason ? ` - ${response.error.reason}` : '';
-                    reject(new Error(`${description}${code}${reason}`));
+                    reject(new Error(response.error.description));
                 });
             });
         },
