@@ -100,11 +100,11 @@ export default function PollsPage() {
 
                 {/* Options */}
                 <div className="space-y-3">
-                    {displayPoll.options.map((option, index) => {
-                        const result = displayPoll.results?.find(r => r.optionIndex === index);
+                    {poll.options.map((option, index) => {
+                        const result = poll.results?.find(r => r.optionIndex === index);
                         const voteCount = result?.count || 0;
                         const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
-                        const isSelected = displayPoll.userVote === index;
+                        const isSelected = poll.userVote === index;
                         const isVoting = votingPollId === poll.id;
 
                         return (
