@@ -38,10 +38,7 @@ export default function PollsPage() {
 
     const voteMutation = useMutation({
         mutationFn: async ({ pollId, optionIndex }: { pollId: string; optionIndex: number }) => {
-            return apiRequest(`/api/polls/${pollId}/vote`, {
-                method: 'POST',
-                body: JSON.stringify({ optionIndex }),
-            });
+            return apiRequest('POST', `/api/polls/${pollId}/vote`, { optionIndex });
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['/api/polls'] });
