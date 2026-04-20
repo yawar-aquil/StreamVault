@@ -943,9 +943,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, error: "Token is required" });
       }
 
-      // Cloudflare's official test secret - always passes, use when no real key is set
+      // Cloudflare's official test secret - always passes, use for localhost dev
       const TEST_SECRET = "1x0000000000000000000000000000000AA";
-      const secret = process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY || TEST_SECRET;
+      const isLocalhost = req.hostname === 'localhost' || req.hostname === '127.0.0.1' || req.hostname === '0.0.0.0';
+      const secret = isLocalhost ? TEST_SECRET : (process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY || TEST_SECRET);
 
       const formData = new URLSearchParams();
       formData.append("secret", secret);
@@ -2777,13 +2778,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/polls", requireApiKey, async (req, res) => {
     try {
       const polls = await storage.getPolls(true);
+      const parsed = polls.map(p => ({ ...p, options: typeof p.options === 'string' ? JSON.parse(p.options) : p.options }));
 
       // Restrict external API users to 1 item per request
       if ((req as any).apiKey) {
-        return res.json(polls.slice(0, 1));
+        return res.json(parsed.slice(0, 1));
       }
 
-      res.json(polls);
+      res.json(parsed);
     } catch (error) {
       console.error("Get polls error:", error);
       res.status(500).json({ error: "Failed to get polls" });
