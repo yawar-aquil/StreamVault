@@ -4970,8 +4970,10 @@ function PollsManager() {
   const [featured, setFeatured] = useState(false);
   const [endDate, setEndDate] = useState('');
 
+  const [resultsPoll, setResultsPoll] = useState<any>(null);
+
   const { data: polls, isLoading } = useQuery<any[]>({
-    queryKey: ["/api/polls"],
+    queryKey: ["/api/admin/polls"],
   });
 
   const createPollMutation = useMutation({
@@ -4986,6 +4988,7 @@ function PollsManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/polls"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/polls"] });
       toast({ title: "Success!", description: "Poll created successfully" });
       setQuestion('');
       setOptions(['', '']);
@@ -5119,13 +5122,22 @@ function PollsManager() {
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="font-medium">{poll.question}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {poll.options?.length || 0} options • {poll.featured ? '⭐ Featured' : 'Regular'}
+                      <p className="text-xs text-muted-foreground flex items-center gap-2">
+                        <span>{poll.options?.length || 0} options</span>
+                        <span>•</span>
+                        <span>{poll.totalVotes || 0} total vote{poll.totalVotes !== 1 ? 's' : ''}</span>
+                        <span>•</span>
+                        <span className={poll.featured ? "text-primary font-medium" : ""}>{poll.featured ? '⭐ Featured' : 'Regular'}</span>
                       </p>
                     </div>
-                    <Badge variant={poll.active ? "default" : "secondary"}>
-                      {poll.active ? "Active" : "Ended"}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setResultsPoll(poll)}>
+                        View Results
+                      </Button>
+                      <Badge variant={poll.active ? "default" : "secondary"}>
+                        {poll.active ? "Active" : "Ended"}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -5133,6 +5145,71 @@ function PollsManager() {
           ) : (
             <p className="text-muted-foreground text-center py-8">No polls created yet</p>
           )}
+
+          {/* Results Dialog */}
+          <Dialog open={!!resultsPoll} onOpenChange={(open) => !open && setResultsPoll(null)}>
+            {resultsPoll && (
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+                <DialogHeader>
+                  <DialogTitle>Poll Results</DialogTitle>
+                  <DialogDescription>{resultsPoll.question}</DialogDescription>
+                </DialogHeader>
+                <div className="flex-1 overflow-y-auto pr-2 space-y-6">
+                  {/* Option Counts */}
+                  <div>
+                    <h3 className="font-semibold mb-3">Vote Distribution</h3>
+                    <div className="space-y-2">
+                      {resultsPoll.options.map((option: string, index: number) => {
+                        const result = resultsPoll.results?.find((r: any) => r.optionIndex === index);
+                        const count = result?.count || 0;
+                        const percentage = resultsPoll.totalVotes > 0 ? Math.round((count / resultsPoll.totalVotes) * 100) : 0;
+                        return (
+                          <div key={index} className="space-y-1">
+                            <div className="flex justify-between text-sm">
+                              <span>{option}</span>
+                              <span className="text-muted-foreground">{count} {count === 1 ? 'vote' : 'votes'} ({percentage}%)</span>
+                            </div>
+                            <div className="w-full bg-secondary rounded-full h-2">
+                              <div className="bg-primary h-2 rounded-full" style={{ width: `${percentage}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  
+                  {/* Voters List */}
+                  <div>
+                    <h3 className="font-semibold mb-3">Voters ({resultsPoll.voters?.length || 0})</h3>
+                    {resultsPoll.voters && resultsPoll.voters.length > 0 ? (
+                      <div className="space-y-2">
+                        {resultsPoll.voters.map((voter: any, idx: number) => (
+                          <div key={idx} className="flex items-center justify-between p-2 rounded bg-card border border-white/5">
+                            <div className="flex items-center gap-2">
+                              {/* Assume UserAvatar is available, else just a generic avatar or no avatar */}
+                              {voter.avatarUrl ? (
+                                <img src={voter.avatarUrl} alt={voter.username} className="w-6 h-6 rounded-full" />
+                              ) : (
+                                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] text-primary">
+                                  {voter.username.substring(0, 2).toUpperCase()}
+                                </div>
+                              )}
+                              <span className="text-sm font-medium">{voter.username}</span>
+                            </div>
+                            <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded">
+                              {resultsPoll.options[voter.optionIndex]}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">No votes yet.</p>
+                    )}
+                  </div>
+                </div>
+              </DialogContent>
+            )}
+          </Dialog>
         </CardContent>
       </Card>
     </div>

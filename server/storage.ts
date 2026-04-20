@@ -351,7 +351,9 @@ export interface IStorage {
   getPolls(activeOnly?: boolean): Promise<Poll[]>;
   getPollById(id: string): Promise<Poll | undefined>;
   votePoll(pollId: string, userId: string, optionIndex: number): Promise<PollVote>;
-
+  getPollResults(pollId: string): Promise<{ optionIndex: number; count: number }[]>;
+  getUserVote(pollId: string, userId: string): Promise<PollVote | undefined>;
+  getPollVotesDetails(pollId: string): Promise<{ userId: string; username: string; optionIndex: number; avatarUrl: string | null }[]>;
   // Badges
   getBadges(): Promise<Badge[]>;
   getBadge(id: string): Promise<Badge | undefined>;
@@ -363,9 +365,6 @@ export interface IStorage {
   revokeBadge(userId: string, badgeId: string): Promise<void>;
   getEquippedBadge(userId: string): Promise<Badge | undefined>;
   updateUserBadgeEquippedStatus(userId: string, badgeId: string, equipped: boolean): Promise<void>;
-
-  getPollResults(pollId: string): Promise<{ optionIndex: number; count: number }[]>;
-  getUserVote(pollId: string, userId: string): Promise<PollVote | undefined>;
 
   // XP History for time-based leaderboards
   addXpHistory(userId: string, amount: number, source: string): Promise<XpHistoryEntry>;
@@ -3215,6 +3214,19 @@ export class MemStorage implements IStorage {
     return Array.from(this.pollVotes.values()).find(
       v => v.pollId === pollId && v.userId === userId
     );
+  }
+
+  async getPollVotesDetails(pollId: string): Promise<{ userId: string; username: string; optionIndex: number; avatarUrl: string | null }[]> {
+    const votes = Array.from(this.pollVotes.values()).filter(v => v.pollId === pollId);
+    return votes.map(v => {
+      const user = this.users.get(v.userId);
+      return { 
+        userId: v.userId, 
+        username: user?.username || 'Unknown', 
+        optionIndex: v.optionIndex,
+        avatarUrl: user?.avatarUrl || null
+      };
+    });
   }
 
   // ============================================

@@ -2778,7 +2778,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/polls", requireApiKey, async (req, res) => {
     try {
       const polls = await storage.getPolls(true);
-      const parsed = polls.map(p => ({ ...p, options: typeof p.options === 'string' ? JSON.parse(p.options) : p.options }));
+      const parsed = await Promise.all(polls.map(async p => {
+        const results = await storage.getPollResults(p.id);
+        const totalVotes = results.reduce((sum, r) => sum + r.count, 0);
+        return { 
+          ...p, 
+          options: typeof p.options === 'string' ? JSON.parse(p.options) : p.options,
+          totalVotes
+        };
+      }));
 
       // Restrict external API users to 1 item per request
       if ((req as any).apiKey) {
@@ -2789,6 +2797,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get polls error:", error);
       res.status(500).json({ error: "Failed to get polls" });
+    }
+  });
+
+  // Admin: Get all polls with detailed results and voters
+  app.get("/api/admin/polls", requireAdmin, async (req, res) => {
+    try {
+      const polls = await storage.getPolls(false); // Get all polls
+      
+      const detailedPolls = await Promise.all(polls.map(async p => {
+        const results = await storage.getPollResults(p.id);
+        const totalVotes = results.reduce((sum, r) => sum + r.count, 0);
+        const voterDetails = await storage.getPollVotesDetails(p.id);
+        
+        return { 
+          ...p, 
+          options: typeof p.options === 'string' ? JSON.parse(p.options) : p.options,
+          results,
+          totalVotes,
+          voters: voterDetails
+        };
+      }));
+
+      res.json(detailedPolls);
+    } catch (error) {
+      console.error("Get admin polls error:", error);
+      res.status(500).json({ error: "Failed to get admin polls" });
     }
   });
 

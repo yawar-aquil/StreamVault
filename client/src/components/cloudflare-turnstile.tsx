@@ -34,7 +34,14 @@ interface CloudflareTurnstileProps {
 // Cloudflare's official test key - always passes, works on any domain including localhost
 // Replace with real key via VITE_TURNSTILE_SITE_KEY env var in production
 const TEST_SITE_KEY = '1x00000000000000000000AA'; // always passes
-const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || TEST_SITE_KEY;
+
+// Auto-detect localhost and force test keys so Turnstile never blocks local development
+const isLocalhost = typeof window !== 'undefined' && (
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname === '0.0.0.0'
+);
+const SITE_KEY = isLocalhost ? TEST_SITE_KEY : (import.meta.env.VITE_TURNSTILE_SITE_KEY || TEST_SITE_KEY);
 
 export function CloudflareTurnstile({
     onVerify,

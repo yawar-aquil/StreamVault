@@ -71,7 +71,7 @@ export default function PollsPage() {
 
         const displayPoll = pollWithResults || poll;
         const hasVoted = displayPoll.userVote !== undefined && displayPoll.userVote !== null;
-        const totalVotes = displayPoll.results?.reduce((sum, r) => sum + r.count, 0) || 0;
+        const totalVotes = (displayPoll as any).totalVotes ?? displayPoll.results?.reduce((sum, r) => sum + r.count, 0) || 0;
 
         return (
             <motion.div
@@ -157,12 +157,10 @@ export default function PollsPage() {
                 </div>
 
                 {/* Total votes */}
-                {hasVoted && (
-                    <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between text-sm text-muted-foreground">
-                        <span>{totalVotes} total vote{totalVotes !== 1 ? 's' : ''}</span>
-                        <span>Created {formatDistanceToNow(new Date(poll.createdAt), { addSuffix: true })}</span>
-                    </div>
-                )}
+                <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between text-sm text-muted-foreground">
+                    <span>{totalVotes} total vote{totalVotes !== 1 ? 's' : ''}</span>
+                    <span>Created {formatDistanceToNow(new Date(poll.createdAt), { addSuffix: true })}</span>
+                </div>
             </motion.div>
         );
     };
