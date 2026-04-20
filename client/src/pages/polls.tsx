@@ -72,7 +72,7 @@ export default function PollsPage() {
         const displayPoll = pollWithResults || poll;
         const hasVoted = displayPoll.userVote !== undefined && displayPoll.userVote !== null;
         const anyPoll = displayPoll as any;
-        const totalVotes = anyPoll.totalVotes ?? displayPoll.results?.reduce((sum, r) => sum + r.count, 0) || 0;
+        const totalVotes = anyPoll.totalVotes ?? (displayPoll.results?.reduce((sum, r) => sum + r.count, 0) || 0);
 
         return (
             <motion.div
