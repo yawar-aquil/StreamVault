@@ -2778,13 +2778,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/polls", requireApiKey, async (req, res) => {
     try {
       const polls = await storage.getPolls(true);
+      
+      // Check if user is authenticated to get their votes
+      let userId: string | null = null;
+      const token = req.cookies.authToken;
+      if (token) {
+        const payload = verifyToken(token);
+        if (payload) userId = payload.userId;
+      }
+      
       const parsed = await Promise.all(polls.map(async p => {
         const results = await storage.getPollResults(p.id);
         const totalVotes = results.reduce((sum, r) => sum + r.count, 0);
+        
+        let userVote: number | null = null;
+        if (userId) {
+          const vote = await storage.getUserVote(p.id, userId);
+          if (vote) userVote = vote.optionIndex;
+        }
+        
         return { 
           ...p, 
           options: typeof p.options === 'string' ? JSON.parse(p.options) : p.options,
-          totalVotes
+          results,
+          totalVotes,
+          userVote
         };
       }));
 

@@ -46,7 +46,14 @@ export default function PollsPage() {
             setVotingPollId(null);
         },
         onError: (error: any) => {
-            toast({ title: error.message || 'Failed to vote', variant: 'destructive' });
+            const msg = error.message || '';
+            if (msg.includes('Already voted')) {
+                toast({ title: 'You have already voted on this poll', variant: 'destructive' });
+            } else if (msg.includes('Not authenticated') || msg.includes('401')) {
+                toast({ title: 'Please log in to vote', variant: 'destructive' });
+            } else {
+                toast({ title: 'Failed to vote', variant: 'destructive' });
+            }
             setVotingPollId(null);
         },
     });
@@ -61,18 +68,8 @@ export default function PollsPage() {
     };
 
     const PollCard = ({ poll }: { poll: Poll }) => {
-        const [selectedPollData, setSelectedPollData] = useState<Poll | null>(null);
-
-        // Fetch poll with results when needed
-        const { data: pollWithResults } = useQuery<Poll>({
-            queryKey: [`/api/polls/${poll.id}`],
-            enabled: selectedPollData !== null || poll.userVote !== undefined,
-        });
-
-        const displayPoll = pollWithResults || poll;
-        const hasVoted = displayPoll.userVote !== undefined && displayPoll.userVote !== null;
-        const anyPoll = displayPoll as any;
-        const totalVotes = anyPoll.totalVotes ?? (displayPoll.results?.reduce((sum, r) => sum + r.count, 0) || 0);
+        const hasVoted = poll.userVote !== undefined && poll.userVote !== null;
+        const totalVotes = (poll as any).totalVotes ?? (poll.results?.reduce((sum, r) => sum + r.count, 0) || 0);
 
         return (
             <motion.div
