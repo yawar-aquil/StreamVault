@@ -4974,6 +4974,11 @@ function PollsManager() {
 
   const { data: polls, isLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/polls"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/polls", { headers: getAuthHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch polls");
+      return res.json();
+    },
   });
 
   const createPollMutation = useMutation({

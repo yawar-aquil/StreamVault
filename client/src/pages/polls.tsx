@@ -129,12 +129,12 @@ export default function PollsPage() {
                                         {isSelected && <CheckCircle2 className="w-4 h-4 text-primary" />}
                                         <span className="font-medium">{option}</span>
                                     </div>
-                                    {hasVoted && (
+                                    {totalVotes > 0 && (
                                         <span className="text-sm font-semibold">{percentage}%</span>
                                     )}
                                 </div>
 
-                                {hasVoted && (
+                                {totalVotes > 0 && (
                                     <div className="mt-2">
                                         <Progress
                                             value={percentage}
