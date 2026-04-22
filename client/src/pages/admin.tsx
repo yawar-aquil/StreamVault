@@ -26,6 +26,7 @@ import {
   Vote,
   Target,
   Award,
+  Gift,
   ShoppingBag, // Added ShoppingBag
   Mail,
   FileJson,
@@ -48,6 +49,7 @@ import type { Show, Episode, Movie, BlogPost, Anime, AnimeEpisode, Review } from
 import { getAuthHeaders, logout as authLogout } from "@/lib/auth";
 import { SubtitleManager } from "@/components/admin/SubtitleManager";
 import { AudioTracksInput } from "@/components/admin/audio-tracks-input";
+import { GiftCoinsManager } from "@/components/admin/GiftCoinsManager";
 
 export default function AdminPage() {
   const { toast } = useToast();
@@ -204,6 +206,10 @@ export default function AdminPage() {
               <Settings className="w-4 h-4" />
               Subtitles
             </TabsTrigger>
+            <TabsTrigger value="gift-coins" className="gap-2">
+              <Gift className="w-4 h-4" />
+              Gift Coins
+            </TabsTrigger>
           </TabsList>
 
           {/* User Analytics Tab */}
@@ -329,6 +335,11 @@ export default function AdminPage() {
           {/* Subtitles Management Tab */}
           <TabsContent value="subtitles">
             <SubtitleManager shows={shows} movies={movies} anime={anime} />
+          </TabsContent>
+
+          {/* Gift Coins Tab */}
+          <TabsContent value="gift-coins">
+            <GiftCoinsManager />
           </TabsContent>
         </Tabs>
       </div>

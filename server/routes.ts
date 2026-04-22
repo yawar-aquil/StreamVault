@@ -4092,6 +4092,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Get all users
+  app.get("/api/admin/users/all", requireAdmin, async (req, res) => {
+    try {
+      const usersList = await storage.getAllUsers();
+      res.json(usersList);
+    } catch (error) {
+      console.error("Failed to fetch all users:", error);
+      res.status(500).json({ error: "Failed to fetch all users" });
+    }
+  });
+
+  // Admin: Gift coins to multiple users
+  app.post("/api/admin/users/gift", requireAdmin, async (req, res) => {
+    try {
+      const { userIds, amount, message } = req.body;
+
+      if (!Array.isArray(userIds) || userIds.length === 0) {
+        return res.status(400).json({ error: "userIds array is required" });
+      }
+      if (typeof amount !== 'number' || amount <= 0) {
+        return res.status(400).json({ error: "A valid positive amount is required" });
+      }
+      if (!message || typeof message !== 'string') {
+        return res.status(400).json({ error: "A valid message is required" });
+      }
+
+      for (const userId of userIds) {
+        // 1. Add coins to the user
+        await storage.updateUserCoins(userId, amount);
+
+        // 2. Create coin transaction record
+        await storage.createCoinTransaction({
+          userId,
+          amount,
+          type: "gift",
+          description: "Admin Gift",
+        });
+
+        // 3. Send notification with link to wallet
+        await storage.createNotification({
+          userId,
+          type: 'admin_gift',
+          title: 'You received a gift!',
+          message: message,
+          data: { link: '/wallet' },
+          read: false,
+        });
+      }
+
+      res.json({ success: true, count: userIds.length });
+    } catch (error) {
+      console.error("Failed to gift coins:", error);
+      res.status(500).json({ error: "Failed to process gifts" });
+    }
+  });
+
   // Search shows
   app.get("/api/shows/search", requireApiKey, async (req, res) => {
     try {
