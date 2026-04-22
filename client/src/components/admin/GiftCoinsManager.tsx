@@ -17,6 +17,7 @@ export function GiftCoinsManager() {
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [amount, setAmount] = useState<number>(500);
   const [message, setMessage] = useState("You received 500 StreamCoins as a sign up bonus");
+  const [tag, setTag] = useState("Admin Gift");
 
   // Fetch all users
   const { data: users = [], isLoading: isLoadingUsers } = useQuery<User[]>({
@@ -82,6 +83,7 @@ export function GiftCoinsManager() {
           userIds: Array.from(selectedUserIds),
           amount,
           message,
+          tag,
         }),
       });
       if (!res.ok) {
@@ -99,6 +101,7 @@ export function GiftCoinsManager() {
       setSelectedUserIds(new Set());
       setAmount(500);
       setMessage("You received 500 StreamCoins as a sign up bonus");
+      setTag("Admin Gift");
       setSearchQuery("");
     },
     onError: (error: Error) => {
@@ -227,6 +230,19 @@ export function GiftCoinsManager() {
             </div>
             <p className="text-xs text-muted-foreground">
               This amount will be added to the selected users' wallets.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Transaction Label (Tag)</Label>
+            <Input
+              value={tag}
+              onChange={(e) => setTag(e.target.value)}
+              placeholder="e.g., Admin Gift, Event Winner, Sign Up Bonus"
+              className="bg-black/40 border-white/10"
+            />
+            <p className="text-xs text-muted-foreground">
+              This label will appear in the user's wallet transaction history.
             </p>
           </div>
 

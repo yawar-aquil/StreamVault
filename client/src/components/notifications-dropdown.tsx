@@ -11,6 +11,7 @@ import {
 import { useNotifications } from '@/contexts/notifications-context';
 import { useLocation } from 'wouter';
 import { formatDistanceToNow } from 'date-fns';
+import StreamCoin from '@/components/stream-coin';
 
 export function NotificationsDropdown() {
     const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
@@ -25,6 +26,8 @@ export function NotificationsDropdown() {
                 return <Users className="h-4 w-4 text-green-500" />;
             case 'dm':
                 return <MessageCircle className="h-4 w-4 text-purple-500" />;
+            case 'admin_gift':
+                return <StreamCoin size="sm" />;
             case 'new_content':
             case 'new_episode':
                 return <Check className="h-4 w-4 text-primary" />;
@@ -133,7 +136,20 @@ export function NotificationsDropdown() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium truncate">{notification.title}</p>
-                                    <p className="text-xs text-muted-foreground line-clamp-2">{notification.message}</p>
+                                    
+                                    {notification.data?.isGift ? (
+                                        <div className="flex flex-col gap-1 mt-1">
+                                            <p className="text-xs text-muted-foreground line-clamp-2">{notification.message}</p>
+                                            <div className="flex items-center gap-1 font-bold text-yellow-500 bg-yellow-500/10 w-fit px-2 py-0.5 rounded-full mt-1 border border-yellow-500/20">
+                                                <span>+</span>
+                                                <StreamCoin size="sm" />
+                                                <span>{notification.data.amount}</span>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs text-muted-foreground line-clamp-2">{notification.message}</p>
+                                    )}
+
                                     <p className="text-xs text-muted-foreground mt-1">
                                         {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
                                     </p>

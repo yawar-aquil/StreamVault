@@ -4106,7 +4106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin: Gift coins to multiple users
   app.post("/api/admin/users/gift", requireAdmin, async (req, res) => {
     try {
-      const { userIds, amount, message } = req.body;
+      const { userIds, amount, message, tag } = req.body;
 
       if (!Array.isArray(userIds) || userIds.length === 0) {
         return res.status(400).json({ error: "userIds array is required" });
@@ -4127,7 +4127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId,
           amount,
           type: "gift",
-          description: "Admin Gift",
+          description: tag || "Admin Gift",
         });
 
         // 3. Send notification with link to wallet
@@ -4136,7 +4136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'admin_gift',
           title: 'You received a gift!',
           message: message,
-          data: { link: '/wallet' },
+          data: { link: '/wallet', amount, isGift: true },
           read: false,
         });
       }
