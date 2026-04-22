@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Gift, Users, CheckSquare, Square, Loader2 } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { getAuthHeaders } from "@/lib/auth";
 
 export function GiftCoinsManager() {
   const { toast } = useToast();
@@ -21,6 +21,13 @@ export function GiftCoinsManager() {
   // Fetch all users
   const { data: users = [], isLoading: isLoadingUsers } = useQuery<User[]>({
     queryKey: ["/api/admin/users/all"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/users/all", {
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to fetch users");
+      return res.json();
+    },
   });
 
   // Filter users based on search query
@@ -68,11 +75,19 @@ export function GiftCoinsManager() {
       if (amount <= 0) throw new Error("Amount must be greater than 0");
       if (!message.trim()) throw new Error("Message cannot be empty");
 
-      const res = await apiRequest("POST", "/api/admin/users/gift", {
-        userIds: Array.from(selectedUserIds),
-        amount,
-        message,
+      const res = await fetch("/api/admin/users/gift", {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          userIds: Array.from(selectedUserIds),
+          amount,
+          message,
+        }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to send gifts");
+      }
       return res.json();
     },
     onSuccess: (data) => {
