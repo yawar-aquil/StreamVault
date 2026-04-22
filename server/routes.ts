@@ -971,6 +971,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============================================
+  // HCAPTCHA VERIFICATION (download gateway)
+  // ============================================
+
+  app.post("/api/hcaptcha/verify", async (req, res) => {
+    try {
+      const { token } = req.body;
+      if (!token) {
+        return res.status(400).json({ success: false, error: "Token is required" });
+      }
+
+      // hCaptcha official test secret - always passes, use for localhost dev
+      const TEST_SECRET = "0x0000000000000000000000000000000000000000";
+      const isLocalhost = req.hostname === 'localhost' || req.hostname === '127.0.0.1' || req.hostname === '0.0.0.0';
+      const secret = isLocalhost
+        ? TEST_SECRET
+        : (process.env.HCAPTCHA_SECRET_KEY || TEST_SECRET);
+
+      const formData = new URLSearchParams();
+      formData.append("secret", secret);
+      formData.append("response", token);
+      if (req.ip) formData.append("remoteip", req.ip);
+
+      const response = await fetch("https://api.hcaptcha.com/siteverify", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: formData.toString(),
+      });
+
+      const data = await response.json() as {
+        success: boolean;
+        "error-codes"?: string[];
+        score?: number;
+      };
+      return res.json({
+        success: data.success,
+        errorCodes: data["error-codes"],
+        score: data.score,
+      });
+    } catch (error) {
+      console.error("hCaptcha verify error:", error);
+      return res.status(500).json({ success: false, error: "Verification failed" });
+    }
+  });
+
+  // ============================================
   // AUTHENTICATION ROUTES
   // ============================================
 
@@ -4014,6 +4059,298 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Link preview error:", error);
       res.status(500).json({ error: "Failed to fetch link preview" });
+    }
+  });
+
+  // Domain-masked download STREAMING proxy.
+  // Usage: /api/dl?u=<base64-encoded-url>&name=<optional-filename>
+  // Fetches the upstream file (archive.org / google drive) and pipes the bytes
+  // through our server to the client. The browser only ever sees streamvault.*
+  // as the host — the real URL never appears in the address bar or network tab.
+  // Supports HTTP Range requests so resume / seek / download managers work.
+  // Aborts the upstream fetch if the client disconnects to save bandwidth.
+  app.get("/api/dl", async (req: Request, res: Response) => {
+    const encodedUrl = req.query.u as string;
+    const filename = (req.query.name as string) || "";
+
+    if (!encodedUrl) {
+      return res.status(400).send("Missing url parameter");
+    }
+
+    // Decode base64url URL
+    let targetUrl: string;
+    try {
+      const normalized = encodedUrl.replace(/-/g, "+").replace(/_/g, "/");
+      const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+      targetUrl = Buffer.from(padded, "base64").toString("utf-8");
+    } catch {
+      return res.status(400).send("Invalid url encoding");
+    }
+
+    // Validate URL
+    let parsed: URL;
+    try {
+      parsed = new URL(targetUrl);
+    } catch {
+      return res.status(400).send("Invalid url");
+    }
+
+    // Whitelist allowed hosts to prevent SSRF / open-proxy abuse
+    const allowedHosts = [
+      "archive.org",
+      "www.archive.org",
+      "ia800000.us.archive.org",
+      "drive.google.com",
+      "docs.google.com",
+      "googleusercontent.com",
+      "googleapis.com",
+    ];
+    const hostAllowed = allowedHosts.some(
+      (h) => parsed.hostname === h || parsed.hostname.endsWith("." + h)
+    );
+    if (!hostAllowed) {
+      console.warn(`🚫 /api/dl blocked untrusted host: ${parsed.hostname}`);
+      return res.status(403).send("Host not allowed");
+    }
+
+    // Abort upstream fetch if the client disconnects (saves bandwidth)
+    const abortController = new AbortController();
+    const onClientAbort = () => {
+      if (!res.writableEnded) {
+        abortController.abort();
+      }
+    };
+    req.on("close", onClientAbort);
+
+    try {
+      // Build upstream request headers — forward Range for partial-content support
+      const upstreamHeaders: Record<string, string> = {
+        "User-Agent":
+          "Mozilla/5.0 (Linux; Node.js StreamVault Proxy) AppleWebKit/537.36",
+        Accept: "*/*",
+      };
+      if (req.headers.range) {
+        upstreamHeaders["Range"] = String(req.headers.range);
+      }
+      if (req.headers["if-range"]) {
+        upstreamHeaders["If-Range"] = String(req.headers["if-range"]);
+      }
+
+      const upstream = await fetch(targetUrl, {
+        method: "GET",
+        headers: upstreamHeaders,
+        redirect: "follow",
+        signal: abortController.signal,
+      });
+
+      // 200 OK or 206 Partial Content are both success cases
+      if (!upstream.ok && upstream.status !== 206) {
+        console.warn(
+          `/api/dl upstream returned ${upstream.status} for ${parsed.hostname}`
+        );
+        return res
+          .status(502)
+          .send(`Upstream download failed (${upstream.status})`);
+      }
+
+      // Mirror upstream status (200 or 206)
+      res.status(upstream.status);
+
+      // Forward relevant headers from upstream to client
+      const headersToForward = [
+        "content-type",
+        "content-length",
+        "content-range",
+        "accept-ranges",
+        "last-modified",
+        "etag",
+        "cache-control",
+      ];
+      for (const h of headersToForward) {
+        const v = upstream.headers.get(h);
+        if (v) res.setHeader(h, v);
+      }
+
+      // Always set attachment Content-Disposition with our filename (overrides upstream)
+      const safeName = filename
+        ? filename.replace(/[^\w.\-() ]/g, "_").slice(0, 180)
+        : "download";
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${safeName}"`
+      );
+      // Explicitly advertise range support (some upstreams don't set this but support it)
+      if (!res.getHeader("accept-ranges")) {
+        res.setHeader("accept-ranges", "bytes");
+      }
+
+      // Stream upstream body -> client
+      if (!upstream.body) {
+        return res.end();
+      }
+
+      const { Readable } = await import("node:stream");
+      const nodeStream = Readable.fromWeb(upstream.body as any);
+
+      nodeStream.on("error", (err: any) => {
+        if (err?.name === "AbortError") return; // client disconnect — expected
+        console.error("/api/dl stream error:", err?.message || err);
+        if (!res.headersSent) res.status(500);
+        try {
+          res.end();
+        } catch { }
+      });
+
+      nodeStream.pipe(res);
+    } catch (err: any) {
+      if (err?.name === "AbortError") {
+        // Client disconnected — nothing to do
+        return;
+      }
+      console.error("/api/dl proxy error:", err?.message || err);
+      if (!res.headersSent) {
+        res.status(500).send("Download proxy failed");
+      }
+    } finally {
+      req.off("close", onClientAbort);
+    }
+  });
+
+  // Inline video streaming proxy.
+  // Usage: /api/stream?u=<base64-encoded-url>
+  // Same domain-masking + range-support design as /api/dl, but serves inline
+  // (no Content-Disposition: attachment) so HTML5 <video> / JWPlayer can play it.
+  // Lets clients in India (and anywhere far from archive.org) fetch through our
+  // VPS which usually has a much faster, more stable connection to archive.org
+  // than the client's ISP does.
+  app.get("/api/stream", async (req: Request, res: Response) => {
+    const encodedUrl = req.query.u as string;
+
+    if (!encodedUrl) {
+      return res.status(400).send("Missing url parameter");
+    }
+
+    // Decode base64url URL
+    let targetUrl: string;
+    try {
+      const normalized = encodedUrl.replace(/-/g, "+").replace(/_/g, "/");
+      const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+      targetUrl = Buffer.from(padded, "base64").toString("utf-8");
+    } catch {
+      return res.status(400).send("Invalid url encoding");
+    }
+
+    // Validate URL
+    let parsed: URL;
+    try {
+      parsed = new URL(targetUrl);
+    } catch {
+      return res.status(400).send("Invalid url");
+    }
+
+    // Same whitelist as /api/dl — prevents SSRF / open-proxy abuse
+    const allowedHosts = [
+      "archive.org",
+      "www.archive.org",
+      "ia800000.us.archive.org",
+      "drive.google.com",
+      "docs.google.com",
+      "googleusercontent.com",
+      "googleapis.com",
+    ];
+    const hostAllowed = allowedHosts.some(
+      (h) => parsed.hostname === h || parsed.hostname.endsWith("." + h)
+    );
+    if (!hostAllowed) {
+      console.warn(`🚫 /api/stream blocked untrusted host: ${parsed.hostname}`);
+      return res.status(403).send("Host not allowed");
+    }
+
+    // Abort upstream fetch if client disconnects (saves bandwidth when user seeks)
+    const abortController = new AbortController();
+    const onClientAbort = () => {
+      if (!res.writableEnded) abortController.abort();
+    };
+    req.on("close", onClientAbort);
+
+    try {
+      const upstreamHeaders: Record<string, string> = {
+        "User-Agent":
+          "Mozilla/5.0 (Linux; Node.js StreamVault Stream) AppleWebKit/537.36",
+        Accept: "*/*",
+      };
+      if (req.headers.range) {
+        upstreamHeaders["Range"] = String(req.headers.range);
+      }
+      if (req.headers["if-range"]) {
+        upstreamHeaders["If-Range"] = String(req.headers["if-range"]);
+      }
+
+      const upstream = await fetch(targetUrl, {
+        method: "GET",
+        headers: upstreamHeaders,
+        redirect: "follow",
+        signal: abortController.signal,
+      });
+
+      if (!upstream.ok && upstream.status !== 206) {
+        console.warn(
+          `/api/stream upstream ${upstream.status} for ${parsed.hostname}`
+        );
+        return res
+          .status(502)
+          .send(`Upstream stream failed (${upstream.status})`);
+      }
+
+      res.status(upstream.status);
+
+      // Forward headers critical for video playback + seeking
+      const headersToForward = [
+        "content-type",
+        "content-length",
+        "content-range",
+        "accept-ranges",
+        "last-modified",
+        "etag",
+      ];
+      for (const h of headersToForward) {
+        const v = upstream.headers.get(h);
+        if (v) res.setHeader(h, v);
+      }
+
+      // Force inline (do NOT trigger download) + allow seek
+      res.setHeader("Content-Disposition", "inline");
+      if (!res.getHeader("accept-ranges")) {
+        res.setHeader("accept-ranges", "bytes");
+      }
+      // Cache at the edge / browser for 1 hour so repeat seeks are fast
+      res.setHeader("cache-control", "public, max-age=3600");
+
+      if (!upstream.body) {
+        return res.end();
+      }
+
+      const { Readable } = await import("node:stream");
+      const nodeStream = Readable.fromWeb(upstream.body as any);
+
+      nodeStream.on("error", (err: any) => {
+        if (err?.name === "AbortError") return;
+        console.error("/api/stream stream error:", err?.message || err);
+        if (!res.headersSent) res.status(500);
+        try {
+          res.end();
+        } catch { }
+      });
+
+      nodeStream.pipe(res);
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
+      console.error("/api/stream proxy error:", err?.message || err);
+      if (!res.headersSent) {
+        res.status(500).send("Stream proxy failed");
+      }
+    } finally {
+      req.off("close", onClientAbort);
     }
   });
 

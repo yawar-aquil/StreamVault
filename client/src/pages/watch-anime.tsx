@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from "react";
 import { Download, ChevronLeft, ChevronRight, Share2, MessageSquare, Play, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { getGoogleDriveDownloadUrl } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { CommentsSection } from "@/components/comments-section";
@@ -465,15 +464,10 @@ export default function WatchAnime() {
                                         className="gap-2"
                                         asChild
                                     >
-                                        <a
-                                            href={getGoogleDriveDownloadUrl(currentEpisodeData.videoUrl || currentEpisodeData.googleDriveUrl)}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            download
-                                        >
+                                        <Link href={`/download/anime/${slug}?season=${currentSeason}&episode=${currentEpisode}`}>
                                             <Download className="w-4 h-4" />
                                             Download
-                                        </a>
+                                        </Link>
                                     </Button>
                                 </div>
                             </div>

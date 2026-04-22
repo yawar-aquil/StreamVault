@@ -85,10 +85,46 @@ const isProxyRequiredUrl = (url: string): boolean => {
     return proxyDomains.some(domain => url.includes(domain));
 };
 
+// Domains whose videos are SLOW to stream directly from client → route through
+// our VPS proxy (/api/stream). Archive.org especially: their CDN often gives
+// 300-500ms latency per range request from India, causing heavy buffering.
+// Our Mumbai VPS usually has a far better route to archive.org's US servers.
+const SHOULD_STREAM_PROXY_DOMAINS = [
+    'archive.org',
+    'ia800000.us.archive.org',
+    'ia600000.us.archive.org',
+    'ia802600.us.archive.org',
+    '.archive.org', // catches any ia*.us.archive.org mirror
+];
+
+const shouldStreamProxy = (url: string): boolean => {
+    try {
+        const host = new URL(url).hostname;
+        return SHOULD_STREAM_PROXY_DOMAINS.some((d) =>
+            d.startsWith('.') ? host.endsWith(d) : host === d
+        );
+    } catch {
+        return false;
+    }
+};
+
+// base64url-encode (URL-safe, no padding) — must match getSafeDownloadUrl in utils.ts
+const base64UrlEncode = (s: string): string => {
+    return btoa(unescape(encodeURIComponent(s)))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+};
+
 // Get proxied URL for external videos
 const getProxiedUrl = (url: string): string => {
     if (isProxyRequiredUrl(url)) {
         return `/api/proxy-video?url=${encodeURIComponent(url)}`;
+    }
+    if (shouldStreamProxy(url)) {
+        // Use inline streaming proxy so playback routes through our VPS.
+        // base64url matches the decoder on the server side.
+        return `/api/stream?u=${base64UrlEncode(url)}`;
     }
     return url;
 };

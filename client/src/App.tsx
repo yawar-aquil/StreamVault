@@ -23,6 +23,7 @@ import Category from "@/pages/category";
 import Watchlist from "@/pages/watchlist";
 import Admin from "@/pages/admin";
 import DownloadsPage from "@/pages/downloads";
+import DownloadGateway from "@/pages/download";
 import AdminLogin from "@/pages/admin-login";
 import Privacy from "@/pages/privacy";
 import About from "@/pages/about";
@@ -117,6 +118,7 @@ function Router() {
           <ProtectedRoute path="/admin/analytics" component={SiteAnalytics} />
           <ProtectedRoute path="/admin" component={Admin} />
           <ProtectedRoute path="/downloads" component={DownloadsPage} />
+          <Route path="/download/:type/:slug" component={DownloadGateway} />
           <Route path="/privacy" component={Privacy} />
           <Route path="/about" component={About} />
           <Route path="/contact" component={Contact} />

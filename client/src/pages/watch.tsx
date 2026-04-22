@@ -12,7 +12,6 @@ import { Trophy } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import type { Show, Episode } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import { getGoogleDriveDownloadUrl } from "@/lib/utils";
 import { trackWatch } from "@/components/analytics-tracker";
 import { AdContainer, SmartlinkButton } from "@/components/ad-manager";
 
@@ -504,15 +503,12 @@ export default function Watch() {
                     className="gap-2"
                     asChild
                   >
-                    <a
-                      href={getGoogleDriveDownloadUrl(currentEpisodeData.googleDriveUrl)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      download
+                    <Link
+                      href={`/download/show/${slug}?season=${currentSeason}&episode=${currentEpisode}`}
                     >
                       <Download className="w-4 h-4" />
                       Download Episode
-                    </a>
+                    </Link>
                   </Button>
                 </div>
               </div>

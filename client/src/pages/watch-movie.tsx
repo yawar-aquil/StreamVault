@@ -3,7 +3,6 @@ import { useRoute, Link } from "wouter";
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, Play, Download, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getGoogleDriveDownloadUrl } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CommentsSection } from "@/components/comments-section";
@@ -405,15 +404,10 @@ export default function WatchMovie() {
                     className="gap-2"
                     asChild
                   >
-                    <a
-                      href={getGoogleDriveDownloadUrl(movie.googleDriveUrl)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      download
-                    >
+                    <Link href={`/download/movie/${slug}`}>
                       <Download className="w-4 h-4" />
                       Download
-                    </a>
+                    </Link>
                   </Button>
                 </div>
               </div>
