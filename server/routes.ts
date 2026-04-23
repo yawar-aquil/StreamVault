@@ -4216,14 +4216,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Inline video streaming proxy.
-  // Usage: /api/stream?u=<base64-encoded-url>
-  // Same domain-masking + range-support design as /api/dl, but serves inline
-  // (no Content-Disposition: attachment) so HTML5 <video> / JWPlayer can play it.
-  // Lets clients in India (and anywhere far from archive.org) fetch through our
-  // VPS which usually has a much faster, more stable connection to archive.org
-  // than the client's ISP does.
-  app.get("/api/stream", async (req: Request, res: Response) => {
+  // NOTE: /api/stream (inline video streaming proxy) was removed to save VPS
+  // egress bandwidth. Video playback loads directly from archive.org now.
+  // If you ever put CloudFront in front of the app, re-add this endpoint — see
+  // git history for commit 2d0e6c3.
+  app.get("/api/stream-disabled", async (req: Request, res: Response) => {
     const encodedUrl = req.query.u as string;
 
     if (!encodedUrl) {

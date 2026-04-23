@@ -101,6 +101,15 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <!-- Warm up connection to archive.org so video first-byte is faster.
+       dns-prefetch is cheap; preconnect does full TLS handshake upfront. -->
+  <link rel="dns-prefetch" href="https://archive.org">
+  <link rel="preconnect" href="https://archive.org" crossorigin>
+  <link rel="dns-prefetch" href="//ia800000.us.archive.org">
+  <link rel="dns-prefetch" href="//ia600000.us.archive.org">
+  <link rel="dns-prefetch" href="//ia802600.us.archive.org">
+  <link rel="dns-prefetch" href="https://drive.google.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- JW Player CDN -->
