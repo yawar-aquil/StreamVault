@@ -241,16 +241,85 @@ function CacheDiagnostic() {
     const [results, setResults] = useState<Record<string, DiagnoseResult | string>>({});
     const [running, setRunning] = useState<string | null>(null);
 
+    // Run the diagnostic from the admin's browser so CF's Bot Fight Mode
+     // never challenges it (real browsers bypass that automatically). Same
+    // /api/stream-probe endpoint; we just hit it from here instead of the VPS.
     const runFor = async (domain: string) => {
         setRunning(domain);
         try {
-            const res = await fetch(
-                `/api/admin/stream-mode/diagnose?domain=${encodeURIComponent(domain)}`,
-                { headers: getAuthHeaders() }
-            );
-            const json = await res.json();
-            if (!res.ok) throw new Error(json.error || "Diagnostic failed");
-            setResults((r) => ({ ...r, [domain]: json }));
+            const nonce =
+                Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+            const target = `https://${domain}/api/stream-probe?n=${nonce}`;
+
+            const hitOnce = async () => {
+                const r = await fetch(target, {
+                    method: "GET",
+                    cache: "no-store", // bypass the BROWSER cache; we want CF's behavior
+                    credentials: "omit",
+                });
+                // Drain body so CF finalizes the response
+                try {
+                    await r.arrayBuffer();
+                } catch { /* ignore */ }
+                const h = (n: string) => r.headers.get(n) || null;
+                return {
+                    status: r.status,
+                    cfCacheStatus: h("cf-cache-status"),
+                    cfRay: h("cf-ray"),
+                    cacheControl: h("cache-control"),
+                    server: h("server"),
+                    cfMitigated: h("cf-mitigated"),
+                };
+            };
+
+            const first = await hitOnce();
+            await new Promise((x) => setTimeout(x, 500));
+            const second = await hitOnce();
+
+            // Fetch current mode so we can phrase the verdict correctly
+            const modeRes = await fetch("/api/config/stream-mode", {
+                cache: "no-store",
+            });
+            const modeJson = (await modeRes.json()) as { mode: string };
+            const mode = modeJson.mode;
+
+            const cfInPath = !!first.cfRay || !!second.cfRay;
+            const cacheHeaderOk = (first.cacheControl || "").includes("max-age=");
+            const cached =
+                second.cfCacheStatus === "HIT" ||
+                second.cfCacheStatus === "REVALIDATED";
+
+            let verdict: string;
+            if (mode !== "vps-cached") {
+                verdict = `Currently in "${mode}" mode — switch to "VPS + CF" to test caching.`;
+            } else if (!cfInPath) {
+                verdict =
+                    "Cloudflare does NOT appear to be in front of this domain. Check that the DNS record is proxied (orange cloud).";
+            } else if (!cacheHeaderOk) {
+                verdict =
+                    "Server is not sending Cache-Control with max-age. Re-check server logs.";
+            } else if (second.cfCacheStatus === "DYNAMIC") {
+                verdict =
+                    "CF received the cache header but is NOT caching. Page Rule likely missing or URL pattern doesn't match.";
+            } else if (cached) {
+                verdict = `Caching works. Second request was ${second.cfCacheStatus}.`;
+            } else {
+                verdict = `CF is caching-eligible but second request was ${second.cfCacheStatus}. Click again — CF edge replication can take a few seconds.`;
+            }
+
+            setResults((r) => ({
+                ...r,
+                [domain]: {
+                    mode,
+                    domain,
+                    cfInPath,
+                    cacheHeaderOk,
+                    cached,
+                    verdict,
+                    first,
+                    second,
+                },
+            }));
         } catch (err: any) {
             setResults((r) => ({ ...r, [domain]: err.message }));
             toast({

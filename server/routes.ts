@@ -4386,6 +4386,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const mode = getStreamMode();
     res.setHeader("content-type", "application/octet-stream");
     res.setHeader("x-probe-mode", mode);
+    // Allow the admin diagnostic page (loaded on one domain) to read CF
+    // response headers when testing another domain.
+    res.setHeader("access-control-allow-origin", "*");
+    res.setHeader(
+      "access-control-expose-headers",
+      "cf-cache-status, cf-ray, cache-control, server, cf-mitigated, x-probe-mode"
+    );
     if (mode === "vps-cached") {
       res.setHeader(
         "cache-control",
