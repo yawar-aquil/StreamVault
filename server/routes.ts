@@ -4223,11 +4223,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mumbai edge. First viewer pays VPS egress; all subsequent viewers of the
   // same chunk are served from Cloudflare's network for free.
   app.get("/api/stream", async (req: Request, res: Response) => {
+    // Any early-exit (error) branch MUST set Cache-Control: no-store so CF's
+    // "Cache Everything" Page Rule doesn't cache 401/403/410/400 responses.
+    // Once a 401 is cached, even authenticated users get served the cached
+    // error from CF without ever hitting origin.
+    const sendError = (status: number, msg: string) => {
+      res.setHeader("cache-control", "private, no-store");
+      return res.status(status).send(msg);
+    };
+
     // --- Gating: admin-controlled mode + auth check ---
     const mode = getStreamMode();
     if (mode === "direct") {
-      // Proxy disabled entirely via admin panel
-      return res.status(410).send("Stream proxy is disabled");
+      return sendError(410, "Stream proxy is disabled");
     }
     // Require logged-in user so this can't be abused as an open proxy
     const token =
@@ -4235,13 +4243,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       (req.headers.authorization || "").replace("Bearer ", "");
     const authed = token ? verifyToken(token) : null;
     if (!authed) {
-      return res.status(401).send("Login required to use streaming proxy");
+      return sendError(401, "Login required to use streaming proxy");
     }
 
     const encodedUrl = req.query.u as string;
 
     if (!encodedUrl) {
-      return res.status(400).send("Missing url parameter");
+      return sendError(400, "Missing url parameter");
     }
 
     // Decode base64url URL
@@ -4251,7 +4259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
       targetUrl = Buffer.from(padded, "base64").toString("utf-8");
     } catch {
-      return res.status(400).send("Invalid url encoding");
+      return sendError(400, "Invalid url encoding");
     }
 
     // Validate URL
@@ -4259,7 +4267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       parsed = new URL(targetUrl);
     } catch {
-      return res.status(400).send("Invalid url");
+      return sendError(400, "Invalid url");
     }
 
     // Same whitelist as /api/dl — prevents SSRF / open-proxy abuse
@@ -4277,7 +4285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     );
     if (!hostAllowed) {
       console.warn(`🚫 /api/stream blocked untrusted host: ${parsed.hostname}`);
-      return res.status(403).send("Host not allowed");
+      return sendError(403, "Host not allowed");
     }
 
     // Abort upstream fetch if client disconnects (saves bandwidth when user seeks)
@@ -4311,9 +4319,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.warn(
           `/api/stream upstream ${upstream.status} for ${parsed.hostname}`
         );
-        return res
-          .status(502)
-          .send(`Upstream stream failed (${upstream.status})`);
+        return sendError(502, `Upstream stream failed (${upstream.status})`);
       }
 
       res.status(upstream.status);
