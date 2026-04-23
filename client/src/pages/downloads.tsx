@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileVideo, Upload, Play, Info } from "lucide-react";
-import VideoPlayer from "@/components/video-player";
+import CustomVideoPlayer from "@/components/custom-video-player";
 import { SEO } from "@/components/seo"; // Assuming SEO component exists
 import { SmartlinkButton } from "@/components/ad-manager";
 
@@ -73,10 +73,11 @@ export default function DownloadsPage() {
                         ) : (
                             <div className="space-y-6">
                                 <div className="aspect-video rounded-lg overflow-hidden border border-border bg-black/50 shadow-2xl">
-                                    <VideoPlayer
+                                    <CustomVideoPlayer
                                         videoUrl={videoUrl}
                                         className="w-full h-full"
                                         autoplay={true}
+                                        fileName={selectedFile?.name}
                                     />
                                 </div>
 
