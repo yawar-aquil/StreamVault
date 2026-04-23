@@ -8,7 +8,6 @@ import {
     Minimize,
     Settings,
     Subtitles,
-    Upload,
     RotateCcw,
     RotateCw,
     Check,
@@ -261,7 +260,10 @@ export default function CustomVideoPlayer({
     const seekTo = (t: number) => {
         const video = videoRef.current;
         if (!video) return;
-        video.currentTime = Math.max(0, Math.min(duration, t));
+        // Read duration from the element, not component state — keyboard handlers
+        // close over stale state otherwise (causing arrow-right to jump to 0).
+        const max = isFinite(video.duration) ? video.duration : 0;
+        video.currentTime = Math.max(0, Math.min(max, t));
     };
 
     const seekBy = (delta: number) => {
@@ -534,7 +536,9 @@ export default function CustomVideoPlayer({
                             value={muted ? 0 : volume}
                             onChange={(e) => setVol(parseFloat(e.target.value))}
                             aria-label="Volume"
-                            className="w-0 group-hover/vol:w-20 transition-all duration-200 h-1 accent-primary cursor-pointer"
+                            // invisible (not w-0) so the native thumb isn't rendered
+                            // as a red dot next to the speaker icon when collapsed.
+                            className="w-0 invisible group-hover/vol:w-20 group-hover/vol:visible transition-all duration-200 h-1 accent-primary cursor-pointer"
                         />
                     </div>
 
@@ -583,16 +587,6 @@ export default function CustomVideoPlayer({
                                 +
                             </span>
                         )}
-                    </button>
-
-                    {/* Upload subtitle (distinct from CC toggle) */}
-                    <button
-                        onClick={() => subtitleInputRef.current?.click()}
-                        aria-label="Upload subtitle file"
-                        title="Upload subtitle file (.srt or .vtt)"
-                        className="p-2 hover:bg-white/10 rounded-full transition-colors"
-                    >
-                        <Upload className="h-5 w-5" />
                     </button>
 
                     {/* Settings (speed) */}
