@@ -24,6 +24,81 @@ interface CustomVideoPlayerProps {
 
 const PLAYBACK_RATES = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
+const DEFAULT_SUB_SETTINGS = {
+    fontSize: 20,
+    bgOpacity: 70,     // 0-100 %
+    posY: 88,          // % from top of container (bottom of cue box sits at this Y)
+    color: "#FFFFFF",
+};
+
+const SUB_COLORS: Array<{ label: string; value: string }> = [
+    { label: "White", value: "#FFFFFF" },
+    { label: "Yellow", value: "#FFEB3B" },
+    { label: "Cyan", value: "#4DD0E1" },
+    { label: "Green", value: "#81C784" },
+    { label: "Red", value: "#F48FB1" },
+];
+
+/**
+ * Sanitize VTT cue text before rendering via dangerouslySetInnerHTML.
+ * VTT cues can contain <i>, <b>, <u>, <c.className> tags and \n line breaks.
+ * We keep inline styling tags, drop everything else, and convert newlines.
+ */
+function sanitizeCueHtml(input: string): string {
+    if (!input) return "";
+    // 1. Remove HTML tags entirely except an allowlist.
+    const ALLOWED = /^(i|b|u|em|strong|br)$/i;
+    const withoutBad = input.replace(
+        /<\/?([a-z][a-z0-9]*)(\s[^>]*)?>/gi,
+        (_match, tag: string) => (ALLOWED.test(tag) ? `<${tag.toLowerCase()}>` : "")
+    );
+    // 2. Remove VTT-specific tags like <c.className>, <v Speaker>, <00:00:01.000>
+    const noVtt = withoutBad.replace(/<\/?(c|v|lang|ruby|rt)[^>]*>/gi, "");
+    // 3. Convert raw newlines to <br>
+    return noVtt.replace(/\r?\n/g, "<br/>");
+}
+
+interface LabeledSliderProps {
+    label: string;
+    value: number;
+    min: number;
+    max: number;
+    step: number;
+    suffix?: string;
+    onChange: (v: number) => void;
+}
+function LabeledSlider({
+    label,
+    value,
+    min,
+    max,
+    step,
+    suffix = "",
+    onChange,
+}: LabeledSliderProps) {
+    return (
+        <div className="space-y-1">
+            <div className="flex items-center justify-between text-[11px] text-white/70">
+                <span>{label}</span>
+                <span className="tabular-nums text-white/90">
+                    {value}
+                    {suffix}
+                </span>
+            </div>
+            <input
+                type="range"
+                min={min}
+                max={max}
+                step={step}
+                value={value}
+                onChange={(e) => onChange(parseFloat(e.target.value))}
+                aria-label={label}
+                className="w-full h-1 accent-primary cursor-pointer"
+            />
+        </div>
+    );
+}
+
 /**
  * Converts an SRT subtitle file contents to WebVTT format so an HTML5
  * <track> element can consume it. Only lightweight transforms — replaces
@@ -76,6 +151,21 @@ export default function CustomVideoPlayer({
     const [seekingHover, setSeekingHover] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
 
+    // --- custom subtitle rendering ---
+    // We render cues in our own overlay div (instead of letting the browser
+    // paint native ::cue text) so they never collide with the controls bar
+    // and the user can drag/customize them.
+    const [activeCues, setActiveCues] = useState<string[]>([]);
+    const [subSettings, setSubSettings] = useState(() => {
+        try {
+            const raw = localStorage.getItem("cvp_sub_settings");
+            if (raw) return JSON.parse(raw) as typeof DEFAULT_SUB_SETTINGS;
+        } catch { /* ignore */ }
+        return DEFAULT_SUB_SETTINGS;
+    });
+    const [subSettingsOpen, setSubSettingsOpen] = useState(false);
+    const draggingSubRef = useRef<{ startY: number; startPos: number } | null>(null);
+
     // --- video element event wiring ---
     useEffect(() => {
         const video = videoRef.current;
@@ -126,30 +216,76 @@ export default function CustomVideoPlayer({
         };
     }, []);
 
-    // Whenever subtitle track source/enabled state changes, explicitly flip the
-    // TextTrack mode. React's <track default> is unreliable — browsers often
-    // leave the track mode as "disabled" without this.
+    // Persist subtitle settings
+    useEffect(() => {
+        try {
+            localStorage.setItem("cvp_sub_settings", JSON.stringify(subSettings));
+        } catch { /* ignore quota */ }
+    }, [subSettings]);
+
+    // Keep the TextTrack in 'hidden' mode (so the browser parses cues but does
+    // NOT paint them) and mirror the currently-active cues into React state via
+    // the cuechange event. We then render them ourselves in a positioned div.
     useEffect(() => {
         const video = videoRef.current;
         if (!video) return;
 
-        const applyTrackState = () => {
+        const handlers: Array<{ track: TextTrack; fn: () => void }> = [];
+
+        const wireTracks = () => {
             const tracks = video.textTracks;
             for (let i = 0; i < tracks.length; i++) {
-                tracks[i].mode =
-                    subtitleUrl && ccEnabled ? "showing" : "hidden";
+                const track = tracks[i];
+                // 'hidden' = cues are parsed + cuechange fires, but not rendered.
+                // 'disabled' = nothing fires. Use hidden so we can listen.
+                track.mode = subtitleUrl ? "hidden" : "disabled";
             }
+
+            // Only wire the first track for now (we only ever load one upload)
+            const track = tracks[0];
+            if (!track) return;
+
+            const onCueChange = () => {
+                if (!ccEnabled) {
+                    setActiveCues([]);
+                    return;
+                }
+                const cues = track.activeCues;
+                if (!cues) {
+                    setActiveCues([]);
+                    return;
+                }
+                const texts: string[] = [];
+                for (let j = 0; j < cues.length; j++) {
+                    const c = cues[j] as VTTCue;
+                    // Strip VTT voice/style tags but keep i/b/u for formatting.
+                    // (Rendered via dangerouslySetInnerHTML after sanitize.)
+                    texts.push(c.text || "");
+                }
+                setActiveCues(texts);
+            };
+
+            track.addEventListener("cuechange", onCueChange);
+            handlers.push({ track, fn: onCueChange });
+            // Fire once in case there's already an active cue at load time
+            onCueChange();
         };
 
-        // textTracks list updates async after <track> renders — apply a few times
-        applyTrackState();
-        const t1 = setTimeout(applyTrackState, 100);
-        const t2 = setTimeout(applyTrackState, 500);
+        wireTracks();
+        const t1 = setTimeout(wireTracks, 100);
+        const t2 = setTimeout(wireTracks, 500);
+
         return () => {
             clearTimeout(t1);
             clearTimeout(t2);
+            for (const h of handlers) h.track.removeEventListener("cuechange", h.fn);
         };
     }, [subtitleUrl, ccEnabled]);
+
+    // If subtitles disabled, clear active cues immediately so overlay hides.
+    useEffect(() => {
+        if (!ccEnabled || !subtitleUrl) setActiveCues([]);
+    }, [ccEnabled, subtitleUrl]);
 
     // Free blob URLs on unmount so we don't leak memory between uploads
     useEffect(() => {
@@ -338,6 +474,29 @@ export default function CustomVideoPlayer({
 
     // --- seek bar mouse handling ---
     const seekBarRef = useRef<HTMLDivElement>(null);
+    // --- subtitle drag-to-reposition ---
+    const startSubDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+        if (!containerRef.current) return;
+        e.preventDefault();
+        e.stopPropagation();
+        (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+        draggingSubRef.current = {
+            startY: e.clientY,
+            startPos: subSettings.posY,
+        };
+    };
+    const onSubDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+        const d = draggingSubRef.current;
+        if (!d || !containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const deltaPct = ((e.clientY - d.startY) / rect.height) * 100;
+        const next = Math.max(5, Math.min(95, d.startPos + deltaPct));
+        setSubSettings((s: typeof DEFAULT_SUB_SETTINGS) => ({ ...s, posY: next }));
+    };
+    const endSubDrag = () => {
+        draggingSubRef.current = null;
+    };
+
     const handleSeekBarClick = (e: React.MouseEvent<HTMLDivElement>) => {
         if (!seekBarRef.current || duration === 0) return;
         const rect = seekBarRef.current.getBoundingClientRect();
@@ -375,6 +534,11 @@ export default function CustomVideoPlayer({
                 playsInline
                 onClick={togglePlay}
                 crossOrigin="anonymous"
+                // Native ::cue renderer is visually disabled via CSS so even if a
+                // browser ignores `track.mode = hidden`, cues won't overlap controls.
+                style={{ // @ts-ignore
+                    ['--cvp-hide-native-cue' as any]: '1',
+                }}
             >
                 {subtitleUrl && (
                     <track
@@ -386,6 +550,45 @@ export default function CustomVideoPlayer({
                     />
                 )}
             </video>
+
+            {/* Custom subtitle overlay — draggable, stylable, always above controls */}
+            {ccEnabled && subtitleUrl && activeCues.length > 0 && (
+                <div
+                    className={cn(
+                        "absolute left-1/2 -translate-x-1/2 pointer-events-auto cursor-grab select-none text-center max-w-[90%] rounded-md px-3 py-1",
+                        draggingSubRef.current && "cursor-grabbing"
+                    )}
+                    style={{
+                        top: `${subSettings.posY}%`,
+                        transform: "translate(-50%, -100%)",
+                        fontSize: `${subSettings.fontSize}px`,
+                        color: subSettings.color,
+                        backgroundColor: `rgba(0,0,0,${subSettings.bgOpacity / 100})`,
+                        textShadow: subSettings.bgOpacity < 20
+                            ? "0 2px 4px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,1)"
+                            : undefined,
+                        lineHeight: 1.3,
+                        fontWeight: 600,
+                        touchAction: "none",
+                    }}
+                    onPointerDown={startSubDrag}
+                    onPointerMove={onSubDrag}
+                    onPointerUp={endSubDrag}
+                    onPointerCancel={endSubDrag}
+                    title="Drag to reposition"
+                >
+                    {activeCues.map((text, i) => (
+                        <div
+                            key={i}
+                            // Subtitle text may contain <i>, <b> tags from VTT — render inline.
+                            // Basic sanitization: strip script/style/other dangerous tags.
+                            dangerouslySetInnerHTML={{
+                                __html: sanitizeCueHtml(text),
+                            }}
+                        />
+                    ))}
+                </div>
+            )}
 
             {/* Center loading spinner */}
             {loading && (
@@ -604,7 +807,7 @@ export default function CustomVideoPlayer({
                             <Settings className="h-5 w-5" />
                         </button>
                         {settingsOpen && (
-                            <div className="absolute bottom-full right-0 mb-2 min-w-[180px] bg-black/95 backdrop-blur border border-white/10 rounded-lg shadow-2xl overflow-hidden">
+                            <div className="absolute bottom-full right-0 mb-2 w-[260px] bg-black/95 backdrop-blur border border-white/10 rounded-lg shadow-2xl overflow-hidden">
                                 <div className="px-3 py-2 text-xs text-white/60 border-b border-white/10">
                                     Playback speed
                                 </div>
@@ -612,10 +815,7 @@ export default function CustomVideoPlayer({
                                     {PLAYBACK_RATES.map((r) => (
                                         <button
                                             key={r}
-                                            onClick={() => {
-                                                setRate(r);
-                                                setSettingsOpen(false);
-                                            }}
+                                            onClick={() => setRate(r)}
                                             className="w-full px-3 py-2 text-left text-sm flex items-center justify-between hover:bg-white/10 transition-colors"
                                         >
                                             <span>
@@ -627,6 +827,86 @@ export default function CustomVideoPlayer({
                                         </button>
                                     ))}
                                 </div>
+
+                                {/* Subtitle customization */}
+                                <div className="px-3 py-2 text-xs text-white/60 border-y border-white/10 flex items-center justify-between">
+                                    <span>Subtitles</span>
+                                    {subtitleUrl && (
+                                        <button
+                                            onClick={() => setSubSettings(DEFAULT_SUB_SETTINGS)}
+                                            className="text-[10px] text-white/50 hover:text-white"
+                                        >
+                                            Reset
+                                        </button>
+                                    )}
+                                </div>
+
+                                {!subtitleUrl ? (
+                                    <div className="px-3 py-3 text-xs text-white/50">
+                                        Upload a subtitle file (click the CC button) to enable customization.
+                                    </div>
+                                ) : (
+                                    <div className="px-3 py-3 space-y-3">
+                                        <LabeledSlider
+                                            label="Font size"
+                                            value={subSettings.fontSize}
+                                            min={12}
+                                            max={42}
+                                            step={1}
+                                            onChange={(v) =>
+                                                setSubSettings((s: typeof DEFAULT_SUB_SETTINGS) => ({ ...s, fontSize: v }))
+                                            }
+                                            suffix="px"
+                                        />
+                                        <LabeledSlider
+                                            label="Background"
+                                            value={subSettings.bgOpacity}
+                                            min={0}
+                                            max={100}
+                                            step={5}
+                                            onChange={(v) =>
+                                                setSubSettings((s: typeof DEFAULT_SUB_SETTINGS) => ({ ...s, bgOpacity: v }))
+                                            }
+                                            suffix="%"
+                                        />
+                                        <LabeledSlider
+                                            label="Position"
+                                            value={Math.round(subSettings.posY)}
+                                            min={10}
+                                            max={95}
+                                            step={1}
+                                            onChange={(v) =>
+                                                setSubSettings((s: typeof DEFAULT_SUB_SETTINGS) => ({ ...s, posY: v }))
+                                            }
+                                            suffix="%"
+                                        />
+                                        <div className="space-y-1">
+                                            <div className="text-[11px] text-white/70">Text color</div>
+                                            <div className="flex gap-2">
+                                                {SUB_COLORS.map((c) => (
+                                                    <button
+                                                        key={c.value}
+                                                        onClick={() =>
+                                                            setSubSettings((s: typeof DEFAULT_SUB_SETTINGS) => ({ ...s, color: c.value }))
+                                                        }
+                                                        aria-label={c.label}
+                                                        title={c.label}
+                                                        className={cn(
+                                                            "h-6 w-6 rounded-full border-2 transition-transform",
+                                                            subSettings.color === c.value
+                                                                ? "border-white scale-110"
+                                                                : "border-white/30 hover:border-white/60"
+                                                        )}
+                                                        style={{ backgroundColor: c.value }}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <p className="text-[10px] text-white/40 pt-1 leading-relaxed">
+                                            Tip: drag the subtitle text directly to reposition it.
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
