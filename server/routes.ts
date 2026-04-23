@@ -24,6 +24,7 @@ import multer from "multer";
 import storeRoutes from "./store";
 import { getLinkPreview } from "./link-preview";
 import { translateText, translateBatch } from "./translate";
+import { getStreamMode, setStreamMode, isValidStreamMode, type StreamMode } from "./stream-mode";
 
 // Helper to convert ReadableStream to async iterable for Node.js
 async function* streamToAsyncIterable(stream: ReadableStream<Uint8Array>) {
@@ -4216,11 +4217,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // NOTE: /api/stream (inline video streaming proxy) was removed to save VPS
-  // egress bandwidth. Video playback loads directly from archive.org now.
-  // If you ever put CloudFront in front of the app, re-add this endpoint — see
-  // git history for commit 2d0e6c3.
-  app.get("/api/stream-disabled", async (req: Request, res: Response) => {
+  // Inline video streaming proxy. Masks archive.org URLs and — critically —
+  // because streamvault.live is already behind Cloudflare, the `Cache-Control:
+  // public, max-age=86400` header below lets CF cache video chunks at its
+  // Mumbai edge. First viewer pays VPS egress; all subsequent viewers of the
+  // same chunk are served from Cloudflare's network for free.
+  app.get("/api/stream", async (req: Request, res: Response) => {
+    // --- Gating: admin-controlled mode + auth check ---
+    const mode = getStreamMode();
+    if (mode === "direct") {
+      // Proxy disabled entirely via admin panel
+      return res.status(410).send("Stream proxy is disabled");
+    }
+    // Require logged-in user so this can't be abused as an open proxy
+    const token =
+      (req as any).cookies?.authToken ||
+      (req.headers.authorization || "").replace("Bearer ", "");
+    const authed = token ? verifyToken(token) : null;
+    if (!authed) {
+      return res.status(401).send("Login required to use streaming proxy");
+    }
+
     const encodedUrl = req.query.u as string;
 
     if (!encodedUrl) {
@@ -4320,8 +4337,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!res.getHeader("accept-ranges")) {
         res.setHeader("accept-ranges", "bytes");
       }
-      // Cache at the edge / browser for 1 hour so repeat seeks are fast
-      res.setHeader("cache-control", "public, max-age=3600");
+      // Caching depends on current mode (admin-switchable):
+      //  - "vps-cached": allow Cloudflare + browsers to cache aggressively
+      //  - "vps":        tell CF NOT to cache; every byte comes through VPS
+      if (mode === "vps-cached") {
+        res.setHeader(
+          "cache-control",
+          "public, max-age=86400, s-maxage=86400, immutable"
+        );
+      } else {
+        res.setHeader("cache-control", "private, no-store");
+      }
 
       if (!upstream.body) {
         return res.end();
@@ -4349,6 +4375,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } finally {
       req.off("close", onClientAbort);
     }
+  });
+
+  // Public endpoint: client reads current mode so it knows whether to request
+  // /api/stream at all (anonymous users always get direct regardless).
+  app.get("/api/config/stream-mode", (_req, res) => {
+    res.setHeader("cache-control", "no-store");
+    res.json({ mode: getStreamMode() });
+  });
+
+  // Admin: read current stream mode
+  app.get("/api/admin/stream-mode", requireAdmin, (_req, res) => {
+    res.json({ mode: getStreamMode() });
+  });
+
+  // Admin: switch stream mode instantly (no redeploy)
+  app.post("/api/admin/stream-mode", requireAdmin, (req, res) => {
+    const { mode } = req.body || {};
+    if (!isValidStreamMode(mode)) {
+      return res
+        .status(400)
+        .json({ error: "mode must be 'direct', 'vps', or 'vps-cached'" });
+    }
+    const newMode = setStreamMode(mode as StreamMode);
+    console.log(`[admin] stream mode changed to: ${newMode}`);
+    res.json({ mode: newMode });
   });
 
   // Translate text (for Watch Together chat translation)

@@ -50,6 +50,7 @@ import { getAuthHeaders, logout as authLogout } from "@/lib/auth";
 import { SubtitleManager } from "@/components/admin/SubtitleManager";
 import { AudioTracksInput } from "@/components/admin/audio-tracks-input";
 import { GiftCoinsManager } from "@/components/admin/GiftCoinsManager";
+import { StreamingModeManager } from "@/components/admin/StreamingModeManager";
 
 export default function AdminPage() {
   const { toast } = useToast();
@@ -210,6 +211,10 @@ export default function AdminPage() {
               <Gift className="w-4 h-4" />
               Gift Coins
             </TabsTrigger>
+            <TabsTrigger value="streaming" className="gap-2">
+              <Activity className="w-4 h-4" />
+              Streaming
+            </TabsTrigger>
           </TabsList>
 
           {/* User Analytics Tab */}
@@ -335,6 +340,11 @@ export default function AdminPage() {
           {/* Subtitles Management Tab */}
           <TabsContent value="subtitles">
             <SubtitleManager shows={shows} movies={movies} anime={anime} />
+          </TabsContent>
+
+          {/* Streaming Mode Tab */}
+          <TabsContent value="streaming">
+            <StreamingModeManager />
           </TabsContent>
 
           {/* Gift Coins Tab */}

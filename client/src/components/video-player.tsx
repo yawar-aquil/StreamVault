@@ -1,6 +1,8 @@
 import { AudioLines, Check } from 'lucide-react';
 
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/auth-context';
 import { createPortal } from 'react-dom';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
@@ -85,10 +87,50 @@ const isProxyRequiredUrl = (url: string): boolean => {
     return proxyDomains.some(domain => url.includes(domain));
 };
 
-// Get proxied URL for external videos
-const getProxiedUrl = (url: string): string => {
+// Domains we proxy through our VPS (/api/stream). For archive.org: their US
+// CDN is slow from India (200-400ms round-trip per range request). Proxying
+// lets Cloudflare cache the response at its Mumbai edge, so the 2nd+ viewer
+// of any episode loads instantly from CF and costs us zero VPS bandwidth.
+const SHOULD_STREAM_PROXY_DOMAINS = [
+    '.archive.org', // matches archive.org itself + any ia*.us.archive.org mirror
+];
+
+const shouldStreamProxy = (url: string): boolean => {
+    try {
+        const host = new URL(url).hostname;
+        return SHOULD_STREAM_PROXY_DOMAINS.some((d) =>
+            d.startsWith('.') ? host === d.slice(1) || host.endsWith(d) : host === d
+        );
+    } catch {
+        return false;
+    }
+};
+
+const base64UrlEncode = (s: string): string =>
+    btoa(unescape(encodeURIComponent(s)))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+
+type StreamMode = 'direct' | 'vps' | 'vps-cached';
+
+// Get proxied URL for external videos. The /api/stream proxy is only used
+// when the admin has enabled it AND the viewer is a registered user. The
+// difference between 'vps' and 'vps-cached' is server-side (Cache-Control
+// header); the client URL is identical for both.
+const getProxiedUrl = (
+    url: string,
+    opts: { streamMode: StreamMode; isAuthenticated: boolean }
+): string => {
     if (isProxyRequiredUrl(url)) {
         return `/api/proxy-video?url=${encodeURIComponent(url)}`;
+    }
+    if (
+        shouldStreamProxy(url) &&
+        opts.isAuthenticated &&
+        (opts.streamMode === 'vps' || opts.streamMode === 'vps-cached')
+    ) {
+        return `/api/stream?u=${base64UrlEncode(url)}`;
     }
     return url;
 };
@@ -158,6 +200,15 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
     const [isIdle, setIsIdle] = useState(true); // Track if player is idle/unstarted
     const [playerContainer, setPlayerContainer] = useState<HTMLElement | null>(null);
 
+    // Admin-controlled streaming mode + current user auth state. Both influence
+    // whether we route videoUrl through /api/stream (see getProxiedUrl).
+    const { isAuthenticated } = useAuth();
+    const { data: streamModeData } = useQuery<{ mode: StreamMode }>({
+        queryKey: ['/api/config/stream-mode'],
+        staleTime: 60 * 1000, // re-fetch at most once per minute
+    });
+    const streamMode: StreamMode = streamModeData?.mode || 'direct';
+
     // Refs for callbacks to avoid stale closures
     const callbacksRef = useRef({
         onPlay,
@@ -224,7 +275,10 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
         }
 
         const playerId = playerIdRef.current;
-        const finalVideoUrl = getProxiedUrl(videoUrl);
+        const finalVideoUrl = getProxiedUrl(videoUrl, {
+            streamMode,
+            isAuthenticated,
+        });
         const playerConfig: any = {
             file: finalVideoUrl,
             width: '100%',
@@ -373,7 +427,7 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
                 window.jwplayer(playerId).remove();
             } catch (e) { }
         };
-    }, [videoUrl, autoplay, isHost, syncMode, subtitleTracks.length]);
+    }, [videoUrl, autoplay, isHost, syncMode, subtitleTracks.length, streamMode, isAuthenticated]);
 
     // Format helpers
     const formatSeasonEp = () => {
