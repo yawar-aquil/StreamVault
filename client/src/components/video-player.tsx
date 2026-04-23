@@ -123,15 +123,29 @@ const getProxiedUrl = (
     opts: { streamMode: StreamMode; isAuthenticated: boolean }
 ): string => {
     if (isProxyRequiredUrl(url)) {
-        return `/api/proxy-video?url=${encodeURIComponent(url)}`;
+        const out = `/api/proxy-video?url=${encodeURIComponent(url)}`;
+        console.log('[stream] proxy-video route', { input: url, output: out });
+        return out;
     }
     if (
         shouldStreamProxy(url) &&
         opts.isAuthenticated &&
         (opts.streamMode === 'vps' || opts.streamMode === 'vps-cached')
     ) {
-        return `/api/stream?u=${base64UrlEncode(url)}`;
+        const out = `/api/stream?u=${base64UrlEncode(url)}`;
+        console.log('[stream] /api/stream route', {
+            input: url,
+            output: out,
+            mode: opts.streamMode,
+        });
+        return out;
     }
+    console.log('[stream] direct route (no proxy)', {
+        input: url,
+        shouldStreamProxy: shouldStreamProxy(url),
+        isAuthenticated: opts.isAuthenticated,
+        mode: opts.streamMode,
+    });
     return url;
 };
 
