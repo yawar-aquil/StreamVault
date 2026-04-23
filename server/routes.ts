@@ -4377,6 +4377,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public probe endpoint for cache diagnostics. Matches the `/api/stream*`
+  // Page Rule pattern so Cloudflare treats it identically. Returns a tiny
+  // fixed body + Cache-Control matching the current mode. Admin diagnostic
+  // hits this (no auth needed) to confirm CF is caching /api/stream-shaped
+  // URLs end-to-end.
+  app.get("/api/stream-probe", (_req, res) => {
+    const mode = getStreamMode();
+    res.setHeader("content-type", "application/octet-stream");
+    res.setHeader("x-probe-mode", mode);
+    if (mode === "vps-cached") {
+      res.setHeader(
+        "cache-control",
+        "public, max-age=86400, s-maxage=86400, immutable"
+      );
+    } else {
+      res.setHeader("cache-control", "private, no-store");
+    }
+    // 256 bytes of zeros — CF needs a body to cache
+    res.end(Buffer.alloc(256));
+  });
+
   // Public endpoint: client reads current mode so it knows whether to request
   // /api/stream at all (anonymous users always get direct regardless).
   app.get("/api/config/stream-mode", (_req, res) => {
@@ -4387,6 +4408,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin: read current stream mode
   app.get("/api/admin/stream-mode", requireAdmin, (_req, res) => {
     res.json({ mode: getStreamMode() });
+  });
+
+  // Admin: diagnose whether /api/stream is being cached by Cloudflare.
+  // Makes two range requests to the public URL and returns the CF headers.
+  app.get("/api/admin/stream-mode/diagnose", requireAdmin, async (req, res) => {
+    const testDomain = (req.query.domain as string) || "streamvault.live";
+    if (!/^[a-z0-9.-]+$/i.test(testDomain)) {
+      return res.status(400).json({ error: "Invalid domain" });
+    }
+
+    // Unique nonce per diagnostic run so each run tests a fresh cache key.
+    // Both requests in this run share the same nonce = same cache key.
+    const nonce = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    const target = `https://${testDomain}/api/stream-probe?n=${nonce}`;
+
+    const hitOnce = async () => {
+      const r = await fetch(target, {
+        method: "GET",
+        redirect: "manual",
+      });
+      // Read & discard body to let CF complete the response
+      try {
+        await r.arrayBuffer();
+      } catch { /* ignore */ }
+      const pick = (h: string) => r.headers.get(h) || null;
+      return {
+        status: r.status,
+        cfCacheStatus: pick("cf-cache-status"),
+        cfRay: pick("cf-ray"),
+        cacheControl: pick("cache-control"),
+        server: pick("server"),
+        contentLength: pick("content-length"),
+      };
+    };
+
+    try {
+      const first = await hitOnce();
+      // Second request 500ms later — CF needs a moment to populate
+      await new Promise((r) => setTimeout(r, 500));
+      const second = await hitOnce();
+
+      // Interpret results
+      const cfInPath = !!first.cfRay || !!second.cfRay;
+      const cacheHeaderOk = (first.cacheControl || "").includes("max-age=");
+      const cached =
+        second.cfCacheStatus === "HIT" ||
+        second.cfCacheStatus === "REVALIDATED";
+      const mode = getStreamMode();
+
+      let verdict: string;
+      if (mode !== "vps-cached") {
+        verdict = `Currently in "${mode}" mode — switch to "VPS + CF" to test caching.`;
+      } else if (!cfInPath) {
+        verdict =
+          "Cloudflare does NOT appear to be in front of this domain. Check that the DNS record is proxied (orange cloud).";
+      } else if (!cacheHeaderOk) {
+        verdict =
+          "Server is not sending Cache-Control with max-age. This shouldn't happen in vps-cached mode — re-check server logs.";
+      } else if (second.cfCacheStatus === "DYNAMIC") {
+        verdict =
+          "CF received the cache header but is NOT caching. Page Rule likely missing or URL pattern doesn't match.";
+      } else if (cached) {
+        verdict = `✅ Caching works. Second request was ${second.cfCacheStatus}.`;
+      } else {
+        verdict = `CF is caching-eligible but second request was ${second.cfCacheStatus}. Try again in a moment — CF needs time to replicate to edge.`;
+      }
+
+      res.json({
+        mode,
+        domain: testDomain,
+        cfInPath,
+        cacheHeaderOk,
+        cached,
+        verdict,
+        first,
+        second,
+      });
+    } catch (err: any) {
+      res.status(500).json({
+        error: "Diagnostic request failed",
+        details: err?.message || String(err),
+      });
+    }
   });
 
   // Admin: switch stream mode instantly (no redeploy)

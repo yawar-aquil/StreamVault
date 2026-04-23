@@ -208,43 +208,153 @@ export function StreamingModeManager() {
                 </CardContent>
             </Card>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-base">
-                        Cloudflare Page Rule (required for "VPS + CF" mode)
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm space-y-2 text-muted-foreground">
-                    <p>
-                        Cloudflare won't cache dynamic-looking URLs like{" "}
-                        <code className="bg-muted px-1 rounded">/api/stream?u=...</code>{" "}
-                        by default. Add one Page Rule so it caches video chunks at the
-                        edge:
-                    </p>
-                    <ol className="list-decimal list-inside space-y-1 pl-2">
-                        <li>
-                            Cloudflare dashboard → your domain → <b>Rules → Page Rules</b>
-                        </li>
-                        <li>
-                            URL pattern:{" "}
-                            <code className="bg-muted px-1 rounded">
-                                *streamvault.live/api/stream*
-                            </code>
-                        </li>
-                        <li>
-                            Setting: <b>Cache Level → Cache Everything</b>
-                        </li>
-                        <li>
-                            Setting: <b>Edge Cache TTL → a month</b>
-                        </li>
-                        <li>Save &amp; Deploy. Repeat for streamvault.in if needed.</li>
-                    </ol>
-                    <p className="pt-2">
-                        Without this rule, "VPS + CF" mode still works but behaves like
-                        plain "VPS" — every viewer hits your VPS directly.
-                    </p>
-                </CardContent>
-            </Card>
+            <CacheDiagnostic />
         </div>
+    );
+}
+
+interface DiagnoseResult {
+    mode: string;
+    domain: string;
+    cfInPath: boolean;
+    cacheHeaderOk: boolean;
+    cached: boolean;
+    verdict: string;
+    first: {
+        status: number;
+        cfCacheStatus: string | null;
+        cfRay: string | null;
+        cacheControl: string | null;
+        server: string | null;
+    };
+    second: {
+        status: number;
+        cfCacheStatus: string | null;
+        cfRay: string | null;
+        cacheControl: string | null;
+        server: string | null;
+    };
+}
+
+function CacheDiagnostic() {
+    const { toast } = useToast();
+    const [results, setResults] = useState<Record<string, DiagnoseResult | string>>({});
+    const [running, setRunning] = useState<string | null>(null);
+
+    const runFor = async (domain: string) => {
+        setRunning(domain);
+        try {
+            const res = await fetch(
+                `/api/admin/stream-mode/diagnose?domain=${encodeURIComponent(domain)}`,
+                { headers: getAuthHeaders() }
+            );
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || "Diagnostic failed");
+            setResults((r) => ({ ...r, [domain]: json }));
+        } catch (err: any) {
+            setResults((r) => ({ ...r, [domain]: err.message }));
+            toast({
+                title: "Diagnostic error",
+                description: err.message,
+                variant: "destructive",
+            });
+        } finally {
+            setRunning(null);
+        }
+    };
+
+    const domains = ["streamvault.live", "streamvault.in"];
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="text-base">Cloudflare Cache Diagnostic</CardTitle>
+                <CardDescription>
+                    Tests whether Cloudflare is caching <code>/api/stream*</code>{" "}
+                    responses. Run this after flipping to "VPS + CF" mode and setting up
+                    the Page Rule. No DevTools needed.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                {domains.map((d) => {
+                    const result = results[d];
+                    const isString = typeof result === "string";
+                    const r = !isString ? (result as DiagnoseResult) : null;
+                    return (
+                        <div key={d} className="border rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-2">
+                                <code className="text-sm font-medium">{d}</code>
+                                <Button
+                                    size="sm"
+                                    disabled={running === d}
+                                    onClick={() => runFor(d)}
+                                >
+                                    {running === d ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                        "Test caching"
+                                    )}
+                                </Button>
+                            </div>
+                            {isString && (
+                                <p className="text-sm text-destructive">
+                                    Error: {result as string}
+                                </p>
+                            )}
+                            {r && (
+                                <div className="space-y-1 text-sm">
+                                    <p
+                                        className={
+                                            r.cached
+                                                ? "text-emerald-600 dark:text-emerald-400 font-medium"
+                                                : "text-amber-600 dark:text-amber-400"
+                                        }
+                                    >
+                                        {r.verdict}
+                                    </p>
+                                    <div className="grid grid-cols-2 gap-2 text-xs font-mono mt-2 text-muted-foreground">
+                                        <span>1st cf-cache-status:</span>
+                                        <span>{r.first.cfCacheStatus || "—"}</span>
+                                        <span>2nd cf-cache-status:</span>
+                                        <span>{r.second.cfCacheStatus || "—"}</span>
+                                        <span>cf-ray:</span>
+                                        <span className="truncate">
+                                            {r.first.cfRay || "—"}
+                                        </span>
+                                        <span>cache-control:</span>
+                                        <span className="truncate">
+                                            {r.first.cacheControl || "—"}
+                                        </span>
+                                        <span>status:</span>
+                                        <span>
+                                            {r.first.status} / {r.second.status}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+                <details className="text-sm text-muted-foreground">
+                    <summary className="cursor-pointer">
+                        Cloudflare Page Rule setup (if not done yet)
+                    </summary>
+                    <div className="mt-2 space-y-2 pl-2">
+                        <ol className="list-decimal list-inside space-y-1">
+                            <li>CF dashboard → your domain → <b>Rules → Page Rules</b></li>
+                            <li>
+                                URL pattern:{" "}
+                                <code className="bg-muted px-1 rounded">
+                                    yourdomain.com/api/stream*
+                                </code>
+                            </li>
+                            <li>Setting: <b>Cache Level → Cache Everything</b></li>
+                            <li>Setting: <b>Edge Cache TTL → a month</b></li>
+                            <li>Save &amp; Deploy. Repeat for each domain.</li>
+                        </ol>
+                    </div>
+                </details>
+            </CardContent>
+        </Card>
     );
 }
