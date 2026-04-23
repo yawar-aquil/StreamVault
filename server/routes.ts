@@ -4228,9 +4228,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Once a 401 is cached, even authenticated users get served the cached
     // error from CF without ever hitting origin.
     const sendError = (status: number, msg: string) => {
+      console.log(
+        `[/api/stream] ${status} ${msg} | ua="${req.headers["user-agent"]?.slice(0, 60) || "-"}" | range="${req.headers.range || "-"}" | cf-ray="${req.headers["cf-ray"] || "-"}"`
+      );
       res.setHeader("cache-control", "private, no-store");
       return res.status(status).send(msg);
     };
+    console.log(
+      `[/api/stream] START mode=${getStreamMode()} | range="${req.headers.range || "-"}" | cf-ray="${req.headers["cf-ray"] || "-"}"`
+    );
 
     // --- Gating: admin-controlled mode + auth check ---
     const mode = getStreamMode();
