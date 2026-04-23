@@ -428,6 +428,26 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
             if (isHost || !syncMode) onSubtitleChange?.(subtitleIndex);
         });
 
+        // Fallback: if playback via our /api/stream proxy fails for any
+        // reason (CF challenge, upstream 5xx, etc.) transparently retry with
+        // the DIRECT source URL. The proxy is an optimization, not a hard
+        // requirement — viewers should never see a broken player because of it.
+        const handlePlaybackError = (e: { message?: string; code?: number }) => {
+            console.warn('[stream] JW error', e?.code, e?.message, 'current file:', finalVideoUrl);
+            const usingProxy = finalVideoUrl.startsWith('/api/stream');
+            if (usingProxy && videoUrl && videoUrl !== finalVideoUrl) {
+                console.warn('[stream] Retrying with direct URL:', videoUrl);
+                try {
+                    player.load([{ file: videoUrl }]);
+                    player.play();
+                } catch (err) {
+                    console.error('[stream] Direct fallback also failed:', err);
+                }
+            }
+        };
+        player.on('error', handlePlaybackError);
+        player.on('setupError', handlePlaybackError);
+
         player.on('levels', (e: { levels: Array<{ label: string; bitrate: number }> }) => {
             if (e.levels && e.levels.length > 1) {
                 const highestLevel = e.levels.length - 1;
