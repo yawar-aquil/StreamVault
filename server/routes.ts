@@ -4427,6 +4427,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const r = await fetch(target, {
         method: "GET",
         redirect: "manual",
+        headers: {
+          // Browser-like UA + Accept to bypass Cloudflare Bot Fight Mode
+          // challenges on the self-request.
+          "user-agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          accept: "*/*",
+          "accept-language": "en-US,en;q=0.9",
+        },
       });
       // Read & discard body to let CF complete the response
       try {
@@ -4440,6 +4448,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cacheControl: pick("cache-control"),
         server: pick("server"),
         contentLength: pick("content-length"),
+        cfMitigated: pick("cf-mitigated"),
       };
     };
 
@@ -4457,9 +4466,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         second.cfCacheStatus === "REVALIDATED";
       const mode = getStreamMode();
 
+      const cfChallenged =
+        first.cfMitigated === "challenge" ||
+        second.cfMitigated === "challenge" ||
+        (first.status === 403 && first.cfRay);
+
       let verdict: string;
       if (mode !== "vps-cached") {
         verdict = `Currently in "${mode}" mode — switch to "VPS + CF" to test caching.`;
+      } else if (cfChallenged) {
+        verdict =
+          "Cloudflare blocked this test request with a bot challenge. Temporarily disable 'Bot Fight Mode' under Security → Bots in CF dashboard, or add a WAF skip rule for /api/stream*. CF is definitely in the path (cf-ray present).";
       } else if (!cfInPath) {
         verdict =
           "Cloudflare does NOT appear to be in front of this domain. Check that the DNS record is proxied (orange cloud).";
