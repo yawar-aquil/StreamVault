@@ -353,8 +353,20 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
             },
         };
 
-        if (finalVideoUrl.startsWith('blob:')) {
-            playerConfig.type = 'mp4';
+        // Explicitly tell JWPlayer the file format. Since the proxy URL
+        // (/api/stream?u=...) has no file extension, JWPlayer will fail with
+        // Error 102630 if it cannot guess the format.
+        if (videoUrl) {
+            const lowerUrl = videoUrl.toLowerCase();
+            if (lowerUrl.includes('.m3u8')) {
+                playerConfig.type = 'hls';
+            } else if (lowerUrl.includes('.mp4') || finalVideoUrl.startsWith('blob:')) {
+                playerConfig.type = 'mp4';
+            } else if (lowerUrl.includes('.webm')) {
+                playerConfig.type = 'webm';
+            } else {
+                playerConfig.type = 'mp4'; // fallback
+            }
         }
 
         const player = window.jwplayer(playerId).setup({
