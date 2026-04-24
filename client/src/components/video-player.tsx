@@ -118,34 +118,57 @@ type StreamMode = 'direct' | 'vps' | 'vps-cached';
 // when the admin has enabled it AND the viewer is a registered user. The
 // difference between 'vps' and 'vps-cached' is server-side (Cache-Control
 // header); the client URL is identical for both.
+// Probes /api/stream-probe once per session. If CF is blocking our proxy
+// (Bot Fight Mode, WAF, etc.) this tells us immediately so we can fall back
+// to direct URLs without ever trying the broken proxy path.
+const PROXY_HEALTH_KEY = 'sv_proxy_health';
+let probePromise: Promise<boolean> | null = null;
+const probeProxyHealth = (): Promise<boolean> => {
+    try {
+        const cached = sessionStorage.getItem(PROXY_HEALTH_KEY);
+        if (cached === 'ok') return Promise.resolve(true);
+        if (cached === 'blocked') return Promise.resolve(false);
+    } catch { /* ignore storage errors */ }
+
+    if (probePromise) return probePromise;
+    probePromise = (async () => {
+        try {
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), 3000);
+            const r = await fetch(`/api/stream-probe?n=${Date.now()}`, {
+                method: 'GET',
+                signal: ctrl.signal,
+                cache: 'no-store',
+            });
+            clearTimeout(timer);
+            const ok = r.ok && r.headers.get('content-type') === 'application/octet-stream';
+            try { sessionStorage.setItem(PROXY_HEALTH_KEY, ok ? 'ok' : 'blocked'); } catch {}
+            console.log('[stream] Proxy health check:', ok ? 'OK' : 'BLOCKED');
+            return ok;
+        } catch (err) {
+            console.warn('[stream] Proxy health check failed:', err);
+            try { sessionStorage.setItem(PROXY_HEALTH_KEY, 'blocked'); } catch {}
+            return false;
+        }
+    })();
+    return probePromise;
+};
+
 const getProxiedUrl = (
     url: string,
-    opts: { streamMode: StreamMode; isAuthenticated: boolean }
+    opts: { streamMode: StreamMode; isAuthenticated: boolean; proxyHealthy: boolean }
 ): string => {
     if (isProxyRequiredUrl(url)) {
-        const out = `/api/proxy-video?url=${encodeURIComponent(url)}`;
-        console.log('[stream] proxy-video route', { input: url, output: out });
-        return out;
+        return `/api/proxy-video?url=${encodeURIComponent(url)}`;
     }
     if (
+        opts.proxyHealthy &&
         shouldStreamProxy(url) &&
         opts.isAuthenticated &&
         (opts.streamMode === 'vps' || opts.streamMode === 'vps-cached')
     ) {
-        const out = `/api/stream?u=${base64UrlEncode(url)}`;
-        console.log('[stream] /api/stream route', {
-            input: url,
-            output: out,
-            mode: opts.streamMode,
-        });
-        return out;
+        return `/api/stream?u=${base64UrlEncode(url)}`;
     }
-    console.log('[stream] direct route (no proxy)', {
-        input: url,
-        shouldStreamProxy: shouldStreamProxy(url),
-        isAuthenticated: opts.isAuthenticated,
-        mode: opts.streamMode,
-    });
     return url;
 };
 
@@ -213,6 +236,7 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
     const [isPaused, setIsPaused] = useState(!autoplay); // Default to paused unless autoplay
     const [isIdle, setIsIdle] = useState(true); // Track if player is idle/unstarted
     const [playerContainer, setPlayerContainer] = useState<HTMLElement | null>(null);
+    const [proxyHealthy, setProxyHealthy] = useState(false);
 
     // Admin-controlled streaming mode + current user auth state. Both influence
     // whether we route videoUrl through /api/stream (see getProxiedUrl).
@@ -222,6 +246,20 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
         staleTime: 60 * 1000, // re-fetch at most once per minute
     });
     const streamMode: StreamMode = streamModeData?.mode || 'direct';
+
+    // Probe proxy health once when the component mounts (or mode/auth changes)
+    // so we know whether to route through /api/stream.
+    useEffect(() => {
+        if (streamMode === 'direct' || !isAuthenticated) {
+            setProxyHealthy(false);
+            return;
+        }
+        let cancelled = false;
+        probeProxyHealth().then((ok) => {
+            if (!cancelled) setProxyHealthy(ok);
+        });
+        return () => { cancelled = true; };
+    }, [streamMode, isAuthenticated]);
 
     // Refs for callbacks to avoid stale closures
     const callbacksRef = useRef({
@@ -292,6 +330,7 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
         const finalVideoUrl = getProxiedUrl(videoUrl, {
             streamMode,
             isAuthenticated,
+            proxyHealthy,
         });
         const playerConfig: any = {
             file: finalVideoUrl,
@@ -428,22 +467,10 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
             if (isHost || !syncMode) onSubtitleChange?.(subtitleIndex);
         });
 
-        // Fallback: if playback via our /api/stream proxy fails for any
-        // reason (CF challenge, upstream 5xx, etc.) transparently retry with
-        // the DIRECT source URL. The proxy is an optimization, not a hard
-        // requirement — viewers should never see a broken player because of it.
+        // Log playback errors for debugging — no automatic fallback to direct
+        // URL. The proxy is the intended path; if it fails we want to know.
         const handlePlaybackError = (e: { message?: string; code?: number }) => {
-            console.warn('[stream] JW error', e?.code, e?.message, 'current file:', finalVideoUrl);
-            const usingProxy = finalVideoUrl.startsWith('/api/stream');
-            if (usingProxy && videoUrl && videoUrl !== finalVideoUrl) {
-                console.warn('[stream] Retrying with direct URL:', videoUrl);
-                try {
-                    player.load([{ file: videoUrl }]);
-                    player.play();
-                } catch (err) {
-                    console.error('[stream] Direct fallback also failed:', err);
-                }
-            }
+            console.error('[stream] JW playback error', e?.code, e?.message, 'file:', finalVideoUrl);
         };
         player.on('error', handlePlaybackError);
         player.on('setupError', handlePlaybackError);
@@ -461,7 +488,7 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
                 window.jwplayer(playerId).remove();
             } catch (e) { }
         };
-    }, [videoUrl, autoplay, isHost, syncMode, subtitleTracks.length, streamMode, isAuthenticated]);
+    }, [videoUrl, autoplay, isHost, syncMode, subtitleTracks.length, streamMode, isAuthenticated, proxyHealthy]);
 
     // Format helpers
     const formatSeasonEp = () => {

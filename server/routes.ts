@@ -4355,7 +4355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (mode === "vps-cached") {
         res.setHeader(
           "cache-control",
-          "public, max-age=86400, s-maxage=86400, immutable"
+          "public, max-age=2592000, s-maxage=2592000, immutable"
         );
       } else {
         res.setHeader("cache-control", "private, no-store");
@@ -4408,7 +4408,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (mode === "vps-cached") {
       res.setHeader(
         "cache-control",
-        "public, max-age=86400, s-maxage=86400, immutable"
+        "public, max-age=2592000, s-maxage=2592000, immutable"
       );
     } else {
       res.setHeader("cache-control", "private, no-store");
