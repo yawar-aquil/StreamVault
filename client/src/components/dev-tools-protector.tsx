@@ -13,66 +13,51 @@ export function DevToolsProtector() {
 
     const isProtectionEnabled = settings?.devToolsProtection ?? true;
 
-    const detectDevTools = useCallback(() => {
-        if (!isProtectionEnabled) {
-            setIsDevToolsOpen(false);
-            return;
-        }
-
-        // Method 1: Screen size difference (detects docked DevTools)
-        const threshold = 160;
-        const widthDiff = window.outerWidth - window.innerWidth > threshold;
-        const heightDiff = window.outerHeight - window.innerHeight > threshold;
-        
-        if (widthDiff || heightDiff) {
-            setIsDevToolsOpen(true);
-            return;
-        }
-
-        // Method 2: Performance timing (detects debugger pause)
-        // This is done in the interval below, but we also clear the flag
-        // if neither method detects it.
-        setIsDevToolsOpen(false);
-    }, [isProtectionEnabled]);
-
     useEffect(() => {
         if (!isProtectionEnabled) return;
 
-        // 1. Listen for window resize (when DevTools is docked/undocked)
-        window.addEventListener('resize', detectDevTools);
-        
-        // 2. Initial check
-        detectDevTools();
+        let devToolsOpen = false;
 
-        // 3. Interval for debugger trap and timing detection
-        let lastTime = performance.now();
-        const interval = setInterval(() => {
-            // Measure time elapsed before and after debugger
-            const before = performance.now();
+        const checkDevTools = () => {
+            const threshold = 160;
+            const widthDiff = window.outerWidth - window.innerWidth > threshold;
+            const heightDiff = window.outerHeight - window.innerHeight > threshold;
             
-            // The actual debugger trap that freezes the DevTools
-            // eslint-disable-next-line no-debugger
-            debugger;
-            
-            const after = performance.now();
-            
-            // If the time between before and after is large, the debugger was triggered
-            // meaning DevTools is open (even if undocked).
-            if (after - before > 100) {
+            if (widthDiff || heightDiff) {
+                devToolsOpen = true;
                 setIsDevToolsOpen(true);
             } else {
-                // Double check with size method just in case
-                detectDevTools();
+                devToolsOpen = false;
+                setIsDevToolsOpen(false);
             }
+        };
+
+        window.addEventListener('resize', checkDevTools);
+        checkDevTools();
+
+        const interval = setInterval(() => {
+            const start = performance.now();
             
-            lastTime = after;
+            // We use an eval-like approach to prevent some minifiers from stripping the debugger
+            const check = new Function("debugger");
+            check();
+            
+            const end = performance.now();
+            
+            // If the debugger took more than 100ms, it means DevTools was open 
+            // and the user was trapped until they closed it or forced resume.
+            if (end - start > 100) {
+                // If they just resumed, it means DevTools is STILL open!
+                // We show the warning.
+                setIsDevToolsOpen(true);
+            }
         }, 1000);
 
         return () => {
-            window.removeEventListener('resize', detectDevTools);
+            window.removeEventListener('resize', checkDevTools);
             clearInterval(interval);
         };
-    }, [isProtectionEnabled, detectDevTools]);
+    }, [isProtectionEnabled]);
 
     if (!isDevToolsOpen) return null;
 
