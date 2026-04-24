@@ -41,7 +41,8 @@ import {
   RefreshCw,
   Eye, // Added Eye icon
   MessageSquare, // Added MessageSquare icon
-  Bot
+  Bot,
+  ShieldAlert
 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import StreamCoin from "@/components/stream-coin";
@@ -51,6 +52,7 @@ import { SubtitleManager } from "@/components/admin/SubtitleManager";
 import { AudioTracksInput } from "@/components/admin/audio-tracks-input";
 import { GiftCoinsManager } from "@/components/admin/GiftCoinsManager";
 import { StreamingModeManager } from "@/components/admin/StreamingModeManager";
+import { SecuritySettings } from "@/components/admin/SecuritySettings";
 
 export default function AdminPage() {
   const { toast } = useToast();
@@ -215,6 +217,10 @@ export default function AdminPage() {
               <Activity className="w-4 h-4" />
               Streaming
             </TabsTrigger>
+            <TabsTrigger value="security" className="gap-2">
+              <ShieldAlert className="w-4 h-4" />
+              Security
+            </TabsTrigger>
           </TabsList>
 
           {/* User Analytics Tab */}
@@ -350,6 +356,11 @@ export default function AdminPage() {
           {/* Gift Coins Tab */}
           <TabsContent value="gift-coins">
             <GiftCoinsManager />
+          </TabsContent>
+
+          {/* Security Tab */}
+          <TabsContent value="security">
+            <SecuritySettings />
           </TabsContent>
         </Tabs>
       </div>

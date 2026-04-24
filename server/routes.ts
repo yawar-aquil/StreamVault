@@ -25,6 +25,7 @@ import storeRoutes from "./store";
 import { getLinkPreview } from "./link-preview";
 import { translateText, translateBatch } from "./translate";
 import { getStreamMode, setStreamMode, isValidStreamMode, type StreamMode } from "./stream-mode";
+import { getSiteSettings, updateSiteSettings } from "./settings";
 
 // Helper to convert ReadableStream to async iterable for Node.js
 async function* streamToAsyncIterable(stream: ReadableStream<Uint8Array>) {
@@ -4427,6 +4428,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin: read current stream mode
   app.get("/api/admin/stream-mode", requireAdmin, (_req, res) => {
     res.json({ mode: getStreamMode() });
+  });
+
+  // Public: read site settings (like devToolsProtection)
+  app.get("/api/config/settings", (_req, res) => {
+    res.setHeader("cache-control", "no-store");
+    res.json(getSiteSettings());
+  });
+
+  // Admin: read site settings
+  app.get("/api/admin/settings", requireAdmin, (_req, res) => {
+    res.json(getSiteSettings());
+  });
+
+  // Admin: update site settings
+  app.post("/api/admin/settings", requireAdmin, (req, res) => {
+    try {
+      const updated = updateSiteSettings(req.body);
+      res.json(updated);
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
   });
 
   // Admin: diagnose whether /api/stream is being cached by Cloudflare.

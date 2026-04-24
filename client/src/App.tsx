@@ -11,6 +11,7 @@ import { Chatbot } from "@/components/chatbot";
 import { AdBanner } from "@/components/ad-banner";
 import { AdBlockDetector } from "@/components/adblock-detector";
 import { AdProvider } from "@/components/ad-manager"; // Added this import
+import { DevToolsProtector } from "@/components/dev-tools-protector";
 import { InstallPrompt } from "@/components/install-prompt";
 import { NotificationPrompt } from "@/components/notification-prompt";
 import Home from "@/pages/home";
@@ -199,6 +200,7 @@ function App() {
                   <WatchTogetherProvider>
                     <AdProvider>
                       <Toaster />
+                      <DevToolsProtector />
                       <AdBlockDetector />
                       <AnalyticsTracker />
                       <Router />
