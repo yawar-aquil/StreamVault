@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ShieldAlert, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getAuthHeaders } from "@/lib/auth";
 
 export function SecuritySettings() {
     const { toast } = useToast();
@@ -12,6 +13,13 @@ export function SecuritySettings() {
     // Fetch the current settings
     const { data: settings, isLoading } = useQuery({
         queryKey: ["/api/admin/settings"],
+        queryFn: async () => {
+            const res = await fetch("/api/admin/settings", {
+                headers: getAuthHeaders(),
+            });
+            if (!res.ok) throw new Error("Failed to fetch settings");
+            return res.json();
+        },
     });
 
     // Mutation to update the settings
@@ -19,7 +27,10 @@ export function SecuritySettings() {
         mutationFn: async (newSettings: { devToolsProtection: boolean }) => {
             const res = await fetch("/api/admin/settings", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { 
+                    ...getAuthHeaders(),
+                    "Content-Type": "application/json" 
+                },
                 body: JSON.stringify(newSettings),
             });
             if (!res.ok) {
