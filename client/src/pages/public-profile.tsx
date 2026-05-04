@@ -21,6 +21,7 @@ import { format } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { SEO } from '@/components/seo';
 
 interface UserProfile {
     id: string;
@@ -141,6 +142,12 @@ export default function PublicProfile() {
     if (error || !user) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+                <SEO
+                    title="Profile Not Found"
+                    description={`The user profile for ${username || 'this account'} could not be found on StreamVault.`}
+                    canonical={`https://streamvault.live/profile/${encodeURIComponent(username || '')}`}
+                    robots="noindex,follow"
+                />
                 <h1 className="text-2xl font-bold">User not found</h1>
                 <p className="text-muted-foreground">The user "{username}" does not exist.</p>
             </div>
@@ -165,9 +172,40 @@ export default function PublicProfile() {
     // Logic for skin class:
     const equippedSkin = user.badges.find((b: any) => (b.category === 'theme' || b.category === 'skin') && b.equipped);
     const skinClass = equippedSkin && THEME_MAPPING[equippedSkin.name] ? `skin-${THEME_MAPPING[equippedSkin.name]}` : '';
+    const canonicalUrl = `https://streamvault.live/profile/${encodeURIComponent(user.username)}`;
+    const profileDescription = user.bio
+        ? `${user.bio.slice(0, 155)}${user.bio.length > 155 ? '...' : ''}`
+        : `View ${user.username}'s public StreamVault profile, achievements, favorites, and activity.`;
+    const sameAs = Object.values(user.socialLinks || {}).filter((link): link is string => Boolean(link));
+    const structuredData = {
+        "@context": "https://schema.org",
+        "@type": "ProfilePage",
+        "name": `${user.username} - StreamVault Profile`,
+        "description": profileDescription,
+        "url": canonicalUrl,
+        "mainEntity": {
+            "@type": "Person",
+            "name": user.username,
+            "description": profileDescription,
+            "image": user.avatarUrl,
+            "url": canonicalUrl,
+            "identifier": user.id,
+            "sameAs": sameAs.length > 0 ? sameAs : undefined
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4 pt-24 pb-20">
+            <SEO
+                title={`${user.username} - Public Profile`}
+                description={profileDescription}
+                canonical={canonicalUrl}
+                image={user.avatarUrl || undefined}
+                type="profile"
+                keywords={[user.username, 'public profile', 'StreamVault community']}
+                structuredData={structuredData}
+                imageAlt={`${user.username} profile picture on StreamVault`}
+            />
             <div className="max-w-4xl mx-auto space-y-8">
                 {/* Hero Profile Card */}
                 <Card className={cn("border-primary/20 bg-card/60 backdrop-blur-sm overflow-hidden relative transition-colors duration-500", skinClass)}>

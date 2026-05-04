@@ -6,12 +6,35 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Shield, Key, Zap, Globe, Lock, Terminal } from "lucide-react";
 import { Link } from "wouter";
+import { SEO } from "@/components/seo";
 
 export default function ApiDocs() {
     const baseUrl = window.location.origin;
+    const structuredData = {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "StreamVault API Documentation",
+        "description": "Explore authentication, rate limits, and public endpoints for the StreamVault API.",
+        "url": "https://streamvault.live/api-docs",
+        "author": {
+            "@type": "Organization",
+            "name": "StreamVault"
+        },
+        "publisher": {
+            "@type": "Organization",
+            "name": "StreamVault"
+        }
+    };
 
     return (
         <div className="container mx-auto px-4 py-8 space-y-8">
+            <SEO
+                title="API Documentation"
+                description="Explore the StreamVault API documentation, authentication requirements, rate limits, and developer integration examples."
+                canonical="https://streamvault.live/api-docs"
+                keywords={["StreamVault API", "movie API", "anime API", "streaming API documentation"]}
+                structuredData={structuredData}
+            />
             {/* Header */}
             <div className="text-center max-w-3xl mx-auto space-y-4">
                 <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">

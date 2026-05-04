@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
-import { Helmet } from "react-helmet-async";
-import { Instagram, Twitter, Facebook, ExternalLink, ChevronLeft, MapPin, Calendar, Film } from "lucide-react";
+import { Instagram, Twitter, Facebook, ExternalLink, ChevronLeft, MapPin, Calendar, Film, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { useState } from "react";
+import { SEO } from "@/components/seo";
 
 export default function PersonDetail() {
     const [, params] = useRoute("/person/:name");
@@ -64,13 +64,33 @@ export default function PersonDetail() {
     };
 
     const age = getAge(person.birthday);
+    const canonicalUrl = `https://streamvault.live/person/${encodeURIComponent(person.name)}`;
+    const personDescription = person.biography
+        ? `${person.biography.slice(0, 155)}${person.biography.length > 155 ? '...' : ''}`
+        : `Learn more about ${person.name}, their biography, and movies/shows they have featured in.`;
+    const personStructuredData = {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": person.name,
+        "url": canonicalUrl,
+        "image": person.profileUrl,
+        "description": personDescription,
+        "jobTitle": person.knownForDepartment,
+        "birthDate": person.birthday,
+        "birthPlace": person.placeOfBirth,
+    };
 
     return (
         <div className="min-h-screen bg-background">
-            <Helmet>
-                <title>{`${person.name} - Cast Profile | StreamVault`}</title>
-                <meta name="description" content={`Learn more about ${person.name}, their biography, and movies/shows they have featured in.`} />
-            </Helmet>
+            <SEO
+                title={`${person.name} - Cast Profile`}
+                description={personDescription}
+                canonical={canonicalUrl}
+                image={person.profileUrl || undefined}
+                type="profile"
+                keywords={[person.name, person.knownForDepartment, "cast profile", "actor biography"].filter(Boolean)}
+                structuredData={personStructuredData}
+            />
 
             <div className="container mx-auto px-4 py-8">
                 <div className="mb-6">
@@ -195,8 +215,8 @@ export default function PersonDetail() {
                                 </div>
                                 {person.biography.length > 500 && (
                                     <Button
-                                        variant="link"
-                                        className="p-0 h-auto text-primary"
+                                        variant="ghost"
+                                        className="h-auto p-0 text-primary hover:bg-transparent hover:text-primary/80"
                                         onClick={() => setIsBioExpanded(!isBioExpanded)}
                                     >
                                         {isBioExpanded ? "Read Less" : "Read More"}

@@ -102,12 +102,32 @@ export default function Blog() {
     )
     : sortedPosts;
 
+  const blogStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "StreamVault Blog",
+    "description": "Read detailed reviews, cast information, box office reports, and behind-the-scenes content for movies, anime, and TV shows.",
+    "url": "https://streamvault.live/blog",
+    "mainEntity": filteredPosts.slice(0, 12).map((post) => ({
+      "@type": "Article",
+      "headline": post.title,
+      "url": `https://streamvault.live/blog/${post.type}/${post.slug}`,
+      "image": post.backdropUrl || post.posterUrl,
+      "about": {
+        "@type": post.type === "movie" ? "Movie" : "TVSeries",
+        "name": post.title
+      }
+    }))
+  };
+
   return (
     <div className="min-h-screen">
       <SEO
         title="Blog - Movie & TV Show Reviews, News & Updates"
         description="Read detailed reviews, cast information, box office reports, and behind-the-scenes content for all movies and TV shows on StreamVault."
         canonical="https://streamvault.live/blog"
+        keywords={["movie reviews", "tv show reviews", "anime guides", "streaming blog", "cast information"]}
+        structuredData={blogStructuredData}
       />
 
       {/* Hero Section */}

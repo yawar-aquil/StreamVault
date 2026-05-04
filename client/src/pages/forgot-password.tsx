@@ -7,6 +7,7 @@ import { Loader2, Mail, Lock, KeyRound, CheckCircle2, ArrowLeft, ArrowRight } fr
 import { OTPInput } from '@/components/otp-input';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { SEO } from '@/components/seo';
 
 export default function ForgotPasswordPage() {
     const [, navigate] = useLocation();
@@ -72,6 +73,12 @@ export default function ForgotPasswordPage() {
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-[#141414] p-4">
+            <SEO
+                title="Reset Password"
+                description="Reset your StreamVault password and regain access to your account securely."
+                canonical="https://streamvault.live/forgot-password"
+                robots="noindex,follow"
+            />
             {/* Logo */}
             <div className="flex items-center gap-2 mb-10">
                 <div className="bg-[#e60a15] p-2 rounded-lg">

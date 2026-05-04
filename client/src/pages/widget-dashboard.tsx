@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { Helmet } from 'react-helmet-async';
 import {
     BarChart3,
     MousePointer,
@@ -11,6 +10,7 @@ import {
     RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SEO } from '@/components/seo';
 
 interface WidgetAnalytics {
     summary: {
@@ -73,9 +73,12 @@ export default function WidgetDashboard() {
 
     return (
         <>
-            <Helmet>
-                <title>Widget Analytics | StreamVault Admin</title>
-            </Helmet>
+            <SEO
+                title="Widget Analytics"
+                description="Internal StreamVault widget analytics dashboard for authorized admin use."
+                canonical="https://streamvault.live/admin/widget"
+                robots="noindex,follow"
+            />
 
             <div className="min-h-screen bg-background p-6">
                 <div className="max-w-7xl mx-auto">

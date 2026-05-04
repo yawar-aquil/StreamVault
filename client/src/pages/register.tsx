@@ -6,6 +6,7 @@ import { Link } from 'wouter';
 import { Loader2, Mail, Lock, User, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { CloudflareTurnstile } from '@/components/cloudflare-turnstile';
+import { SEO } from '@/components/seo';
 
 export default function RegisterPage() {
     const [, navigate] = useLocation();
@@ -86,6 +87,12 @@ export default function RegisterPage() {
 
     return (
         <div className="relative flex min-h-screen w-full flex-row">
+            <SEO
+                title="Create Account"
+                description="Create a StreamVault account to build your watchlist, join watch parties, and unlock personalized streaming features."
+                canonical="https://streamvault.live/register"
+                robots="noindex,follow"
+            />
             {/* Left Side: Cinematic Branding (60%) */}
             <section className="relative hidden lg:flex w-[60%] flex-col justify-center p-16 overflow-hidden">
                 {/* Background Image */}

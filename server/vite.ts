@@ -124,23 +124,96 @@ export function serveStatic(app: Express) {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
 
+    const baseUrl = 'https://streamvault.live';
+    const defaultRobots = 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
+    const noindexRobots = 'noindex,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
+    const indexPath = path.resolve(distPath, "index.html");
+    const requestPath = req.originalUrl.split('?')[0];
+    const canonicalUrl = (() => {
+      const showWatchMatch = requestPath.match(/^\/watch\/([^\/]+)/);
+      if (showWatchMatch) {
+        return `${baseUrl}/show/${showWatchMatch[1]}`;
+      }
+
+      const movieWatchMatch = requestPath.match(/^\/watch-movie\/([^\/]+)/);
+      if (movieWatchMatch) {
+        return `${baseUrl}/movie/${movieWatchMatch[1]}`;
+      }
+
+      const animeWatchMatch = requestPath.match(/^\/watch-anime\/([^\/]+)/);
+      if (animeWatchMatch) {
+        return `${baseUrl}/anime/${animeWatchMatch[1]}`;
+      }
+
+      if (requestPath === '/search') {
+        return `${baseUrl}/search`;
+      }
+
+      return `${baseUrl}${requestPath === '' ? '/' : requestPath}`;
+    })();
+    const robotsContent = (() => {
+      const noindexPatterns = [
+        /^\/search$/,
+        /^\/request$/,
+        /^\/report$/,
+        /^\/watchlist$/,
+        /^\/continue-watching$/,
+        /^\/login$/,
+        /^\/register$/,
+        /^\/verify-email$/,
+        /^\/forgot-password$/,
+        /^\/downloads$/,
+        /^\/download\//,
+        /^\/watch\//,
+        /^\/watch-movie\//,
+        /^\/watch-anime\//,
+        /^\/watch-rooms/,
+        /^\/watch-together/,
+        /^\/create-room/,
+        /^\/admin/,
+        /^\/profile\/?$/,
+        /^\/community$/,
+        /^\/settings$/,
+        /^\/friends$/,
+        /^\/notifications$/,
+        /^\/leaderboard$/,
+        /^\/achievements$/,
+        /^\/challenges$/,
+        /^\/polls$/,
+        /^\/store$/,
+        /^\/wallet$/,
+        /^\/inventory$/,
+        /^\/referral-program$/,
+        /^\/calendar$/,
+      ];
+
+      return noindexPatterns.some((pattern) => pattern.test(requestPath)) ? noindexRobots : defaultRobots;
+    })();
+
     // Helper function to inject meta tags
-    const injectMetaAndServe = (html: string, metaTags: string) => {
+    const injectMetaAndServe = (html: string, metaTags: string, options?: { canonical?: string; robots?: string }) => {
       // Remove ALL existing meta tags that we'll replace
       html = html.replace(/<meta property="og:[^"]*"[^>]*>/g, '');
       html = html.replace(/<meta name="twitter:[^"]*"[^>]*>/g, '');
       html = html.replace(/<meta name="title"[^>]*>/g, '');
       html = html.replace(/<meta name="description"[^>]*>/g, '');
+      html = html.replace(/<meta name="robots"[^>]*>/g, '');
+      html = html.replace(/<meta name="googlebot"[^>]*>/g, '');
+      html = html.replace(/<link rel="canonical"[^>]*>/g, '');
       html = html.replace(/<title>.*?<\/title>/g, '');
 
-      // Inject new meta tags
-      html = html.replace('</head>', `${metaTags}\n  </head>`);
+      const normalizedMetaTags = metaTags.replaceAll('https://streamvault.live', baseUrl);
+      const defaultHeadTags = `
+    <link rel="canonical" href="${options?.canonical || canonicalUrl}">
+    <meta name="robots" content="${options?.robots || robotsContent}">
+    <meta name="googlebot" content="${options?.robots || robotsContent}">
+    <meta property="og:site_name" content="StreamVault">
+    <meta property="og:locale" content="en_US">`;
+
+      html = html.replace('</head>', `${normalizedMetaTags}\n${defaultHeadTags}\n  </head>`);
       res.setHeader('Content-Type', 'text/html');
       res.send(html);
     };
-
-    const indexPath = path.resolve(distPath, "index.html");
-    const requestPath = req.originalUrl.split('?')[0]; // Get path without query params
 
     console.log(`[Meta Tags] Checking path: ${requestPath}`);
 
@@ -166,7 +239,26 @@ export function serveStatic(app: Express) {
     }
 
     // === HIGH PRIORITY: Browse pages ===
-    if (requestPath === '/browse' || requestPath === '/browse-shows') {
+    if (requestPath === '/browse') {
+      console.log(`[Meta Tags] Browse page`);
+      let html = fs.readFileSync(indexPath, 'utf-8');
+      const metaTags = `
+    <meta property="og:title" content="Browse All Movies & TV Shows | StreamVault">
+    <meta property="og:description" content="Browse our complete collection of movies, TV shows, and anime. Filter by genre, discover trending titles, and find your next favorite stream.">
+    <meta property="og:image" content="https://i.ibb.co/N2jssrLd/17e34644-29fb-4a5d-a2e8-e96bee27756f.png">
+    <meta property="og:url" content="https://streamvault.live${requestPath}">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Browse All Movies & TV Shows | StreamVault">
+    <meta name="twitter:description" content="Browse movies, TV shows, and anime free in HD on StreamVault.">
+    <meta name="twitter:image" content="https://i.ibb.co/N2jssrLd/17e34644-29fb-4a5d-a2e8-e96bee27756f.png">
+    <meta name="description" content="Browse our complete collection of movies, TV shows, and anime. Filter by genre, discover trending titles, and find your next favorite stream.">
+    <title>Browse All Movies & TV Shows | StreamVault</title>`;
+      injectMetaAndServe(html, metaTags);
+      return;
+    }
+
+    if (requestPath === '/browse/shows' || requestPath === '/series') {
       console.log(`[Meta Tags] Browse Shows page`);
       let html = fs.readFileSync(indexPath, 'utf-8');
       const metaTags = `
@@ -185,7 +277,7 @@ export function serveStatic(app: Express) {
       return;
     }
 
-    if (requestPath === '/browse-movies' || requestPath === '/movies') {
+    if (requestPath === '/browse/movies' || requestPath === '/movies') {
       console.log(`[Meta Tags] Movies page`);
       let html = fs.readFileSync(indexPath, 'utf-8');
       const metaTags = `
@@ -205,7 +297,7 @@ export function serveStatic(app: Express) {
     }
 
     // === HIGH PRIORITY: Browse Anime page ===
-    if (requestPath === '/browse-anime' || requestPath === '/anime') {
+    if (requestPath === '/browse/anime' || requestPath === '/anime') {
       console.log(`[Meta Tags] Anime page`);
       let html = fs.readFileSync(indexPath, 'utf-8');
       const metaTags = `
@@ -281,6 +373,13 @@ export function serveStatic(app: Express) {
       '/continue-watching': { title: 'Continue Watching', description: 'Pick up where you left off. Your recently watched content on StreamVault.' },
       '/blog': { title: 'Blog - Movie & TV News', description: 'StreamVault blog - Latest news, reviews, and updates about movies and TV shows.' },
       '/create-room': { title: 'Create Watch Party', description: 'Create a watch party room to watch movies and TV shows together with friends.' },
+      '/sitemap': { title: 'Sitemap', description: 'Explore the major public pages and content hubs available on StreamVault.' },
+      '/api-docs': { title: 'API Documentation', description: 'Explore the StreamVault API documentation for developers and integrations.' },
+      '/refund': { title: 'Refund Policy', description: 'Read the StreamVault refund policy and billing guidelines.' },
+      '/login': { title: 'Login', description: 'Access your StreamVault account.' },
+      '/register': { title: 'Create Account', description: 'Create a StreamVault account to unlock personalized features.' },
+      '/forgot-password': { title: 'Forgot Password', description: 'Reset your StreamVault account password.' },
+      '/verify-email': { title: 'Verify Email', description: 'Verify your email address for your StreamVault account.' },
     };
 
     if (staticPages[requestPath]) {
@@ -300,6 +399,95 @@ export function serveStatic(app: Express) {
     <meta name="description" content="${page.description}">
     <title>${page.title} | StreamVault</title>`;
       injectMetaAndServe(html, metaTags);
+      return;
+    }
+
+    const publicProfileMatch = requestPath.match(/^\/profile\/([^\/]+)/);
+    if (publicProfileMatch) {
+      const requestedUsername = decodeURIComponent(publicProfileMatch[1]);
+      console.log(`[Meta Tags] Public profile page: ${requestedUsername}`);
+
+      import('./storage.js').then(({ storage }) => {
+        storage.getUserByUsername(requestedUsername).then(user => {
+          let html = fs.readFileSync(indexPath, 'utf-8');
+
+          if (user) {
+            const rawTitle = `${user.username} - Public Profile`;
+            const rawDescription = user.bio
+              ? `${user.bio.slice(0, 155)}${user.bio.length > 155 ? '...' : ''}`
+              : `View ${user.username}'s public StreamVault profile, achievements, favorites, and activity.`;
+            const title = escapeHtml(rawTitle);
+            const description = escapeHtml(rawDescription);
+            const url = `https://streamvault.live/profile/${encodeURIComponent(user.username)}`;
+            const image = user.avatarUrl || 'https://i.ibb.co/N2jssrLd/17e34644-29fb-4a5d-a2e8-e96bee27756f.png';
+            let sameAs: string[] | undefined;
+
+            if (user.socialLinks) {
+              try {
+                const parsedSocialLinks = typeof user.socialLinks === 'string'
+                  ? JSON.parse(user.socialLinks)
+                  : user.socialLinks;
+                const socialLinkValues = Object.values(parsedSocialLinks || {}).filter((link): link is string => Boolean(link));
+                sameAs = socialLinkValues.length > 0 ? socialLinkValues : undefined;
+              } catch {
+                sameAs = undefined;
+              }
+            }
+
+            const structuredData = {
+              '@context': 'https://schema.org',
+              '@type': 'ProfilePage',
+              name: `${user.username} - StreamVault Profile`,
+              description: rawDescription,
+              url,
+              mainEntity: {
+                '@type': 'Person',
+                name: user.username,
+                description: rawDescription,
+                image: user.avatarUrl || undefined,
+                url,
+                identifier: user.id,
+                sameAs,
+              },
+            };
+
+            const metaTags = `
+    <meta property="og:title" content="${title} | StreamVault">
+    <meta property="og:description" content="${description}">
+    <meta property="og:image" content="${image}">
+    <meta property="og:url" content="${url}">
+    <meta property="og:type" content="profile">
+    <meta property="profile:username" content="${escapeHtml(user.username)}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="${title} | StreamVault">
+    <meta name="twitter:description" content="${description}">
+    <meta name="twitter:image" content="${image}">
+    <meta name="description" content="${description}">
+    <script type="application/ld+json">${JSON.stringify([structuredData]).replace(/<\/script/gi, '<\\/script')}</script>
+    <title>${title} | StreamVault</title>`;
+
+            injectMetaAndServe(html, metaTags, { canonical: url });
+          } else {
+            const title = 'Profile Not Found';
+            const description = escapeHtml(`The user profile for ${requestedUsername} could not be found on StreamVault.`);
+            const url = `https://streamvault.live/profile/${encodeURIComponent(requestedUsername)}`;
+            const metaTags = `
+    <meta property="og:title" content="${title} | StreamVault">
+    <meta property="og:description" content="${description}">
+    <meta property="og:image" content="https://i.ibb.co/N2jssrLd/17e34644-29fb-4a5d-a2e8-e96bee27756f.png">
+    <meta property="og:url" content="${url}">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="${title} | StreamVault">
+    <meta name="twitter:description" content="${description}">
+    <meta name="twitter:image" content="https://i.ibb.co/N2jssrLd/17e34644-29fb-4a5d-a2e8-e96bee27756f.png">
+    <meta name="description" content="${description}">
+    <title>${title} | StreamVault</title>`;
+
+            injectMetaAndServe(html, metaTags, { canonical: url, robots: noindexRobots });
+          }
+        }).catch(() => res.sendFile(indexPath));
+      }).catch(() => res.sendFile(indexPath));
       return;
     }
 
@@ -750,6 +938,31 @@ export function serveStatic(app: Express) {
       }).catch(() => res.sendFile(indexPath));
       return;
     }
+
+    if (robotsContent === noindexRobots) {
+      const titleFromPath = requestPath
+        .replace(/^\//, '')
+        .split('/')
+        .filter(Boolean)
+        .map((segment) => segment.replace(/-/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()))
+        .join(' ') || 'StreamVault';
+      let html = fs.readFileSync(indexPath, 'utf-8');
+      const metaTags = `
+    <meta property="og:title" content="${escapeHtml(titleFromPath)} | StreamVault">
+    <meta property="og:description" content="Access ${escapeHtml(titleFromPath.toLowerCase())} on StreamVault.">
+    <meta property="og:image" content="https://i.ibb.co/N2jssrLd/17e34644-29fb-4a5d-a2e8-e96bee27756f.png">
+    <meta property="og:url" content="${canonicalUrl}">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="${escapeHtml(titleFromPath)} | StreamVault">
+    <meta name="twitter:description" content="Access ${escapeHtml(titleFromPath.toLowerCase())} on StreamVault.">
+    <meta name="twitter:image" content="https://i.ibb.co/N2jssrLd/17e34644-29fb-4a5d-a2e8-e96bee27756f.png">
+    <meta name="description" content="Access ${escapeHtml(titleFromPath.toLowerCase())} on StreamVault.">
+    <title>${escapeHtml(titleFromPath)} | StreamVault</title>`;
+      injectMetaAndServe(html, metaTags);
+      return;
+    }
+
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

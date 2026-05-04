@@ -14,7 +14,7 @@ export default function BrowseAnime() {
             <SEO
                 title="Browse All Anime | Watch Free Anime Online"
                 description="Browse our complete anime collection. Watch subbed and dubbed anime series free in HD. Shonen, Romance, Action, Fantasy and more."
-                canonical="https://streamvault.live/browse-anime"
+                canonical="https://streamvault.live/browse/anime"
             />
             <div className="container mx-auto px-4 py-8">
                 <div className="mb-8">

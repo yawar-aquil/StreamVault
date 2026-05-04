@@ -409,6 +409,7 @@ export default function Watch() {
       <Helmet>
         <title>{`${episodeTitle} - ${show.title} S${currentSeason}E${currentEpisode} | StreamVault`}</title>
         <meta name="description" content={currentEpisodeData.description || show.description} />
+        <meta name="robots" content="noindex,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
         {/* Canonical points to show detail page to avoid duplicate content */}
         <link rel="canonical" href={`https://streamvault.live/show/${show.slug}`} />
         <meta property="og:type" content="video.episode" />

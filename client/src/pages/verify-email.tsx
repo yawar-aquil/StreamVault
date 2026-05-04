@@ -7,6 +7,7 @@ import { Loader2, Mail, ArrowRight } from 'lucide-react';
 import { OTPInput } from '@/components/otp-input';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { SEO } from '@/components/seo';
 
 export default function VerifyEmailPage() {
     const [, navigate] = useLocation();
@@ -99,6 +100,12 @@ export default function VerifyEmailPage() {
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-[#141414] p-4">
+            <SEO
+                title="Verify Email"
+                description="Verify your StreamVault email address to activate your account and access all platform features."
+                canonical="https://streamvault.live/verify-email"
+                robots="noindex,follow"
+            />
             {/* Logo */}
             <div className="flex items-center gap-2 mb-10">
                 <div className="bg-[#e60a15] p-2 rounded-lg">

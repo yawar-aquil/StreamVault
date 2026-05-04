@@ -51,6 +51,7 @@ export default function Watchlist() {
         title="My Watchlist"
         description="Your personal watchlist on StreamVault. Keep track of movies and TV shows you want to watch."
         canonical="https://streamvault.live/watchlist"
+        robots="noindex,follow"
       />
       <div className="container mx-auto px-4 py-8">
         {/* Header */}

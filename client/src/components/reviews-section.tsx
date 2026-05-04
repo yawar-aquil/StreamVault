@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Star, ThumbsUp, AlertTriangle, Trash2, Send } from 'lucide-react';
+import { Star, ThumbsUp, AlertTriangle, Trash2, Send, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,6 +10,14 @@ import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { formatDistanceToNow } from 'date-fns';
+import {
+    EmojiGifPicker,
+    appendEmojiPreservingTenorGif,
+    appendTenorGif,
+    extractTenorGifUrl,
+    mergeTextWithExistingTenorGif,
+    stripTenorGifUrl,
+} from '@/components/emoji-gif-picker';
 
 interface Review {
     id: string;
@@ -163,20 +171,43 @@ export function ReviewsSection({ contentType, contentId }: ReviewsSectionProps) 
 
                     <Textarea
                         placeholder="Write your review (optional)..."
-                        value={newReviewText}
-                        onChange={(e) => setNewReviewText(e.target.value)}
+                        value={stripTenorGifUrl(newReviewText)}
+                        onChange={(e) => setNewReviewText(mergeTextWithExistingTenorGif(e.target.value, newReviewText))}
                         className="min-h-[100px] bg-background/50"
                     />
 
-                    <div className="flex items-center justify-between">
-                        <label className="flex items-center gap-2 text-sm cursor-pointer">
-                            <Checkbox
-                                checked={spoilerWarning}
-                                onCheckedChange={(checked) => setSpoilerWarning(checked as boolean)}
+                    {extractTenorGifUrl(newReviewText) && (
+                        <div className="relative inline-block">
+                            <img
+                                src={extractTenorGifUrl(newReviewText)!}
+                                alt="GIF preview"
+                                className="max-w-[200px] max-h-[150px] rounded-lg"
                             />
-                            <AlertTriangle className="w-4 h-4 text-yellow-500" />
-                            Contains spoilers
-                        </label>
+                            <button
+                                type="button"
+                                onClick={() => setNewReviewText(stripTenorGifUrl(newReviewText))}
+                                className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center hover:bg-destructive/80"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    )}
+
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <EmojiGifPicker
+                                onEmojiSelect={(emoji) => setNewReviewText((prev) => appendEmojiPreservingTenorGif(prev, emoji))}
+                                onGifSelect={(gifUrl) => setNewReviewText((prev) => appendTenorGif(prev, gifUrl))}
+                            />
+                            <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                <Checkbox
+                                    checked={spoilerWarning}
+                                    onCheckedChange={(checked) => setSpoilerWarning(checked as boolean)}
+                                />
+                                <AlertTriangle className="w-4 h-4 text-yellow-500" />
+                                Contains spoilers
+                            </label>
+                        </div>
 
                         <Button
                             onClick={() => submitReviewMutation.mutate()}
@@ -275,9 +306,21 @@ export function ReviewsSection({ contentType, contentId }: ReviewsSectionProps) 
                                                 </div>
                                             </div>
                                         ) : (
-                                            <p className="text-sm text-muted-foreground leading-relaxed">
-                                                {review.reviewText}
-                                            </p>
+                                            <div className="space-y-3">
+                                                {stripTenorGifUrl(review.reviewText) && (
+                                                    <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap break-words">
+                                                        {stripTenorGifUrl(review.reviewText)}
+                                                    </p>
+                                                )}
+                                                {extractTenorGifUrl(review.reviewText) && (
+                                                    <img
+                                                        src={extractTenorGifUrl(review.reviewText)!}
+                                                        alt="GIF"
+                                                        className="max-w-[300px] max-h-[200px] rounded-lg"
+                                                        loading="lazy"
+                                                    />
+                                                )}
+                                            </div>
                                         )}
                                     </div>
                                 )}

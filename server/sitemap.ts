@@ -3,14 +3,7 @@ import type { IStorage } from "./storage";
 import type { Show, Movie, Anime, Category } from "@shared/schema";
 
 // Get base URL from request host
-function getBaseUrl(req: Request): string {
-  const host = req.get('host') || 'streamvault.live';
-  const protocol = req.protocol || 'https';
-
-  // Handle known domains
-  if (host.includes('streamvault.in')) {
-    return 'https://streamvault.in';
-  }
+function getBaseUrl(_req: Request): string {
   return 'https://streamvault.live';
 }
 
@@ -28,13 +21,12 @@ User-agent: *
 Allow: /
 Allow: /series
 Allow: /movies
+Allow: /anime
 Allow: /trending
-Allow: /search
 Allow: /browse
 Allow: /browse/shows
 Allow: /browse/movies
-Allow: /watchlist
-Allow: /continue-watching
+Allow: /browse/anime
 Allow: /sitemap
 
 # Content Detail Pages (main canonical pages)
@@ -42,14 +34,11 @@ Allow: /show/*
 Allow: /movie/*
 Allow: /anime/*
 Allow: /category/*
+Allow: /person/*
 
 # Blog & Articles (SEO content)
 Allow: /blog
 Allow: /blog/*
-
-# User Features
-Allow: /request
-Allow: /report
 
 # Info Pages
 Allow: /about
@@ -59,11 +48,46 @@ Allow: /terms
 Allow: /dmca
 Allow: /help
 Allow: /faq
+Allow: /join-team
+Allow: /api-docs
+Allow: /refund
 
-# Block watch pages (thin content, use canonical to detail pages)
+# Utility and internal pages
+Disallow: /search
+Disallow: /request
+Disallow: /report
+Disallow: /login
+Disallow: /register
+Disallow: /verify-email
+Disallow: /forgot-password
+Disallow: /watchlist
+Disallow: /continue-watching
+Disallow: /downloads
+Disallow: /download/*
+Disallow: /community
+Disallow: /profile
+Disallow: /profile/*
+Disallow: /settings
+Disallow: /friends
+Disallow: /notifications
+Disallow: /leaderboard
+Disallow: /achievements
+Disallow: /challenges
+Disallow: /polls
+Disallow: /store
+Disallow: /wallet
+Disallow: /inventory
+Disallow: /referral-program
+Disallow: /calendar
+
+# Block duplicate or app-only watch pages
 Disallow: /watch/*
 Disallow: /watch-movie/*
 Disallow: /watch-anime/*
+Disallow: /watch-rooms
+Disallow: /watch-together
+Disallow: /watch-together/*
+Disallow: /create-room
 
 # Block admin and API endpoints
 Disallow: /admin
@@ -79,6 +103,7 @@ Crawl-delay: 1
 `;
 
     res.header("Content-Type", "text/plain");
+    res.header("Cache-Control", "public, max-age=3600, s-maxage=86400");
     res.send(robotsTxt);
   });
 
@@ -94,20 +119,14 @@ Crawl-delay: 1
         { url: "/", priority: "1.0", changefreq: "daily" },
         { url: "/series", priority: "0.9", changefreq: "daily" },
         { url: "/movies", priority: "0.9", changefreq: "daily" },
+        { url: "/anime", priority: "0.9", changefreq: "daily" },
         { url: "/trending", priority: "0.9", changefreq: "daily" },
         { url: "/blog", priority: "0.9", changefreq: "daily" },
-        { url: "/search", priority: "0.8", changefreq: "weekly" },
         // Browse pages
         { url: "/browse", priority: "0.8", changefreq: "daily" },
         { url: "/browse/shows", priority: "0.8", changefreq: "daily" },
         { url: "/browse/movies", priority: "0.8", changefreq: "daily" },
-        // Anime
-        { url: "/anime", priority: "0.9", changefreq: "daily" },
-        // User features
-        { url: "/watchlist", priority: "0.7", changefreq: "weekly" },
-        { url: "/continue-watching", priority: "0.7", changefreq: "weekly" },
-        { url: "/request", priority: "0.7", changefreq: "monthly" },
-        { url: "/report", priority: "0.7", changefreq: "monthly" },
+        { url: "/browse/anime", priority: "0.8", changefreq: "daily" },
         // Info pages
         { url: "/about", priority: "0.6", changefreq: "monthly" },
         { url: "/contact", priority: "0.6", changefreq: "monthly" },
@@ -117,6 +136,9 @@ Crawl-delay: 1
         { url: "/terms", priority: "0.5", changefreq: "monthly" },
         { url: "/dmca", priority: "0.5", changefreq: "monthly" },
         { url: "/sitemap", priority: "0.5", changefreq: "weekly" },
+        { url: "/join-team", priority: "0.5", changefreq: "monthly" },
+        { url: "/api-docs", priority: "0.4", changefreq: "monthly" },
+        { url: "/refund", priority: "0.4", changefreq: "monthly" },
       ];
 
       let allUrls: string[] = [];
@@ -363,6 +385,7 @@ Crawl-delay: 1
 </urlset>`;
 
       res.header("Content-Type", "application/xml");
+      res.header("Cache-Control", "public, max-age=3600, s-maxage=86400");
       res.send(xml);
     } catch (error) {
       console.error("Error generating sitemap:", error);

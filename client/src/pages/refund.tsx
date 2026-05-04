@@ -6,10 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Shield, AlertCircle, FileText, CreditCard, Mail, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { Link } from "wouter";
+import { SEO } from "@/components/seo";
 
 export default function RefundPage() {
     return (
         <div className="container mx-auto px-4 py-8 space-y-8">
+            <SEO
+                title="Refund Policy"
+                description="Read the StreamVault refund policy, eligibility rules, non-refundable cases, and request process."
+                canonical="https://streamvault.live/refund"
+                keywords={["StreamVault refund policy", "refund process", "digital purchase support"]}
+            />
             {/* Header */}
             <div className="text-center max-w-3xl mx-auto space-y-4">
                 <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">

@@ -212,15 +212,46 @@ export default function BlogPost() {
   const movieData = content as Movie;
   const showData = content as Show;
   const animeData = content as Anime;
+  const articleUrl = `https://streamvault.live/blog/${type}/${slug}`;
+  const articleTitle = `${content.title} (${content.year}) - Complete Guide, Cast & Reviews`;
+  const articleDescription = `Everything about ${content.title}: Plot, cast, ratings, and more. ${content.description.slice(0, 150)}...`;
+  const articleStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": articleTitle,
+    "description": articleDescription,
+    "url": articleUrl,
+    "mainEntityOfPage": articleUrl,
+    "image": [content.backdropUrl || content.posterUrl].filter(Boolean),
+    "author": {
+      "@type": "Organization",
+      "name": "StreamVault"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "StreamVault",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://streamvault.live/favicon.png"
+      }
+    },
+    "keywords": keywordsData.length > 0 ? keywordsData.join(", ") : content.genres,
+    "about": {
+      "@type": isMovie ? "Movie" : "TVSeries",
+      "name": content.title
+    }
+  };
 
   return (
     <div className="min-h-screen">
       <SEO
-        title={`${content.title} (${content.year}) - Complete Guide, Cast & Reviews`}
-        description={`Everything about ${content.title}: Plot, cast, ratings, and more. ${content.description.slice(0, 150)}...`}
-        canonical={`https://streamvault.live/blog/${type}/${slug}`}
+        title={articleTitle}
+        description={articleDescription}
+        canonical={articleUrl}
         image={content.backdropUrl}
-        type={isMovie ? "video.movie" : "video.tv_show"}
+        type="article"
+        keywords={keywordsData.length > 0 ? keywordsData : content.genres?.split(',').map((genre) => genre.trim()).filter(Boolean)}
+        structuredData={articleStructuredData}
       />
 
       {/* Hero Section */}

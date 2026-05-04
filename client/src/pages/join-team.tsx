@@ -2,10 +2,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Users, Code, PenTool, Shield, Mail, Zap, Terminal, Heart } from "lucide-react";
+import { SEO } from "@/components/seo";
 
 export default function JoinTeam() {
+    const structuredData = {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Join the StreamVault Team",
+        "description": "Explore open StreamVault roles in engineering, moderation, and content operations.",
+        "url": "https://streamvault.live/join-team"
+    };
+
     return (
         <div className="container mx-auto px-4 py-12 space-y-12">
+            <SEO
+                title="Join the StreamVault Team"
+                description="Apply for open roles at StreamVault across engineering, moderation, and content curation."
+                canonical="https://streamvault.live/join-team"
+                keywords={["StreamVault careers", "remote streaming jobs", "community moderator job", "full stack developer role"]}
+                structuredData={structuredData}
+            />
             {/* Header */}
             <div className="text-center max-w-3xl mx-auto space-y-4">
                 <Badge variant="outline" className="mb-4 bg-primary/10 border-primary/20 text-primary px-4 py-1">

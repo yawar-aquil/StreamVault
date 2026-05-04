@@ -81,6 +81,7 @@ export default function ContinueWatchingPage() {
         title="Continue Watching"
         description="Resume watching your movies and TV shows where you left off on StreamVault."
         canonical="https://streamvault.live/continue-watching"
+        robots="noindex,follow"
       />
       {/* Header */}
       <div className="border-b bg-card">

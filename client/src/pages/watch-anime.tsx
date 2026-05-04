@@ -370,6 +370,7 @@ export default function WatchAnime() {
             <Helmet>
                 <title>{`${episodeTitle} - ${anime.title} S${currentSeason}E${currentEpisode} | StreamVault`}</title>
                 <meta name="description" content={currentEpisodeData.description || anime.description} />
+                <meta name="robots" content="noindex,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
                 {/* Canonical points to anime detail page to avoid duplicate content */}
                 <link rel="canonical" href={`https://streamvault.live/anime/${anime.slug}`} />
                 <meta property="og:type" content="video.episode" />

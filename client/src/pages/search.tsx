@@ -229,6 +229,7 @@ export default function Search() {
         title="Search Movies & TV Shows"
         description="Search for your favorite movies and TV shows on StreamVault. Filter by genre, year, and more."
         canonical="https://streamvault.live/search"
+        robots="noindex,follow"
       />
       <div className="container mx-auto px-4 py-8">
         {/* Search Header */}

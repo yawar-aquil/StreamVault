@@ -1,13 +1,19 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { MessageCircle, Send, ThumbsUp, ThumbsDown, ChevronDown, MoreVertical, Smile, Image, X, Search } from "lucide-react";
+import { MessageCircle, ThumbsUp, ThumbsDown, ChevronDown, MoreVertical, X } from "lucide-react";
 import type { Comment, CommentWithBadges } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
-import EmojiPicker, { Theme, SkinTonePickerLocation } from "emoji-picker-react";
+import {
+  EmojiGifPicker,
+  appendEmojiPreservingTenorGif,
+  appendTenorGif,
+  extractTenorGifUrl,
+  mergeTextWithExistingTenorGif,
+  stripTenorGifUrl,
+} from "@/components/emoji-gif-picker";
 
 interface CommentsSectionProps {
   episodeId?: string;
@@ -316,12 +322,32 @@ function CommentItem({
                   <Input
                     type="text"
                     placeholder={`Reply to @${comment.userName.toLowerCase().replace(/\s+/g, '')}...`}
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
+                    value={stripTenorGifUrl(replyText)}
+                    onChange={(e) => setReplyText(mergeTextWithExistingTenorGif(e.target.value, replyText))}
                     maxLength={1000}
                     className="bg-transparent border-0 border-b border-muted rounded-none focus:border-primary px-0"
                   />
-                  <div className="flex justify-end gap-2 mt-2">
+                  {extractTenorGifUrl(replyText) && (
+                    <div className="mt-3 relative inline-block">
+                      <img
+                        src={extractTenorGifUrl(replyText)!}
+                        alt="GIF preview"
+                        className="max-w-[200px] max-h-[150px] rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setReplyText(stripTenorGifUrl(replyText))}
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center hover:bg-destructive/80"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between gap-3 mt-2">
+                    <EmojiGifPicker
+                      onEmojiSelect={(emoji) => setReplyText((prev) => appendEmojiPreservingTenorGif(prev, emoji))}
+                      onGifSelect={(gifUrl) => setReplyText((prev) => appendTenorGif(prev, gifUrl))}
+                    />
                     <Button
                       type="button"
                       variant="ghost"
@@ -453,13 +479,6 @@ export function CommentsSection({ episodeId, movieId, blogPostId }: CommentsSect
   const [userName, setUserName] = useState("");
   const [isNameSaved, setIsNameSaved] = useState(false);
   const [comment, setComment] = useState("");
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [showGifPicker, setShowGifPicker] = useState(false);
-  const [gifSearch, setGifSearch] = useState("");
-  const [gifs, setGifs] = useState<any[]>([]);
-  const [isLoadingGifs, setIsLoadingGifs] = useState(false);
-  const emojiPickerRef = useRef<HTMLDivElement>(null);
-  const gifPickerRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
   // Load saved username from localStorage OR auth
@@ -475,63 +494,6 @@ export function CommentsSection({ episodeId, movieId, blogPostId }: CommentsSect
       }
     }
   }, [isAuthenticated, user]);
-
-  // Click outside to close pickers
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
-        setShowEmojiPicker(false);
-      }
-      if (gifPickerRef.current && !gifPickerRef.current.contains(event.target as Node)) {
-        setShowGifPicker(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Search GIFs from Tenor API
-  const searchGifs = async (query: string) => {
-    if (!query.trim()) {
-      setGifs([]);
-      return;
-    }
-    setIsLoadingGifs(true);
-    try {
-      const response = await fetch(
-        `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ&client_key=streamvault&limit=20`
-      );
-      const data = await response.json();
-      setGifs(data.results || []);
-    } catch (error) {
-      console.error("GIF search error:", error);
-      setGifs([]);
-    }
-    setIsLoadingGifs(false);
-  };
-
-  // Load trending GIFs when GIF picker opens
-  useEffect(() => {
-    if (showGifPicker && gifs.length === 0 && !gifSearch) {
-      searchGifs("trending");
-    }
-  }, [showGifPicker]);
-
-  // Handle emoji selection
-  const handleEmojiClick = (emojiData: any) => {
-    setComment(prev => prev + emojiData.emoji);
-    setShowEmojiPicker(false);
-  };
-
-  // Handle GIF selection
-  const handleGifSelect = (gif: any) => {
-    const gifUrl = gif.media_formats?.gif?.url || gif.media_formats?.tinygif?.url;
-    if (gifUrl) {
-      setComment(prev => prev + (prev ? " " : "") + gifUrl);
-    }
-    setShowGifPicker(false);
-    setGifSearch("");
-  };
 
   // Fetch comments
   const { data: comments, isLoading } = useQuery<CommentWithBadges[]>({
@@ -655,31 +617,22 @@ export function CommentsSection({ episodeId, movieId, blogPostId }: CommentsSect
             <Input
               type="text"
               placeholder="Add a comment..."
-              value={comment.replace(/https:\/\/media\.tenor\.com\/[^\s]+\.gif/g, '').trim() || (comment.includes('tenor.com') ? '' : comment)}
-              onChange={(e) => {
-                // Preserve any existing GIF URL when typing
-                const gifMatch = comment.match(/(https:\/\/media\.tenor\.com\/[^\s]+\.gif)/);
-                if (gifMatch && !e.target.value.includes(gifMatch[1])) {
-                  setComment(e.target.value + (e.target.value ? ' ' : '') + gifMatch[1]);
-                } else {
-                  setComment(e.target.value);
-                }
-              }}
+              value={stripTenorGifUrl(comment)}
+              onChange={(e) => setComment(mergeTextWithExistingTenorGif(e.target.value, comment))}
               maxLength={1000}
               className="bg-transparent border-0 border-b border-muted rounded-none focus:border-primary px-0 focus-visible:ring-0"
             />
 
-            {/* GIF Preview */}
-            {comment.match(/(https:\/\/media\.tenor\.com\/[^\s]+\.gif)/) && (
+            {extractTenorGifUrl(comment) && (
               <div className="mt-3 relative inline-block">
                 <img
-                  src={comment.match(/(https:\/\/media\.tenor\.com\/[^\s]+\.gif)/)?.[1]}
+                  src={extractTenorGifUrl(comment)!}
                   alt="GIF preview"
                   className="max-w-[200px] max-h-[150px] rounded-lg"
                 />
                 <button
                   type="button"
-                  onClick={() => setComment(comment.replace(/(https:\/\/media\.tenor\.com\/[^\s]+\.gif)/, '').trim())}
+                  onClick={() => setComment(stripTenorGifUrl(comment))}
                   className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center hover:bg-destructive/80"
                 >
                   <X className="w-4 h-4" />
@@ -687,116 +640,12 @@ export function CommentsSection({ episodeId, movieId, blogPostId }: CommentsSect
               </div>
             )}
 
-            {/* Action buttons row - always visible */}
-            <div className="flex items-center justify-between mt-3">
-              {/* Emoji & GIF buttons */}
-              <div className="flex items-center gap-1 relative">
-                {/* Emoji Button */}
-                <div className="relative" ref={emojiPickerRef}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowEmojiPicker(!showEmojiPicker);
-                      setShowGifPicker(false);
-                    }}
-                    className={`p-2 rounded-full hover:bg-muted transition-colors ${showEmojiPicker ? 'bg-muted text-primary' : 'text-muted-foreground'}`}
-                    title="Add emoji"
-                  >
-                    <Smile className="w-5 h-5" />
-                  </button>
+            <div className="flex items-center justify-between mt-3 gap-3">
+              <EmojiGifPicker
+                onEmojiSelect={(emoji) => setComment((prev) => appendEmojiPreservingTenorGif(prev, emoji))}
+                onGifSelect={(gifUrl) => setComment((prev) => appendTenorGif(prev, gifUrl))}
+              />
 
-                  {/* Emoji Picker Panel */}
-                  {showEmojiPicker && (
-                    <div className="absolute bottom-12 left-0 z-50 shadow-xl rounded-lg overflow-hidden">
-                      <EmojiPicker
-                        onEmojiClick={handleEmojiClick}
-                        theme={Theme.DARK}
-                        width={350}
-                        height={400}
-                        searchPlaceHolder="Search emoji..."
-
-                        previewConfig={{ showPreview: false }}
-                        skinTonePickerLocation={SkinTonePickerLocation.PREVIEW}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* GIF Button */}
-                <div className="relative" ref={gifPickerRef}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowGifPicker(!showGifPicker);
-                      setShowEmojiPicker(false);
-                    }}
-                    className={`p-2 rounded-full hover:bg-muted transition-colors ${showGifPicker ? 'bg-muted text-primary' : 'text-muted-foreground'}`}
-                    title="Add GIF"
-                  >
-                    <span className="text-xs font-bold">GIF</span>
-                  </button>
-
-                  {/* GIF Picker Panel */}
-                  {showGifPicker && (
-                    <div className="absolute bottom-12 left-0 z-50 w-[350px] bg-card border border-border rounded-lg shadow-xl overflow-hidden">
-                      {/* Search Header */}
-                      <div className="p-3 border-b border-border">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input
-                            type="text"
-                            placeholder="Search GIFs..."
-                            value={gifSearch}
-                            onChange={(e) => {
-                              setGifSearch(e.target.value);
-                              searchGifs(e.target.value);
-                            }}
-                            className="pl-9 bg-muted/50"
-                          />
-                        </div>
-                      </div>
-
-                      {/* GIF Grid */}
-                      <div className="h-[300px] overflow-y-auto p-2">
-                        {isLoadingGifs ? (
-                          <div className="flex items-center justify-center h-full text-muted-foreground">
-                            Loading GIFs...
-                          </div>
-                        ) : gifs.length > 0 ? (
-                          <div className="grid grid-cols-2 gap-2">
-                            {gifs.map((gif: any) => (
-                              <button
-                                key={gif.id}
-                                type="button"
-                                onClick={() => handleGifSelect(gif)}
-                                className="aspect-video rounded overflow-hidden hover:ring-2 ring-primary transition-all"
-                              >
-                                <img
-                                  src={gif.media_formats?.tinygif?.url || gif.media_formats?.nanogif?.url}
-                                  alt={gif.content_description}
-                                  className="w-full h-full object-cover"
-                                  loading="lazy"
-                                />
-                              </button>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-center h-full text-muted-foreground">
-                            {gifSearch ? "No GIFs found" : "Search for GIFs"}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Tenor Attribution */}
-                      <div className="p-2 border-t border-border text-center">
-                        <span className="text-xs text-muted-foreground">Powered by Tenor</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Submit buttons - only show when there's text */}
               {comment && (
                 <div className="flex gap-2">
                   <Button

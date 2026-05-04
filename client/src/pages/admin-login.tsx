@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Lock } from "lucide-react";
 import { CloudflareTurnstile } from "@/components/cloudflare-turnstile";
+import { SEO } from "@/components/seo";
 
 export default function AdminLogin() {
   const [username, setUsername] = useState("");
@@ -68,6 +69,12 @@ export default function AdminLogin() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
+      <SEO
+        title="Admin Login"
+        description="Secure StreamVault admin sign in for authorized team members."
+        canonical="https://streamvault.live/admin/login"
+        robots="noindex,follow"
+      />
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">

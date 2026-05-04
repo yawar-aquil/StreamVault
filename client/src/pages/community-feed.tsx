@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/auth-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "wouter";
+import { SEO } from "@/components/seo";
 
 export default function CommunityFeed() {
     const [realtimeActivities, setRealtimeActivities] = useState<(Activity & { user?: User })[]>([]);
@@ -119,6 +120,12 @@ export default function CommunityFeed() {
 
     return (
         <div className="container mx-auto px-4 py-8 space-y-8 min-h-screen">
+            <SEO
+                title="Community Pulse"
+                description="See live StreamVault community activity, mentions, and friend updates in one feed."
+                canonical="https://streamvault.live/community"
+                robots="noindex,follow"
+            />
             {/* Header */}
             <div className="text-center max-w-3xl mx-auto space-y-4 pt-16 mb-12">
                 <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent flex items-center justify-center gap-2">

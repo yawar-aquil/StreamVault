@@ -343,6 +343,7 @@ export default function WatchMovie() {
       <Helmet>
         <title>{`Watch ${movie.title} (${movie.year}) Free | StreamVault`}</title>
         <meta name="description" content={movie.description} />
+        <meta name="robots" content="noindex,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
         {/* Canonical points to movie detail page to avoid duplicate content */}
         <link rel="canonical" href={`https://streamvault.live/movie/${movie.slug}`} />
         <meta property="og:type" content="video.movie" />
