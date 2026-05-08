@@ -1,3 +1,0 @@
-# Temporarily block ALL crawlers - site under heavy load
-User-agent: *
-Disallow: /

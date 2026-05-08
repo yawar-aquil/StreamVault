@@ -9,17 +9,101 @@ function getBaseUrl(_req: Request): string {
 
 export function setupSitemaps(app: Express, storage: IStorage) {
   // Dynamic robots.txt based on domain
-  // EMERGENCY: Block all crawlers - site under heavy crawl load
   app.get("/robots.txt", (req, res) => {
-    const robotsTxt = `# StreamVault - TEMPORARILY BLOCKING ALL CRAWLERS
-# Site under heavy crawl load
+    const baseUrl = getBaseUrl(req);
+
+    const robotsTxt = `# StreamVault - Free Streaming Platform
+# ${baseUrl}
 
 User-agent: *
-Disallow: /
+
+# Main Pages
+Allow: /
+Allow: /series
+Allow: /movies
+Allow: /anime
+Allow: /trending
+Allow: /browse
+Allow: /browse/shows
+Allow: /browse/movies
+Allow: /browse/anime
+Allow: /sitemap
+
+# Content Detail Pages (main canonical pages)
+Allow: /show/*
+Allow: /movie/*
+Allow: /anime/*
+Allow: /category/*
+Allow: /person/*
+
+# Blog & Articles (SEO content)
+Allow: /blog
+Allow: /blog/*
+
+# Info Pages
+Allow: /about
+Allow: /contact
+Allow: /privacy
+Allow: /terms
+Allow: /dmca
+Allow: /help
+Allow: /faq
+Allow: /join-team
+Allow: /api-docs
+Allow: /refund
+
+# Utility and internal pages
+Disallow: /search
+Disallow: /request
+Disallow: /report
+Disallow: /login
+Disallow: /register
+Disallow: /verify-email
+Disallow: /forgot-password
+Disallow: /watchlist
+Disallow: /continue-watching
+Disallow: /downloads
+Disallow: /download/*
+Disallow: /community
+Disallow: /profile
+Disallow: /profile/*
+Disallow: /settings
+Disallow: /friends
+Disallow: /notifications
+Disallow: /leaderboard
+Disallow: /achievements
+Disallow: /challenges
+Disallow: /polls
+Disallow: /store
+Disallow: /wallet
+Disallow: /inventory
+Disallow: /referral-program
+Disallow: /calendar
+
+# Block duplicate or app-only watch pages
+Disallow: /watch/*
+Disallow: /watch-movie/*
+Disallow: /watch-anime/*
+Disallow: /watch-rooms
+Disallow: /watch-together
+Disallow: /watch-together/*
+Disallow: /create-room
+
+# Block admin and API endpoints
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /api/
+Disallow: /api/*
+
+# Sitemap
+Sitemap: ${baseUrl}/sitemap.xml
+
+# Crawl-delay for polite crawling
+Crawl-delay: 1
 `;
 
     res.header("Content-Type", "text/plain");
-    res.header("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.header("Cache-Control", "public, max-age=3600, s-maxage=86400");
     res.send(robotsTxt);
   });
 
