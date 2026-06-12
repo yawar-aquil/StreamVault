@@ -52,6 +52,9 @@ import { useAuth } from '@/contexts/auth-context';
 import { useVoiceChat } from '@/hooks/use-voice-chat';
 import EmojiPicker, { Theme, SkinTonePickerLocation } from 'emoji-picker-react';
 import { VideoPlayer, VideoPlayerRef } from '@/components/video-player';
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { formatDistanceToNow } from "date-fns";
+import { RoleBadge } from "@/components/role-badge";
 import { RoomPolls } from '@/components/room-polls';
 import { useFriends } from '@/contexts/friends-context';
 import { useToast } from '@/hooks/use-toast';
@@ -1570,6 +1573,7 @@ function WatchTogetherContent() {
                                                             <div className="flex items-center gap-1 overflow-hidden">
                                                                 {roomUser.isHost && <Crown className="h-3 w-3 text-yellow-500 flex-shrink-0" />}
                                                                 <span className="text-sm font-medium whitespace-nowrap truncate">{roomUser.username}</span>
+                                                                <RoleBadge role={roomUser.username.toLowerCase() === "admin" ? "admin" : (roomUser as any).isModerator ? "moderator" : null} />
                                                                 {/* Badges - max 3 shown */}
                                                                 {roomUser.badges && (
                                                                     <div className="flex items-center gap-0.5 flex-shrink-0">
@@ -2091,6 +2095,7 @@ function WatchTogetherContent() {
                                                                     >
                                                                         {msg.username}
                                                                     </button>
+                                                                    <RoleBadge role={msg.username.toLowerCase() === "admin" ? "admin" : (msg as any).isModerator ? "moderator" : null} />
                                                                     {/* Badges */}
                                                                     {msg.badges && (
                                                                         <div className="flex items-center gap-0.5">

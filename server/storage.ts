@@ -1567,6 +1567,8 @@ export class MemStorage implements IStorage {
   private enrichCommentsWithBadges(comments: Comment[]): CommentWithBadges[] {
     return comments.map(comment => {
       let authorBadges: Badge[] = [];
+      let isModerator = false;
+      let isAdmin = comment.userName && comment.userName.toLowerCase() === (process.env.ADMIN_USERNAME || 'admin').toLowerCase();
       if (comment.userId) {
         // Find equipped user badges
         const userBadges = Array.from(this.userBadges.values())

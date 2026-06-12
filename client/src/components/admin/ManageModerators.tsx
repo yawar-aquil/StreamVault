@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { User, ShieldAlert, ShieldCheck } from "lucide-react";
+import { RoleBadge } from "@/components/role-badge";
 
 export function ManageModerators() {
   const { toast } = useToast();
@@ -118,7 +119,10 @@ export function ManageModerators() {
                           {mod.username.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-medium">{mod.username}</p>
+                          <div className="flex items-center">
+                            <p className="font-medium">{mod.username}</p>
+                            <RoleBadge role="moderator" />
+                          </div>
                           <p className="text-xs text-muted-foreground">{mod.email}</p>
                         </div>
                       </div>

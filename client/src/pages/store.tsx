@@ -5,6 +5,9 @@ import { ShoppingBag, Gift, Crown, Heart, Star, Sparkles, AlertCircle, Check, Ar
 import { CloudflareTurnstile } from '@/components/cloudflare-turnstile';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { formatDistanceToNow } from "date-fns";
+import { RoleBadge } from "@/components/role-badge";
 import { Badge as UIBadge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -915,6 +918,7 @@ export default function StorePage() {
                                         {selectedUsers.map(user => (
                                             <UIBadge key={user.id} variant="secondary" className="pl-2 pr-1 py-1 flex items-center gap-1">
                                                 {user.username}
+                                                <RoleBadge role={user.username.toLowerCase() === "admin" ? "admin" : (user as any).isModerator ? "moderator" : null} />
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
@@ -972,6 +976,7 @@ export default function StorePage() {
                                                                         {user.avatarUrl && <img src={user.avatarUrl} className="w-full h-full object-cover" />}
                                                                     </div>
                                                                     <span>{user.username}</span>
+                                                                    <RoleBadge role={user.username.toLowerCase() === "admin" ? "admin" : (user as any).isModerator ? "moderator" : null} />
                                                                     {user.badges && user.badges.length > 0 && (
                                                                         <div className="flex items-center gap-0.5 ml-1">
                                                                             {user.badges.filter((b: any) => b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'theme').sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime()).map((badge: any) => (

@@ -515,6 +515,8 @@ export type Category = {
 
 export type CommentWithBadges = Comment & {
   authorBadges?: Badge[];
+  isModerator?: boolean;
+  isAdmin?: boolean;
 };
 
 // Activity Feed System

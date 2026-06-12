@@ -9,6 +9,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Show, Movie, Anime } from "@shared/schema";
 import { useAuth } from "@/contexts/auth-context";
+import { RoleBadge } from "@/components/role-badge";
 import { useAds } from "@/components/ad-manager";
 import { NotificationsDropdown } from "@/components/notifications-dropdown";
 import { cn, isIndianDomain } from "@/lib/utils";
@@ -415,6 +416,7 @@ export function Header() {
               <DropdownMenuContent align="end" className="w-48">
                 <div className="px-2 py-1.5 text-sm font-medium flex items-center gap-2">
                   {user?.username}
+                  {user?.username && <RoleBadge role={user.username.toLowerCase() === "admin" ? "admin" : (user as any).isModerator ? "moderator" : null} />}
                   {user?.badges && (typeof user.badges === 'string' ? JSON.parse(user.badges) : user.badges)
                     .filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'feature')
                     .sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime())

@@ -3,8 +3,10 @@ import { useAuth } from "@/contexts/auth-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { MessageCircle, ThumbsUp, ThumbsDown, ChevronDown, MoreVertical, X } from "lucide-react";
 import type { Comment, CommentWithBadges } from "@shared/schema";
+import { RoleBadge } from "@/components/role-badge";
 import { formatDistanceToNow } from "date-fns";
 import {
   EmojiGifPicker,
@@ -236,6 +238,7 @@ function CommentItem({
           {/* Header: Username and timestamp */}
           <div className="flex items-center gap-2 mb-1">
             <span className="font-medium text-sm text-foreground">@{comment.userName.toLowerCase().replace(/\s+/g, '')}</span>
+            <RoleBadge role={comment.isAdmin ? "admin" : comment.isModerator ? "moderator" : null} />
 
             {/* Badges Display */}
             {comment.authorBadges && comment.authorBadges.length > 0 && (

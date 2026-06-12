@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Crown, Users, Twitter, Instagram, Youtube, ExternalLink, Trophy, Star, icons, Eye, Heart, Tv, Film, Clapperboard } from 'lucide-react';
 import { SiTiktok, SiDiscord } from 'react-icons/si';
 import { Link } from 'wouter';
+import { RoleBadge } from '@/components/role-badge';
 import {
     Dialog,
     DialogContent,
@@ -192,6 +193,7 @@ export function UserProfileModal({ isOpen, onClose, user, isFriend }: UserProfil
                                 <div className="text-center">
                                     <h3 className="text-lg font-semibold flex items-center justify-center gap-2">
                                         {user.username}
+                                        <RoleBadge role={user.username.toLowerCase() === "admin" ? "admin" : (user as any).isModerator ? "moderator" : null} />
                                     </h3>
                                     {/* Equipped Badges */}
                                     {user.badges && (
