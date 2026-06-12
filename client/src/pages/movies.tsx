@@ -21,10 +21,10 @@ export default function MoviesPage() {
 
   const featured = useMemo(() => movies?.filter((movie) => movie.featured) || [], [movies]);
   const trending = useMemo(() => movies?.filter((movie) => movie.trending) || [], [movies]);
-  const action = useMemo(() => movies?.filter((movie) => movie.genres?.toLowerCase().includes("action")) || [], [movies]);
-  const drama = useMemo(() => movies?.filter((movie) => movie.genres?.toLowerCase().includes("drama")) || [], [movies]);
-  const comedy = useMemo(() => movies?.filter((movie) => movie.genres?.toLowerCase().includes("comedy")) || [], [movies]);
-  const horror = useMemo(() => movies?.filter((movie) => movie.genres?.toLowerCase().includes("horror")) || [], [movies]);
+  const action = useMemo(() => movies?.filter((movie) => movie.genres?.toLowerCase().includes("action")).slice(0, 15) || [], [movies]);
+  const drama = useMemo(() => movies?.filter((movie) => movie.genres?.toLowerCase().includes("drama")).slice(0, 15) || [], [movies]);
+  const comedy = useMemo(() => movies?.filter((movie) => movie.genres?.toLowerCase().includes("comedy")).slice(0, 15) || [], [movies]);
+  const horror = useMemo(() => movies?.filter((movie) => movie.genres?.toLowerCase().includes("horror")).slice(0, 15) || [], [movies]);
 
   if (isLoading) {
     return (

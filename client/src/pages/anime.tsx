@@ -25,12 +25,12 @@ export default function AnimePage() {
 
     const featured = useMemo(() => anime?.filter((a) => a.featured) || [], [anime]);
     const trending = useMemo(() => anime?.filter((a) => a.trending) || [], [anime]);
-    const action = useMemo(() => anime?.filter((a) => a.genres?.toLowerCase().includes("action")) || [], [anime]);
-    const romance = useMemo(() => anime?.filter((a) => a.genres?.toLowerCase().includes("romance")) || [], [anime]);
-    const shonen = useMemo(() => anime?.filter((a) => a.genres?.toLowerCase().includes("shonen") || a.genres?.toLowerCase().includes("shounen")) || [], [anime]);
-    const fantasy = useMemo(() => anime?.filter((a) => a.genres?.toLowerCase().includes("fantasy")) || [], [anime]);
-    const comedy = useMemo(() => anime?.filter((a) => a.genres?.toLowerCase().includes("comedy")) || [], [anime]);
-    const horror = useMemo(() => anime?.filter((a) => a.genres?.toLowerCase().includes("horror")) || [], [anime]);
+    const action = useMemo(() => anime?.filter((a) => a.genres?.toLowerCase().includes("action")).slice(0, 15) || [], [anime]);
+    const romance = useMemo(() => anime?.filter((a) => a.genres?.toLowerCase().includes("romance")).slice(0, 15) || [], [anime]);
+    const shonen = useMemo(() => anime?.filter((a) => a.genres?.toLowerCase().includes("shonen") || a.genres?.toLowerCase().includes("shounen")).slice(0, 15) || [], [anime]);
+    const fantasy = useMemo(() => anime?.filter((a) => a.genres?.toLowerCase().includes("fantasy")).slice(0, 15) || [], [anime]);
+    const comedy = useMemo(() => anime?.filter((a) => a.genres?.toLowerCase().includes("comedy")).slice(0, 15) || [], [anime]);
+    const horror = useMemo(() => anime?.filter((a) => a.genres?.toLowerCase().includes("horror")).slice(0, 15) || [], [anime]);
 
     if (isLoading) {
         return (

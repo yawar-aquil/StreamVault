@@ -4596,12 +4596,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all shows (requires API key for external access)
   app.get("/api/shows", requireApiKey, async (req, res) => {
     try {
-      const shows = await storage.getAllShows();
+      let shows = await storage.getAllShows();
+      
+      // Sort newest first
+      shows.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      const limit = parseInt(req.query.limit as string) || 0;
+      
       // Restrict external API users to 1 item per request
       if ((req as any).apiKey) {
-        return res.json(shows.slice(0, 1));
+        shows = shows.slice(0, 1);
+      } else if (req.query.limit === 'all') {
+        // Return all items for admin
+      } else if (limit > 0) {
+        shows = shows.slice(0, limit);
+      } else {
+        shows = shows.slice(0, 200); // Default limit to prevent frontend freeze
       }
-      res.json(shows);
+      
+      // Strip heavy fields to reduce JSON payload size
+      const optimizedShows = shows.map(s => ({
+        ...s,
+        castDetails: null, // Huge JSON string
+        description: s.description ? s.description.substring(0, 150) + "..." : "", // Truncate description
+      }));
+
+      res.json(optimizedShows);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch shows" });
     }
@@ -4758,12 +4778,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all movies (requires API key for external access)
   app.get("/api/movies", requireApiKey, async (req, res) => {
     try {
-      const movies = await storage.getAllMovies();
+      let movies = await storage.getAllMovies();
+      
+      // Sort newest first
+      movies.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      const limit = parseInt(req.query.limit as string) || 0;
+      
       // Restrict external API users to 1 item per request
       if ((req as any).apiKey) {
-        return res.json(movies.slice(0, 1));
+        movies = movies.slice(0, 1);
+      } else if (req.query.limit === 'all') {
+        // Return all items for admin
+      } else if (limit > 0) {
+        movies = movies.slice(0, limit);
+      } else {
+        movies = movies.slice(0, 200); // Default limit to prevent frontend freeze
       }
-      res.json(movies);
+      
+      // Strip heavy fields to reduce JSON payload size
+      const optimizedMovies = movies.map(m => ({
+        ...m,
+        castDetails: null, // Huge JSON string
+        audioTracks: null, // Huge JSON string
+        googleDriveUrl: "", // Not needed for lists
+        description: m.description ? m.description.substring(0, 150) + "..." : "", // Truncate description
+      }));
+
+      res.json(optimizedMovies);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch movies" });
     }
@@ -4804,12 +4846,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all anime (requires API key for external access)
   app.get("/api/anime", requireApiKey, async (req, res) => {
     try {
-      const anime = await storage.getAllAnime();
+      let anime = await storage.getAllAnime();
+      
+      // Sort newest first
+      anime.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      const limit = parseInt(req.query.limit as string) || 0;
+      
       // Restrict external API users to 1 item per request
       if ((req as any).apiKey) {
-        return res.json(anime.slice(0, 1));
+        anime = anime.slice(0, 1);
+      } else if (req.query.limit === 'all') {
+        // Return all items for admin
+      } else if (limit > 0) {
+        anime = anime.slice(0, limit);
+      } else {
+        anime = anime.slice(0, 200); // Default limit to prevent frontend freeze
       }
-      res.json(anime);
+      
+      // Strip heavy fields to reduce JSON payload size
+      const optimizedAnime = anime.map(a => ({
+        ...a,
+        castDetails: null, // Huge JSON string
+        description: a.description ? a.description.substring(0, 150) + "..." : "", // Truncate description
+      }));
+
+      res.json(optimizedAnime);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch anime" });
     }

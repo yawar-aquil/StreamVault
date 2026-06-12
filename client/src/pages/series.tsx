@@ -21,11 +21,11 @@ export default function SeriesPage() {
 
     const featured = useMemo(() => shows?.filter((s) => s.featured) || [], [shows]);
     const trending = useMemo(() => shows?.filter((s) => s.trending) || [], [shows]);
-    const action = useMemo(() => shows?.filter((s) => s.genres?.toLowerCase().includes("action")) || [], [shows]);
-    const drama = useMemo(() => shows?.filter((s) => s.genres?.toLowerCase().includes("drama")) || [], [shows]);
-    const comedy = useMemo(() => shows?.filter((s) => s.genres?.toLowerCase().includes("comedy")) || [], [shows]);
-    const scifi = useMemo(() => shows?.filter((s) => s.genres?.toLowerCase().includes("sci-fi") || s.genres?.toLowerCase().includes("science fiction")) || [], [shows]);
-    const horror = useMemo(() => shows?.filter((s) => s.genres?.toLowerCase().includes("horror")) || [], [shows]);
+    const action = useMemo(() => shows?.filter((s) => s.genres?.toLowerCase().includes("action")).slice(0, 15) || [], [shows]);
+    const drama = useMemo(() => shows?.filter((s) => s.genres?.toLowerCase().includes("drama")).slice(0, 15) || [], [shows]);
+    const comedy = useMemo(() => shows?.filter((s) => s.genres?.toLowerCase().includes("comedy")).slice(0, 15) || [], [shows]);
+    const scifi = useMemo(() => shows?.filter((s) => s.genres?.toLowerCase().includes("sci-fi") || s.genres?.toLowerCase().includes("science fiction")).slice(0, 15) || [], [shows]);
+    const horror = useMemo(() => shows?.filter((s) => s.genres?.toLowerCase().includes("horror")).slice(0, 15) || [], [shows]);
 
     if (isLoading) {
         return (

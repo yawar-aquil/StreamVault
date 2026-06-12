@@ -106,17 +106,17 @@ export default function AdminPage() {
 
   // Fetch all shows
   const { data: shows = [] } = useQuery<Show[]>({
-    queryKey: ["/api/shows"],
+    queryKey: ["/api/shows?limit=all"],
   });
 
   // Fetch all movies
   const { data: movies = [] } = useQuery<Movie[]>({
-    queryKey: ["/api/movies"],
+    queryKey: ["/api/movies?limit=all"],
   });
 
   // Fetch all anime
   const { data: anime = [] } = useQuery<Anime[]>({
-    queryKey: ["/api/anime"],
+    queryKey: ["/api/anime?limit=all"],
   });
 
   if (isChecking) {
@@ -744,6 +744,10 @@ function ManageShows({ shows }: { shows: Show[] }) {
   const [editingShow, setEditingShow] = useState<Show | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 20;
+  const totalPages = Math.ceil(shows.length / itemsPerPage);
+  const currentShows = shows.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   const deleteMutation = useMutation({
     mutationFn: async (showId: string) => {
@@ -857,7 +861,7 @@ function ManageShows({ shows }: { shows: Show[] }) {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {shows.map((show) => (
+            {currentShows.map((show) => (
               <div
                 key={show.id}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
@@ -904,6 +908,29 @@ function ManageShows({ shows }: { shows: Show[] }) {
               </div>
             ))}
           </div>
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-4 pt-4 border-t mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                Previous
+              </Button>
+              <span className="text-sm">
+                Page {page} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -2389,6 +2416,10 @@ function ManageMovies({ movies }: { movies: Movie[] }) {
   const queryClient = useQueryClient();
   const [editingMovie, setEditingMovie] = useState<Movie | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 20;
+  const totalPages = Math.ceil(movies.length / itemsPerPage);
+  const currentMovies = movies.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   const deleteMovieMutation = useMutation({
     mutationFn: async (movieId: string) => {
@@ -2449,7 +2480,7 @@ function ManageMovies({ movies }: { movies: Movie[] }) {
               No movies found. Add your first movie!
             </p>
           ) : (
-            movies.map((movie) => (
+            currentMovies.map((movie) => (
               <div
                 key={movie.id}
                 className="flex items-center gap-4 p-4 border rounded-lg"
@@ -2513,6 +2544,29 @@ function ManageMovies({ movies }: { movies: Movie[] }) {
               </div>
             ))
           )}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-4 pt-4 border-t">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                Previous
+              </Button>
+              <span className="text-sm">
+                Page {page} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -2525,6 +2579,10 @@ function ManageAnime({ anime }: { anime: Anime[] }) {
   const queryClient = useQueryClient();
   const [editingAnime, setEditingAnime] = useState<Anime | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 20;
+  const totalPages = Math.ceil(anime.length / itemsPerPage);
+  const currentAnime = anime.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   const deleteAnimeMutation = useMutation({
     mutationFn: async (animeId: string) => {
@@ -2602,7 +2660,7 @@ function ManageAnime({ anime }: { anime: Anime[] }) {
                 No anime found. Use the add-anime.cjs script to add anime from TMDB.
               </p>
             ) : (
-              anime.map((a) => (
+              currentAnime.map((a) => (
                 <div
                   key={a.id}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
@@ -2659,6 +2717,29 @@ function ManageAnime({ anime }: { anime: Anime[] }) {
               ))
             )}
           </div>
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-4 pt-4 border-t mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                Previous
+              </Button>
+              <span className="text-sm">
+                Page {page} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -118,10 +118,10 @@ export default function Home() {
   }, [shows, movies, animeList]);
 
   const featured = useMemo(() => allContent.filter((item) => item.featured) || [], [allContent]);
-  const action = useMemo(() => allContent.filter((item) => item.genres?.toLowerCase().includes("action")) || [], [allContent]);
-  const drama = useMemo(() => allContent.filter((item) => item.genres?.toLowerCase().includes("drama")) || [], [allContent]);
-  const comedy = useMemo(() => allContent.filter((item) => item.genres?.toLowerCase().includes("comedy")) || [], [allContent]);
-  const horror = useMemo(() => allContent.filter((item) => item.genres?.toLowerCase().includes("horror")) || [], [allContent]);
+  const action = useMemo(() => allContent.filter((item) => item.genres?.toLowerCase().includes("action")).slice(0, 15) || [], [allContent]);
+  const drama = useMemo(() => allContent.filter((item) => item.genres?.toLowerCase().includes("drama")).slice(0, 15) || [], [allContent]);
+  const comedy = useMemo(() => allContent.filter((item) => item.genres?.toLowerCase().includes("comedy")).slice(0, 15) || [], [allContent]);
+  const horror = useMemo(() => allContent.filter((item) => item.genres?.toLowerCase().includes("horror")).slice(0, 15) || [], [allContent]);
 
   // Ensure we have 10 items for the Top 10 row
   const top10Items = useMemo(() => {
