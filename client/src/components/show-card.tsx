@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { getHeaders } from "@/lib/api";
+import { getOptimizedTmdbUrl } from "@/lib/image";
 
 interface ShowCardProps {
   show: Show | Movie | Anime;
@@ -106,6 +107,8 @@ export function ShowCard({
           {/* Poster Image */}
           <img
             src={imageUrl}
+            srcSet={`${getOptimizedTmdbUrl(imageUrl, 'w500')} 500w, ${imageUrl} 1000w`}
+            sizes="(max-width: 768px) 500px, 1000px"
             alt={show.title}
             className="w-full h-full object-cover"
             loading="lazy"
@@ -120,7 +123,7 @@ export function ShowCard({
 
           {/* Hover Overlay */}
           <div
-            className={`absolute inset-0 bg-gradient-to-t from-background/90 via-background/50 to-transparent transition-opacity duration-300 ${isHovered ? "opacity-100" : "opacity-0"
+            className={`absolute inset-0 bg-gradient-to-t from-background/90 via-background/50 to-transparent transition-opacity duration-300 hidden md:block ${isHovered ? "opacity-100" : "opacity-0"
               }`}
           >
             <div className="absolute inset-0 flex flex-col justify-end p-4">

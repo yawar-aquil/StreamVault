@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { Movie } from "@shared/schema";
 import { Link } from "wouter";
+import { getOptimizedTmdbUrl } from "@/lib/image";
 
 interface MovieHeroCarouselProps {
   movies: Movie[];
@@ -19,7 +20,8 @@ export function MovieHeroCarousel({ movies }: MovieHeroCarouselProps) {
   // Preload all carousel images on mount
   useEffect(() => {
     movies.forEach((movie) => {
-      const urls = [movie.posterUrl, movie.backdropUrl].filter(Boolean) as string[];
+      const optimizedPoster = getOptimizedTmdbUrl(movie.posterUrl, 'w780');
+      const urls = [optimizedPoster, movie.backdropUrl].filter(Boolean) as string[];
       urls.forEach((url) => {
         if (!loadedImages.has(url)) {
           const img = new Image();
@@ -96,7 +98,7 @@ export function MovieHeroCarousel({ movies }: MovieHeroCarouselProps) {
           {/* Poster layer (always rendered, visible on mobile, hidden behind backdrop on desktop) */}
           <div
             className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${movie.posterUrl})`, zIndex: 0 }}
+            style={{ backgroundImage: `url(${getOptimizedTmdbUrl(movie.posterUrl, 'w780')})`, zIndex: 0 }}
           />
           {/* Backdrop layer (always rendered on top, only visible on desktop via opacity) */}
           <div

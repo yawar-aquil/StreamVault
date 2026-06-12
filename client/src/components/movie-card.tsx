@@ -5,6 +5,7 @@ import type { Movie } from "@shared/schema";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { getOptimizedTmdbUrl } from "@/lib/image";
 
 interface MovieCardProps {
   movie: Movie;
@@ -77,6 +78,8 @@ export function MovieCard({
           {/* Poster Image */}
           <img
             src={imageUrl}
+            srcSet={`${getOptimizedTmdbUrl(imageUrl, 'w500')} 500w, ${imageUrl} 1000w`}
+            sizes="(max-width: 768px) 500px, 1000px"
             alt={movie.title}
             className="w-full h-full object-cover"
             loading="lazy"
@@ -84,7 +87,7 @@ export function MovieCard({
 
           {/* Hover Overlay */}
           <div
-            className={`absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent transition-opacity duration-300 ${isHovered ? "opacity-100" : "opacity-0"
+            className={`absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent transition-opacity duration-300 hidden md:block ${isHovered ? "opacity-100" : "opacity-0"
               }`}
           >
             <div className="absolute inset-0 flex flex-col justify-end p-4">
