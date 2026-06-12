@@ -14,7 +14,7 @@ function getCacheKey(text: string, lang: string): string {
     return `${lang}:${text}`;
 }
 
-export function useChatTranslation(messages: ChatMessage[]) {
+export function useChatTranslation(messages: ChatMessage[], isTranslationEnabled: boolean = true) {
     const { i18n } = useTranslation();
     const currentLang = i18n.language;
     const [translatedMessages, setTranslatedMessages] = useState<Map<string, string>>(new Map());
@@ -32,8 +32,8 @@ export function useChatTranslation(messages: ChatMessage[]) {
 
     // Translate new messages
     useEffect(() => {
-        // Skip if language is English (source language)
-        if (currentLang === 'en' || !currentLang) return;
+        // Skip if translation is disabled or language is English (source language)
+        if (!isTranslationEnabled || currentLang === 'en' || !currentLang) return;
 
         const untranslated = messages.filter(msg => {
             if (msg.username === 'System') return false;
@@ -98,7 +98,7 @@ export function useChatTranslation(messages: ChatMessage[]) {
 
     // Get translated text for a message, falling back to original
     const getTranslatedMessage = useCallback((msg: ChatMessage): string => {
-        if (currentLang === 'en' || !currentLang) return msg.message;
+        if (!isTranslationEnabled || currentLang === 'en' || !currentLang) return msg.message;
 
         // Check live state first
         if (translatedMessages.has(msg.id)) return translatedMessages.get(msg.id)!;
@@ -108,9 +108,9 @@ export function useChatTranslation(messages: ChatMessage[]) {
         if (translationCache.has(cacheKey)) return translationCache.get(cacheKey)!;
 
         return msg.message;
-    }, [currentLang, translatedMessages]);
+    }, [currentLang, translatedMessages, isTranslationEnabled]);
 
-    const isTranslating = currentLang !== 'en' && pendingRef.current.size > 0;
+    const isTranslating = currentLang !== 'en' && pendingRef.current.size > 0 && isTranslationEnabled;
 
-    return { getTranslatedMessage, isTranslating, isTranslationActive: currentLang !== 'en' };
+    return { getTranslatedMessage, isTranslating, isTranslationActive: currentLang !== 'en' && isTranslationEnabled };
 }

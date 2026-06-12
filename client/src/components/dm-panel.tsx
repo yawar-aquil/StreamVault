@@ -64,6 +64,40 @@ interface TenorGif {
     };
 }
 
+// Format message with GIFs rendered as media
+function formatMessageWithMedia(text: string) {
+    const mediaRegex = /(https:\/\/media\.tenor\.com\/[^\s]+\.gif)/g;
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match;
+    let keyIndex = 0;
+
+    while ((match = mediaRegex.exec(text)) !== null) {
+        if (match.index > lastIndex) {
+            parts.push(text.slice(lastIndex, match.index));
+        }
+
+        if (match[1]) {
+            parts.push(
+                <img
+                    key={`media-${keyIndex++}`}
+                    src={match[1]}
+                    alt="GIF"
+                    className="max-w-[250px] max-h-[250px] rounded-lg my-2 block object-contain"
+                    loading="lazy"
+                />
+            );
+        }
+        lastIndex = mediaRegex.lastIndex;
+    }
+
+    if (lastIndex < text.length) {
+        parts.push(text.slice(lastIndex));
+    }
+
+    return parts.length > 0 ? parts : text;
+}
+
 // Compact link preview for reply context
 function ReplyLinkPreview({ url, isMe }: { url: string; isMe: boolean }) {
     const [preview, setPreview] = useState<{ title?: string; image?: string; siteName?: string } | null>(null);
@@ -1014,10 +1048,13 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
                                                             ? 'text-4xl leading-normal'
                                                             : 'text-sm leading-relaxed'
                                                             } break-words whitespace-pre-wrap`}>
-                                                            {msg.message}
+                                                            {formatMessageWithMedia(msg.message)}
                                                         </p>
                                                         {(() => {
                                                             const urlMatch = msg.message.match(/(https?:\/\/[^\s]+)/);
+                                                            if (urlMatch && urlMatch[0].match(/https:\/\/media\.tenor\.com\/[^\s]+\.gif/i)) {
+                                                                return null;
+                                                            }
                                                             return urlMatch ? <LinkPreview url={urlMatch[0]} /> : null;
                                                         })()}
                                                     </>

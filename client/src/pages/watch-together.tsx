@@ -29,9 +29,11 @@ import {
     Minimize,
     Share2,
     BarChart2,
-    UserPlus
+    UserPlus,
+    Languages
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import {
     DropdownMenu,
@@ -207,8 +209,18 @@ function WatchTogetherContent() {
         }
     });
 
+    const [isTranslationEnabled, setIsTranslationEnabled] = useState(() => {
+        const stored = localStorage.getItem('watch-together-translation-enabled');
+        return stored !== 'false';
+    });
+
+    const toggleTranslation = (enabled: boolean) => {
+        setIsTranslationEnabled(enabled);
+        localStorage.setItem('watch-together-translation-enabled', enabled ? 'true' : 'false');
+    };
+
     // Chat translation hook — translates messages to user's selected language
-    const { getTranslatedMessage, isTranslationActive } = useChatTranslation(messages);
+    const { getTranslatedMessage, isTranslationActive } = useChatTranslation(messages, isTranslationEnabled);
 
     const [username, setUsername] = useState('');
     const [showJoinModal, setShowJoinModal] = useState(true);
@@ -2026,6 +2038,16 @@ function WatchTogetherContent() {
                                 ) : (
                                     <>
                                         {/* Messages */}
+                                        <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30">
+                                            <span className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
+                                                <Languages className="w-3.5 h-3.5" />
+                                                Translate Chat
+                                            </span>
+                                            <Switch 
+                                                checked={isTranslationEnabled} 
+                                                onCheckedChange={toggleTranslation} 
+                                            />
+                                        </div>
                                         <div className="flex-1 overflow-y-auto p-4 space-y-3">
                                             {messages.map((msg) => (
                                                 <div
@@ -2090,6 +2112,10 @@ function WatchTogetherContent() {
                                                                 <p className="mt-0.5 break-words">{formatMessageWithMedia(getTranslatedMessage(msg))}</p>
                                                                 {(() => {
                                                                     const urlMatch = msg.message.match(/(https?:\/\/[^\s]+)/);
+                                                                    // Do not show link preview for Tenor GIFs since they are rendered as media
+                                                                    if (urlMatch && urlMatch[0].match(/https:\/\/media\.tenor\.com\/[^\s]+\.gif/i)) {
+                                                                        return null;
+                                                                    }
                                                                     return urlMatch ? <LinkPreview url={urlMatch[0]} /> : null;
                                                                 })()}
                                                             </div>
