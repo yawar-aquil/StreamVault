@@ -743,7 +743,7 @@ function ManageShows({ shows }: { shows: Show[] }) {
   const queryClient = useQueryClient();
   const [editingShow, setEditingShow] = useState<Show | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [page, setPage] = useState(1);
   const itemsPerPage = 20;
   const totalPages = Math.ceil(shows.length / itemsPerPage);
@@ -848,15 +848,23 @@ function ManageShows({ shows }: { shows: Show[] }) {
               <CardTitle>All Shows ({shows.length})</CardTitle>
               <CardDescription>Manage your content library</CardDescription>
             </div>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setShowDeleteAllConfirm(true)}
-              disabled={shows.length === 0}
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete All Shows
-            </Button>
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Show
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Add New Show</DialogTitle>
+                  <DialogDescription>
+                    Add a new show to your collection
+                  </DialogDescription>
+                </DialogHeader>
+                <AddShowForm onSuccess={() => setIsAddDialogOpen(false)} />
+              </DialogContent>
+            </Dialog>
           </div>
         </CardHeader>
         <CardContent>
@@ -883,6 +891,8 @@ function ManageShows({ shows }: { shows: Show[] }) {
                           {genre.trim()}
                         </Badge>
                       ))}
+                      {show.featured && <Badge variant="default">Featured</Badge>}
+                      {show.trending && <Badge variant="outline">Trending</Badge>}
                     </div>
                   </div>
                 </div>
@@ -892,8 +902,7 @@ function ManageShows({ shows }: { shows: Show[] }) {
                     size="sm"
                     onClick={() => handleEdit(show)}
                   >
-                    <Edit className="w-4 h-4 mr-2" />
-                    Edit
+                    <Edit className="w-4 h-4" />
                   </Button>
                   <Button
                     variant="destructive"
@@ -901,8 +910,7 @@ function ManageShows({ shows }: { shows: Show[] }) {
                     onClick={() => handleDelete(show.id, show.title)}
                     disabled={deleteMutation.isPending}
                   >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                    <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
@@ -934,33 +942,7 @@ function ManageShows({ shows }: { shows: Show[] }) {
         </CardContent>
       </Card>
 
-      {/* Delete All Confirmation Dialog */}
-      <Dialog open={showDeleteAllConfirm} onOpenChange={setShowDeleteAllConfirm}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete All Shows?</DialogTitle>
-            <DialogDescription>
-              This will permanently delete all {shows.length} shows and their episodes. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-3 mt-4">
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteAllConfirm(false)}
-              disabled={deleteAllMutation.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => deleteAllMutation.mutate()}
-              disabled={deleteAllMutation.isPending}
-            >
-              {deleteAllMutation.isPending ? "Deleting..." : "Delete All"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -1218,7 +1200,7 @@ function EditShowForm({ show, onSave, onCancel, isLoading }: {
 }
 
 // Add Show Form Component
-function AddShowForm() {
+function AddShowForm({ onSuccess }: { onSuccess?: () => void }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
@@ -1253,7 +1235,7 @@ function AddShowForm() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/shows"] });
       toast({
-        title: "Success!",
+        title: "Success",
         description: "Show added successfully",
       });
       // Reset form
@@ -1275,6 +1257,7 @@ function AddShowForm() {
         trending: false,
         category: "action",
       });
+      onSuccess?.();
     },
   });
 
@@ -2501,6 +2484,8 @@ function ManageMovies({ movies }: { movies: Movie[] }) {
                         {genre.trim()}
                       </Badge>
                     ))}
+                    {movie.featured && <Badge variant="default">Featured</Badge>}
+                    {movie.trending && <Badge variant="outline">Trending</Badge>}
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -2579,6 +2564,7 @@ function ManageAnime({ anime }: { anime: Anime[] }) {
   const queryClient = useQueryClient();
   const [editingAnime, setEditingAnime] = useState<Anime | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [page, setPage] = useState(1);
   const itemsPerPage = 20;
   const totalPages = Math.ceil(anime.length / itemsPerPage);
@@ -2651,6 +2637,23 @@ function ManageAnime({ anime }: { anime: Anime[] }) {
               <CardTitle>All Anime ({anime.length})</CardTitle>
               <CardDescription>Manage your anime library</CardDescription>
             </div>
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Anime
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Add New Anime</DialogTitle>
+                  <DialogDescription>
+                    Add a new anime to your collection
+                  </DialogDescription>
+                </DialogHeader>
+                <AddAnimeForm onSuccess={() => setIsAddDialogOpen(false)} />
+              </DialogContent>
+            </Dialog>
           </div>
         </CardHeader>
         <CardContent>
@@ -2696,8 +2699,7 @@ function ManageAnime({ anime }: { anime: Anime[] }) {
                       size="sm"
                       onClick={() => handleEdit(a)}
                     >
-                      <Edit className="w-4 h-4 mr-2" />
-                      Edit
+                      <Edit className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="destructive"
@@ -2709,8 +2711,7 @@ function ManageAnime({ anime }: { anime: Anime[] }) {
                       }}
                       disabled={deleteAnimeMutation.isPending}
                     >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      {deleteAnimeMutation.isPending ? "Deleting..." : "Delete"}
+                      <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
@@ -7662,3 +7663,249 @@ export function TmdbBulkImportTab() {
     </div>
   );
 }
+
+
+function AddAnimeForm({ onSuccess }: { onSuccess: () => void }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [formData, setFormData] = useState({
+    title: "",
+    slug: "",
+    description: "",
+    posterUrl: "",
+    backdropUrl: "",
+    year: new Date().getFullYear(),
+    rating: "PG-13",
+    imdbRating: "",
+    genres: "",
+    language: "English",
+    duration: 120,
+    cast: "",
+    directors: "",
+    googleDriveUrl: "", // Original link
+    audioTracks: "", // For multi-audio
+    featured: false,
+    trending: false,
+    category: "action",
+  });
+
+  const createAnimeMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      const res = await fetch("/api/admin/anime", {
+        method: "POST",
+        headers: {
+          ...getAuthHeaders(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create anime");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/anime"] });
+      toast({
+        title: "Success",
+        description: "Anime added successfully",
+      });
+      onSuccess();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add anime",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createAnimeMutation.mutate(formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="title">Title *</Label>
+          <Input
+            id="title"
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="slug">Slug *</Label>
+          <Input
+            id="slug"
+            value={formData.slug}
+            onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+            required
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="description">Description *</Label>
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          required
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="posterUrl">Poster URL *</Label>
+          <Input
+            id="posterUrl"
+            value={formData.posterUrl}
+            onChange={(e) => setFormData({ ...formData, posterUrl: e.target.value })}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="backdropUrl">Backdrop URL *</Label>
+          <Input
+            id="backdropUrl"
+            value={formData.backdropUrl}
+            onChange={(e) => setFormData({ ...formData, backdropUrl: e.target.value })}
+            required
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="year">Year *</Label>
+          <Input
+            id="year"
+            type="number"
+            value={formData.year}
+            onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="duration">Duration (min) *</Label>
+          <Input
+            id="duration"
+            type="number"
+            value={formData.duration}
+            onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="rating">Rating *</Label>
+          <Input
+            id="rating"
+            value={formData.rating}
+            onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
+            required
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="imdbRating">IMDb Rating</Label>
+          <Input
+            id="imdbRating"
+            value={formData.imdbRating}
+            onChange={(e) => setFormData({ ...formData, imdbRating: e.target.value })}
+            placeholder="8.5"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="language">Language *</Label>
+          <Input
+            id="language"
+            value={formData.language}
+            onChange={(e) => setFormData({ ...formData, language: e.target.value })}
+            required
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="genres">Genres (comma-separated) *</Label>
+        <Input
+          id="genres"
+          value={formData.genres}
+          onChange={(e) => setFormData({ ...formData, genres: e.target.value })}
+          placeholder="Action, Thriller, Drama"
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="cast">Cast (comma-separated)</Label>
+        <Input
+          id="cast"
+          value={formData.cast}
+          onChange={(e) => setFormData({ ...formData, cast: e.target.value })}
+          placeholder="Actor 1, Actor 2, Actor 3"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="directors">Directors (comma-separated)</Label>
+        <Input
+          id="directors"
+          value={formData.directors}
+          onChange={(e) => setFormData({ ...formData, directors: e.target.value })}
+          placeholder="Director 1, Director 2"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="googleDriveUrl">Google Drive URL *</Label>
+        <Input
+          id="googleDriveUrl"
+          value={formData.googleDriveUrl}
+          onChange={(e) => setFormData({ ...formData, googleDriveUrl: e.target.value })}
+          placeholder="https://drive.google.com/file/d/..."
+          required
+        />
+      </div>
+
+      <div className="space-y-4 pt-2">
+        <AudioTracksInput
+          value={formData.audioTracks || ""}
+          onChange={(v) => setFormData({ ...formData, audioTracks: v })}
+        />
+      </div>
+
+      <div className="flex gap-4">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={formData.featured}
+            onChange={(e) => setFormData({ ...formData, featured: e.target.checked })}
+          />
+          <span className="text-sm">Featured</span>
+        </label>
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={formData.trending}
+            onChange={(e) => setFormData({ ...formData, trending: e.target.checked })}
+          />
+          <span className="text-sm">Trending</span>
+        </label>
+      </div>
+
+      <Button type="submit" className="w-full">
+        <Save className="w-4 h-4 mr-2" />
+        Add Anime
+      </Button>
+    </form>
+  );
+}
+
+// Edit Anime Form Component
+
