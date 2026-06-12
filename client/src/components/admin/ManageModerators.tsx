@@ -14,15 +14,36 @@ export function ManageModerators() {
 
   const { data: moderators = [] } = useQuery({
     queryKey: ["/api/admin/moderators"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/moderators", {
+        headers: { "x-admin-token": localStorage.getItem("adminToken") || "" }
+      });
+      if (!res.ok) throw new Error("Failed to fetch moderators");
+      return res.json();
+    }
   });
 
   const { data: logs = [] } = useQuery({
     queryKey: ["/api/admin/moderator-logs"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/moderator-logs", {
+        headers: { "x-admin-token": localStorage.getItem("adminToken") || "" }
+      });
+      if (!res.ok) throw new Error("Failed to fetch logs");
+      return res.json();
+    }
   });
 
   const { data: searchResults = [] } = useQuery({
     queryKey: ["/api/admin/users/search", searchQuery],
     enabled: searchQuery.length > 2,
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/users/search?q=${encodeURIComponent(searchQuery)}`, {
+        headers: { "x-admin-token": localStorage.getItem("adminToken") || "" }
+      });
+      if (!res.ok) throw new Error("Failed to search users");
+      return res.json();
+    }
   });
 
   const promoteMutation = useMutation({
