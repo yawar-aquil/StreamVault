@@ -1,4 +1,4 @@
-import type { Show, Episode, Movie, Anime, AnimeEpisode, Comment, CommentWithBadges, InsertShow, InsertEpisode, InsertMovie, InsertAnime, InsertAnimeEpisode, InsertComment, WatchlistItem, ViewingProgress, Category, BlogPost, InsertBlogPost, User, Badge, InsertBadge, UserBadge, Reminder, InsertReminder, Review, ReviewHelpfulVote, Challenge, UserChallenge, Poll, PollVote, XpHistoryEntry, CoinTransaction, InsertCoinTransaction, Activity, InsertActivity } from "@shared/schema";
+import type { Show, Episode, Movie, Anime, AnimeEpisode, Comment, CommentWithBadges, InsertShow, InsertEpisode, InsertMovie, InsertAnime, InsertAnimeEpisode, InsertComment, WatchlistItem, ViewingProgress, Category, BlogPost, InsertBlogPost, User, Badge, InsertBadge, UserBadge, Reminder, InsertReminder, Review, ReviewHelpfulVote, Challenge, UserChallenge, Poll, PollVote, XpHistoryEntry, CoinTransaction, InsertCoinTransaction, Activity, InsertActivity, ModeratorLog } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
@@ -336,6 +336,12 @@ export interface IStorage {
 
   // Challenges
   getChallenges(type?: 'daily' | 'weekly'): Promise<Challenge[]>;
+
+  // Moderators
+  logModeratorAction(userId: string, action: string, details?: string): Promise<ModeratorLog>;
+  getModeratorLogs(): Promise<(ModeratorLog & { username: string; email: string })[]>;
+  updateUserRole(userId: string, isModerator: boolean): Promise<User>;
+  getModerators(): Promise<User[]>;
   getUserChallenges(userId: string): Promise<(UserChallenge & { challenge: Challenge })[]>;
   updateChallengeProgress(userId: string, challengeId: string, increment: number): Promise<UserChallenge>;
   claimChallengeReward(userId: string, challengeId: string): Promise<{ xpAwarded: number; badgeAwarded?: string }>;
@@ -416,10 +422,12 @@ export class MemStorage implements IStorage {
   private coinTransactions: Map<string, CoinTransaction>;
   private activities: Map<string, Activity>;
   private savedSubtitles: Map<string, SavedSubtitle>;
+  private moderatorLogs: Map<string, ModeratorLog>;
   private dataFile: string;
   private usersFile: string;
   private friendsFile!: string;
   private apiKeysFile!: string;
+  private moderatorLogsFile!: string;
 
   constructor() {
     this.dataFile = join(process.cwd(), "data", "streamvault-data.json");
@@ -457,6 +465,7 @@ export class MemStorage implements IStorage {
     this.coinTransactions = new Map();
     this.activities = new Map();
     this.savedSubtitles = new Map();
+    this.moderatorLogs = new Map();
     this.categories = [
       { id: "action", name: "Action & Thriller", slug: "action" },
       { id: "drama", name: "Drama & Romance", slug: "drama" },
@@ -477,6 +486,8 @@ export class MemStorage implements IStorage {
     this.loadApiKeys();
     this.savedSubtitlesFile = join(process.cwd(), "data", "saved_subtitles.json");
     this.loadSavedSubtitles();
+    this.moderatorLogsFile = join(process.cwd(), "data", "moderator_logs.json");
+    this.loadModeratorLogs();
   }
 
   private loadSavedSubtitles() {
@@ -491,6 +502,36 @@ export class MemStorage implements IStorage {
       }
     } catch (error) {
       console.error("Failed to load saved subtitles:", error);
+    }
+  }
+
+  private loadModeratorLogs() {
+    try {
+      if (existsSync(this.moderatorLogsFile)) {
+        const data = JSON.parse(readFileSync(this.moderatorLogsFile, "utf-8"));
+        if (data.logs) {
+          data.logs.forEach((log: ModeratorLog) => this.moderatorLogs.set(log.id, log));
+          console.log(`✅ Loaded ${data.logs.length} moderator logs`);
+        }
+      }
+    } catch (error) {
+      console.error("❌ Error loading moderator logs:", error);
+    }
+  }
+
+  private saveModeratorLogs() {
+    try {
+      const data = {
+        logs: Array.from(this.moderatorLogs.values()),
+        lastUpdated: new Date().toISOString(),
+      };
+      const dataDir = join(process.cwd(), "data");
+      if (!existsSync(dataDir)) {
+        mkdirSync(dataDir, { recursive: true });
+      }
+      writeFileSync(this.moderatorLogsFile, JSON.stringify(data, null, 2), "utf-8");
+    } catch (error) {
+      console.error("❌ Error saving moderator logs:", error);
     }
   }
 
@@ -2756,10 +2797,47 @@ export class MemStorage implements IStorage {
   }
 
   async deleteSavedSubtitle(id: string): Promise<void> {
-    if (this.savedSubtitles.has(id)) {
-      this.savedSubtitles.delete(id);
-      this.saveSavedSubtitles();
-    }
+    this.savedSubtitles.delete(id);
+    this.saveSavedSubtitles();
+  }
+
+  // Moderators
+  async logModeratorAction(userId: string, action: string, details?: string): Promise<ModeratorLog> {
+    const log: ModeratorLog = {
+      id: Math.random().toString(36).substring(2, 9),
+      userId,
+      action,
+      details: details || null,
+      createdAt: new Date(),
+    };
+    this.moderatorLogs.set(log.id, log);
+    this.saveModeratorLogs();
+    return log;
+  }
+
+  async getModeratorLogs(): Promise<(ModeratorLog & { username: string; email: string })[]> {
+    return Array.from(this.moderatorLogs.values())
+      .map(log => {
+        const user = this.users.get(log.userId);
+        return {
+          ...log,
+          username: user?.username || 'Unknown',
+          email: user?.email || 'Unknown',
+        };
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async updateUserRole(userId: string, isModerator: boolean): Promise<User> {
+    const user = this.users.get(userId);
+    if (!user) throw new Error("User not found");
+    user.isModerator = isModerator;
+    this.saveUsers();
+    return user;
+  }
+
+  async getModerators(): Promise<User[]> {
+    return Array.from(this.users.values()).filter(u => u.isModerator);
   }
 
   // ============================================
@@ -3548,7 +3626,7 @@ export class MemStorage implements IStorage {
   // ACTIVITY FEED IMPLEMENTATION
   // ============================================
 
-  activities: Map<string, Activity> = new Map();
+
 
   async updateSubscriptionAutoRenew(userId: string, autoRenew: boolean): Promise<User> {
     const user = this.users.get(userId);

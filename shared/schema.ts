@@ -32,8 +32,18 @@ export const users = pgTable("users", {
   activityVisible: boolean("activity_visible").default(true),
   settings: text("settings"), // JSON string for all user preferences
   lastActive: timestamp("last_active"),
+  isModerator: boolean("is_moderator").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Moderator Activity Logs
+export const moderatorLogs = pgTable("moderator_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  action: text("action").notNull(),
+  details: text("details"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Coin Transactions for wallet history
@@ -531,3 +541,7 @@ export interface WatchActivity {
   episodeTitle?: string;
   startedAt: Date;
 }
+
+export const insertModeratorLogSchema = createInsertSchema(moderatorLogs);
+export type ModeratorLog = typeof moderatorLogs.$inferSelect;
+export type InsertModeratorLog = z.infer<typeof insertModeratorLogSchema>;

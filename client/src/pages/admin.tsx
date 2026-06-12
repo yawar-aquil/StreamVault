@@ -53,6 +53,7 @@ import { AudioTracksInput } from "@/components/admin/audio-tracks-input";
 import { GiftCoinsManager } from "@/components/admin/GiftCoinsManager";
 import { StreamingModeManager } from "@/components/admin/StreamingModeManager";
 import { SecuritySettings } from "@/components/admin/SecuritySettings";
+import { ManageModerators } from "@/components/admin/ManageModerators";
 
 export default function AdminPage() {
   const { toast } = useToast();
@@ -60,6 +61,7 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState("shows");
   const [, setLocation] = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userRole, setUserRole] = useState<"admin" | "moderator">("admin");
   const [isChecking, setIsChecking] = useState(true);
 
   // Check authentication on mount
@@ -67,19 +69,15 @@ export default function AdminPage() {
     const checkAuth = async () => {
       const token = localStorage.getItem("adminToken");
 
-      if (!token) {
-        setLocation("/admin/login");
-        return;
-      }
-
       try {
         const res = await fetch("/api/admin/verify", {
-          headers: { "x-admin-token": token },
+          headers: token ? { "x-admin-token": token } : {},
         });
         const data = await res.json();
 
         if (data.valid) {
           setIsAuthenticated(true);
+          setUserRole(data.role || "admin");
         } else {
           localStorage.removeItem("adminToken");
           setLocation("/admin/login");
@@ -155,10 +153,11 @@ export default function AdminPage() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="flex flex-wrap h-auto gap-2 mb-8 bg-muted/50 p-1">
-            <TabsTrigger value="users" className="gap-2">
+            {userRole === 'admin' && <TabsTrigger value="users" className="gap-2">
               <UserIcon className="w-4 h-4" />
               Users
-            </TabsTrigger>
+            </TabsTrigger>}
+            {userRole === 'admin' && <TabsTrigger value="moderators" className="gap-2"><UserIcon className="w-4 h-4" />Moderators</TabsTrigger>}
             <TabsTrigger value="shows">Shows</TabsTrigger>
             <TabsTrigger value="movies">Movies</TabsTrigger>
             <TabsTrigger value="anime">Anime</TabsTrigger>
@@ -226,6 +225,11 @@ export default function AdminPage() {
               Security
             </TabsTrigger>
           </TabsList>
+        {userRole === 'admin' && (
+          <TabsContent value="moderators" className="mt-6">
+            <ManageModerators />
+          </TabsContent>
+        )}
 
           {/* User Analytics Tab */}
           <TabsContent value="users">
@@ -904,7 +908,8 @@ function ManageShows({ shows }: { shows: Show[] }) {
                   >
                     <Edit className="w-4 h-4" />
                   </Button>
-                  <Button
+                  {userRole === 'admin' && (
+<Button
                     variant="destructive"
                     size="sm"
                     onClick={() => handleDelete(show.id, show.title)}
@@ -912,6 +917,7 @@ function ManageShows({ shows }: { shows: Show[] }) {
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
+)}
                 </div>
               </div>
             ))}
@@ -1937,7 +1943,8 @@ function ManageEpisodesTab({ shows, anime }: { shows: Show[], anime: Anime[] }) 
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <Button
+                            {userRole === 'admin' && (
+<Button
                               variant="destructive"
                               size="sm"
                               onClick={() => handleDeleteClick(episode)}
@@ -1945,6 +1952,7 @@ function ManageEpisodesTab({ shows, anime }: { shows: Show[], anime: Anime[] }) 
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
+)}
                           </div>
                         </td>
                       </tr>
@@ -2514,7 +2522,8 @@ function ManageMovies({ movies }: { movies: Movie[] }) {
                       )}
                     </DialogContent>
                   </Dialog>
-                  <Button
+                  {userRole === 'admin' && (
+<Button
                     variant="destructive"
                     size="sm"
                     onClick={() => {
@@ -2525,6 +2534,7 @@ function ManageMovies({ movies }: { movies: Movie[] }) {
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
+)}
                 </div>
               </div>
             ))
@@ -2701,7 +2711,8 @@ function ManageAnime({ anime }: { anime: Anime[] }) {
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
-                    <Button
+                    {userRole === 'admin' && (
+<Button
                       variant="destructive"
                       size="sm"
                       onClick={() => {
@@ -2713,6 +2724,7 @@ function ManageAnime({ anime }: { anime: Anime[] }) {
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
+)}
                   </div>
                 </div>
               ))
@@ -4053,7 +4065,8 @@ function CommentsModeration() {
                           <CardDescription>General Comment</CardDescription>
                         )}
                       </div>
-                      <Button
+                      {userRole === 'admin' && (
+<Button
                         variant="destructive"
                         size="sm"
                         onClick={() => handleDelete(comment.id, comment.userName)}
@@ -4062,6 +4075,7 @@ function CommentsModeration() {
                         <Trash2 className="w-4 h-4 mr-2" />
                         {deleteCommentMutation.isPending ? "Deleting..." : "Delete"}
                       </Button>
+)}
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -4366,7 +4380,9 @@ function ManageBlog() {
                     </div>
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm" onClick={() => handleEdit(post)}><Edit className="w-4 h-4 mr-2" />Edit</Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDeletePost(post.id, post.title)} disabled={deleteMutation.isPending}><Trash2 className="w-4 h-4 mr-2" />Delete</Button>
+                      {userRole === 'admin' && (
+<Button variant="destructive" size="sm" onClick={() => handleDeletePost(post.id, post.title)} disabled={deleteMutation.isPending}><Trash2 className="w-4 h-4 mr-2" />Delete</Button>
+)}
                     </div>
                   </div>
                 </CardHeader>
@@ -7478,7 +7494,8 @@ function FeedbackManager() {
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
-                    <Button 
+                    {userRole === 'admin' && (
+<Button 
                       variant="destructive" 
                       size="icon" 
                       onClick={() => {
@@ -7490,6 +7507,7 @@ function FeedbackManager() {
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
+)}
                   </TableCell>
                 </TableRow>
               ))

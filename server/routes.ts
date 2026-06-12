@@ -69,6 +69,35 @@ function requireAdmin(req: any, res: any, next: any) {
   next();
 }
 
+// Admin or Moderator authentication middleware
+async function requireAdminOrModerator(req: any, res: any, next: any) {
+  const authToken = req.headers["x-admin-token"];
+
+  if (authToken && adminSessions.has(authToken)) {
+    return next();
+  }
+
+  // Check user token
+  const token = req.cookies?.authToken || req.headers.authorization?.replace('Bearer ', '');
+  if (!token) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const payload = verifyToken(token);
+  if (!payload || !payload.userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const user = await storage.getUserById(payload.userId);
+  if (!user || !user.isModerator) {
+    return res.status(403).json({ error: "Forbidden: Moderator access required" });
+  }
+
+  req.user = user;
+  req.isModerator = true;
+  next();
+}
+
 // API Key authentication middleware for external access
 async function requireApiKey(req: any, res: any, next: any) {
   // Skip API key check for same-origin (frontend) requests
@@ -711,7 +740,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================
 
   // Get all reviews for moderation
-  app.get("/api/admin/reviews", requireAdmin, async (req, res) => {
+  app.get("/api/admin/reviews", requireAdminOrModerator, async (req, res) => {
     try {
       const reviews = await storage.getAllReviews();
       res.json(reviews);
@@ -2866,7 +2895,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: Get all polls with detailed results and voters
-  app.get("/api/admin/polls", requireAdmin, async (req, res) => {
+  app.get("/api/admin/polls", requireAdminOrModerator, async (req, res) => {
     try {
       const polls = await storage.getPolls(false); // Get all polls
       
@@ -4426,7 +4455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: read current stream mode
-  app.get("/api/admin/stream-mode", requireAdmin, (_req, res) => {
+  app.get("/api/admin/stream-mode", requireAdminOrModerator, (_req, res) => {
     res.json({ mode: getStreamMode() });
   });
 
@@ -4437,7 +4466,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: read site settings
-  app.get("/api/admin/settings", requireAdmin, (_req, res) => {
+  app.get("/api/admin/settings", requireAdminOrModerator, (_req, res) => {
     res.json(getSiteSettings());
   });
 
@@ -4453,7 +4482,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Admin: diagnose whether /api/stream is being cached by Cloudflare.
   // Makes two range requests to the public URL and returns the CF headers.
-  app.get("/api/admin/stream-mode/diagnose", requireAdmin, async (req, res) => {
+  app.get("/api/admin/stream-mode/diagnose", requireAdminOrModerator, async (req, res) => {
     const testDomain = (req.query.domain as string) || "streamvault.live";
     if (!/^[a-z0-9.-]+$/i.test(testDomain)) {
       return res.status(400).json({ error: "Invalid domain" });
@@ -4628,7 +4657,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin Search users
-  app.get("/api/admin/users/search", requireAdmin, async (req, res) => {
+  app.get("/api/admin/users/search", requireAdminOrModerator, async (req, res) => {
     try {
       const query = req.query.query as string || req.query.q as string;
       if (!query) {
@@ -4660,7 +4689,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: Get all users
-  app.get("/api/admin/users/all", requireAdmin, async (req, res) => {
+  app.get("/api/admin/users/all", requireAdminOrModerator, async (req, res) => {
     try {
       const usersList = await storage.getAllUsers();
       res.json(usersList);
@@ -4750,7 +4779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all episodes (for admin)
-  app.get("/api/all-episodes", requireAdmin, async (_req, res) => {
+  app.get("/api/all-episodes", requireAdminOrModerator, async (_req, res) => {
     try {
       const episodes = await storage.getAllEpisodes();
       res.json(episodes);
@@ -4908,7 +4937,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all anime episodes (for admin)
-  app.get("/api/all-anime-episodes", requireAdmin, async (_req, res) => {
+  app.get("/api/all-anime-episodes", requireAdminOrModerator, async (_req, res) => {
     try {
       const episodes = await storage.getAllAnimeEpisodes();
       res.json(episodes);
@@ -5304,14 +5333,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Verify admin session
   app.get("/api/admin/verify", async (req, res) => {
     const authToken = req.headers["x-admin-token"] as string;
-    const isValid = authToken && adminSessions.has(authToken);
-    res.json({ valid: isValid });
+    if (authToken && adminSessions.has(authToken)) {
+      return res.json({ valid: true, role: 'admin' });
+    }
+
+    const token = req.cookies?.authToken || req.headers.authorization?.replace('Bearer ', '');
+    if (token) {
+      const payload = verifyToken(token);
+      if (payload && payload.userId) {
+        const user = await storage.getUserById(payload.userId);
+        if (user && user.isModerator) {
+          return res.json({ valid: true, role: 'moderator' });
+        }
+      }
+    }
+
+    res.json({ valid: false });
   });
 
   // Add new show
-  app.post("/api/admin/shows", requireAdmin, async (req, res) => {
+  app.post("/api/admin/shows", requireAdminOrModerator, async (req, res) => {
     try {
       const show = await storage.createShow(req.body);
+      if ((req as any).isModerator) { await storage.logModeratorAction((req as any).user.id, `Created show: ${show.title}`); }
       res.json(show);
     } catch (error) {
       res.status(500).json({ error: "Failed to create show" });
@@ -5319,11 +5363,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update show
-  app.put("/api/admin/shows/:showId", requireAdmin, async (req, res) => {
+  app.put("/api/admin/shows/:showId", requireAdminOrModerator, async (req, res) => {
     try {
       const { showId } = req.params;
       console.log("Updating show:", showId, "with data:", req.body);
       const show = await storage.updateShow(showId, req.body);
+      if ((req as any).isModerator && show) { await storage.logModeratorAction((req as any).user.id, `Updated show: ${show.title}`); }
       console.log("Updated show:", show);
       res.json(show);
     } catch (error: any) {
@@ -5363,9 +5408,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Admin movie routes
   // Add new movie
-  app.post("/api/admin/movies", requireAdmin, async (req, res) => {
+  app.post("/api/admin/movies", requireAdminOrModerator, async (req, res) => {
     try {
       const movie = await storage.createMovie(req.body);
+      if ((req as any).isModerator) { await storage.logModeratorAction((req as any).user.id, `Created movie: ${movie.title}`); }
       res.json(movie);
     } catch (error) {
       res.status(500).json({ error: "Failed to create movie" });
@@ -5373,10 +5419,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update movie
-  app.put("/api/admin/movies/:movieId", requireAdmin, async (req, res) => {
+  app.put("/api/admin/movies/:movieId", requireAdminOrModerator, async (req, res) => {
     try {
       const { movieId } = req.params;
       const movie = await storage.updateMovie(movieId, req.body);
+      if ((req as any).isModerator && movie) { await storage.logModeratorAction((req as any).user.id, `Updated movie: ${movie.title}`); }
       res.json(movie);
     } catch (error: any) {
       res.status(500).json({ error: "Failed to update movie", details: error.message });
@@ -5397,9 +5444,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Admin anime routes
   // Add new anime
-  app.post("/api/admin/anime", requireAdmin, async (req, res) => {
+  app.post("/api/admin/anime", requireAdminOrModerator, async (req, res) => {
     try {
       const anime = await storage.createAnime(req.body);
+      if ((req as any).isModerator) { await storage.logModeratorAction((req as any).user.id, `Created anime: ${anime.title}`); }
       res.json(anime);
     } catch (error) {
       res.status(500).json({ error: "Failed to create anime" });
@@ -5509,10 +5557,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update anime
-  app.put("/api/admin/anime/:animeId", requireAdmin, async (req, res) => {
+  app.put("/api/admin/anime/:animeId", requireAdminOrModerator, async (req, res) => {
     try {
       const { animeId } = req.params;
       const anime = await storage.updateAnime(animeId, req.body);
+      if ((req as any).isModerator && anime) { await storage.logModeratorAction((req as any).user.id, `Updated anime: ${anime.title}`); }
       res.json(anime);
     } catch (error: any) {
       res.status(500).json({ error: "Failed to update anime", details: error.message });
@@ -5537,7 +5586,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add anime episode
-  app.post("/api/admin/anime-episodes", requireAdmin, async (req, res) => {
+  app.post("/api/admin/anime-episodes", requireAdminOrModerator, async (req, res) => {
     try {
       const episode = await storage.createAnimeEpisode(req.body);
       res.json(episode);
@@ -5547,10 +5596,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update anime episode
-  app.put("/api/admin/anime-episodes/:episodeId", requireAdmin, async (req, res) => {
+  app.put("/api/admin/anime-episodes/:episodeId", requireAdminOrModerator, async (req, res) => {
     try {
       const { episodeId } = req.params;
       const episode = await storage.updateAnimeEpisode(episodeId, req.body);
+      if ((req as any).isModerator && episode) { await storage.logModeratorAction((req as any).user.id, `Updated anime episode: ${episode.title || "Episode " + episode.episodeNumber}`); }
       res.json(episode);
     } catch (error: any) {
       res.status(500).json({ error: "Failed to update anime episode", details: error.message });
@@ -5569,9 +5619,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add new episode
-  app.post("/api/admin/episodes", requireAdmin, async (req, res) => {
+  app.post("/api/admin/episodes", requireAdminOrModerator, async (req, res) => {
     try {
       const episode = await storage.createEpisode(req.body);
+      if ((req as any).isModerator) { await storage.logModeratorAction((req as any).user.id, `Created episode: ${episode.title || "Episode " + episode.episodeNumber}`); }
       res.json(episode);
     } catch (error) {
       res.status(500).json({ error: "Failed to create episode" });
@@ -5667,10 +5718,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update episode
-  app.put("/api/admin/episodes/:episodeId", requireAdmin, async (req, res) => {
+  app.put("/api/admin/episodes/:episodeId", requireAdminOrModerator, async (req, res) => {
     try {
       const { episodeId } = req.params;
       const episode = await storage.updateEpisode(episodeId, req.body);
+      if ((req as any).isModerator && episode) { await storage.logModeratorAction((req as any).user.id, `Updated episode: ${episode.title || "Episode " + episode.episodeNumber}`); }
       res.json(episode);
     } catch (error) {
       res.status(500).json({ error: "Failed to update episode" });
@@ -6108,7 +6160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: Get all content requests
-  app.get("/api/admin/content-requests", requireAdmin, async (req, res) => {
+  app.get("/api/admin/content-requests", requireAdminOrModerator, async (req, res) => {
     try {
       const requests = await storage.getAllContentRequests();
       res.json(requests);
@@ -6119,7 +6171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: Get all issue reports
-  app.get("/api/admin/issue-reports", requireAdmin, async (req, res) => {
+  app.get("/api/admin/issue-reports", requireAdminOrModerator, async (req, res) => {
     try {
       const reports = await storage.getAllIssueReports();
       res.json(reports);
@@ -6130,7 +6182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: Get all comments
-  app.get("/api/admin/comments", requireAdmin, async (req, res) => {
+  app.get("/api/admin/comments", requireAdminOrModerator, async (req, res) => {
     try {
       const comments = await storage.getAllComments();
       res.json(comments);
@@ -6336,7 +6388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: Get all feedback
-  app.get("/api/admin/feedback", requireAdmin, async (req, res) => {
+  app.get("/api/admin/feedback", requireAdminOrModerator, async (req, res) => {
     try {
       const feedbacks = await storage.getAllFeedback();
       res.json(feedbacks);
@@ -6645,7 +6697,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: Get all blog posts (including unpublished)
-  app.get("/api/admin/blog", requireAdmin, async (_req, res) => {
+  app.get("/api/admin/blog", requireAdminOrModerator, async (_req, res) => {
     try {
       const posts = await storage.getAllBlogPosts();
       res.json(posts);
@@ -6655,7 +6707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: Get blog post by ID
-  app.get("/api/admin/blog/:id", requireAdmin, async (req, res) => {
+  app.get("/api/admin/blog/:id", requireAdminOrModerator, async (req, res) => {
     try {
       const { id } = req.params;
       const post = await storage.getBlogPostById(id);
@@ -6752,7 +6804,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get subscriber count (admin only)
-  app.get("/api/admin/newsletter/subscribers", requireAdmin, async (_req, res) => {
+  app.get("/api/admin/newsletter/subscribers", requireAdminOrModerator, async (_req, res) => {
     try {
       if (!existsSync(SUBSCRIBERS_FILE)) {
         return res.json({ count: 0, subscribers: [] });
@@ -6846,7 +6898,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get push subscriber count (admin only)
-  app.get("/api/admin/push/subscribers", requireAdmin, async (_req, res) => {
+  app.get("/api/admin/push/subscribers", requireAdminOrModerator, async (_req, res) => {
     try {
       if (!existsSync(PUSH_SUBSCRIPTIONS_FILE)) {
         return res.json({ count: 0 });
@@ -7908,7 +7960,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================
 
   // Admin endpoint to search subtitles on-demand
-  app.get("/api/admin/subtitles/search", requireAdmin, async (req, res) => {
+  app.get("/api/admin/subtitles/search", requireAdminOrModerator, async (req, res) => {
     try {
       const imdbId = req.query.imdbId as string;
       const season = req.query.season ? parseInt(req.query.season as string) : undefined;
@@ -8191,7 +8243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get widget analytics (admin only)
-  app.get("/api/widget/analytics", requireAdmin, (req, res) => {
+  app.get("/api/widget/analytics", requireAdminOrModerator, (req, res) => {
     try {
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -8350,7 +8402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get site analytics (admin only)
-  app.get("/api/analytics/site", requireAdmin, async (req, res) => {
+  app.get("/api/analytics/site", requireAdminOrModerator, async (req, res) => {
     try {
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -8522,7 +8574,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin Analytics - User Stats
-  app.get("/api/admin/stats/users", requireAdmin, async (_req, res) => {
+  app.get("/api/admin/stats/users", requireAdminOrModerator, async (_req, res) => {
     try {
       // 1. Get User Counts
       const users = await storage.getAllUsers();
@@ -8627,7 +8679,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/tmdb-bulk/status", requireAdmin, async (req, res) => {
+  app.get("/api/admin/tmdb-bulk/status", requireAdminOrModerator, async (req, res) => {
     try {
       const fs = await import("fs");
       const path = await import("path");
@@ -8815,7 +8867,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Poll health check status (GET) — lightweight, returns instantly
-  app.get("/api/admin/url-health/status", requireAdmin, async (_req, res) => {
+  app.get("/api/admin/url-health/status", requireAdminOrModerator, async (_req, res) => {
     res.json({
       status: healthCheckJob.status,
       checked: healthCheckJob.checked,
@@ -8828,7 +8880,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Keep the old GET endpoint for backwards compatibility — now just returns last result or starts a new check
-  app.get("/api/admin/url-health", requireAdmin, async (req, res) => {
+  app.get("/api/admin/url-health", requireAdminOrModerator, async (req, res) => {
     // If a completed report exists, return it
     if (healthCheckJob.status === 'done' && healthCheckJob.report) {
       return res.json(healthCheckJob.report);
@@ -8843,7 +8895,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Check for pending/incomplete content (Admin)
   // Optimized: batched concurrent TMDB lookups + overall timeout to prevent 504
-  app.get("/api/admin/pending-content", requireAdmin, async (req, res) => {
+  app.get("/api/admin/pending-content", requireAdminOrModerator, async (req, res) => {
     try {
       const shows = await storage.getAllShows();
       const animeList = await storage.getAllAnime();
@@ -9017,7 +9069,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Detailed analysis for a single show/anime pending content
-  app.get("/api/admin/pending-content/:type/:id", requireAdmin, async (req, res) => {
+  app.get("/api/admin/pending-content/:type/:id", requireAdminOrModerator, async (req, res) => {
     try {
       const { type, id } = req.params;
 
@@ -9230,6 +9282,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(user);
     } catch (err) {
       res.status(500).json({ error: "Failed to update subscription settings" });
+    }
+  });
+
+  
+  // Moderator Management Endpoints
+  app.get("/api/admin/moderators", requireAdmin, async (req, res) => {
+    try {
+      const moderators = await storage.getModerators();
+      res.json(moderators);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to fetch moderators" });
+    }
+  });
+
+  app.get("/api/admin/moderator-logs", requireAdmin, async (req, res) => {
+    try {
+      const logs = await storage.getModeratorLogs();
+      res.json(logs);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to fetch logs" });
+    }
+  });
+
+  app.post("/api/admin/moderators/promote", requireAdmin, async (req, res) => {
+    try {
+      const { userId } = req.body;
+      const user = await storage.updateUserRole(userId, true);
+      res.json(user);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to promote user" });
+    }
+  });
+
+  app.post("/api/admin/moderators/demote", requireAdmin, async (req, res) => {
+    try {
+      const { userId } = req.body;
+      const user = await storage.updateUserRole(userId, false);
+      res.json(user);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to demote user" });
     }
   });
 
