@@ -214,10 +214,12 @@ export default function AdminPage() {
               <Settings className="w-4 h-4" />
               Subtitles
             </TabsTrigger>
-            <TabsTrigger value="gift-coins" className="gap-2">
+            {userRole === 'admin' && (
+              <TabsTrigger value="gift-coins" className="gap-2">
               <Gift className="w-4 h-4" />
               Gift Coins
             </TabsTrigger>
+            )}
             <TabsTrigger value="streaming" className="gap-2">
               <Activity className="w-4 h-4" />
               Streaming
@@ -1741,6 +1743,7 @@ function AddEpisodeForm({ shows, anime }: { shows: Show[], anime: Anime[] }) {
 
 // Manage Episodes Tab Component
 function ManageEpisodesTab({ shows, anime }: { shows: Show[], anime: Anime[] }) {
+  const { userRole } = useContext(AdminContext);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [contentType, setContentType] = useState<"show" | "anime">("show");
@@ -2406,6 +2409,7 @@ function ImportEpisodesForm() {
 
 // Manage Movies Component
 function ManageMovies({ movies }: { movies: Movie[] }) {
+  const { userRole } = useContext(AdminContext);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [editingMovie, setEditingMovie] = useState<Movie | null>(null);
@@ -2573,6 +2577,7 @@ function ManageMovies({ movies }: { movies: Movie[] }) {
 
 // Manage Anime Component
 function ManageAnime({ anime }: { anime: Anime[] }) {
+  const { userRole } = useContext(AdminContext);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [editingAnime, setEditingAnime] = useState<Anime | null>(null);
@@ -3909,6 +3914,7 @@ function ReviewsModeration() {
 
 // Comments Moderation Component
 function CommentsModeration() {
+  const { userRole } = useContext(AdminContext);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -4099,6 +4105,7 @@ function CommentsModeration() {
 
 // Manage Blog Component
 function ManageBlog() {
+  const { userRole } = useContext(AdminContext);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -7355,6 +7362,7 @@ function PendingContentTab() {
 
 // User Feedback Tab Component
 function FeedbackManager() {
+  const { userRole } = useContext(AdminContext);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
