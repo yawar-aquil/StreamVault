@@ -205,6 +205,10 @@ export default function AdminPage() {
               <Activity className="w-4 h-4" />
               URL Health
             </TabsTrigger>
+            <TabsTrigger value="tmdb-bulk" className="gap-2">
+              <RefreshCw className="w-4 h-4" />
+              TMDB Bulk Import
+            </TabsTrigger>
             <TabsTrigger value="subtitles" className="gap-2">
               <Settings className="w-4 h-4" />
               Subtitles
@@ -341,6 +345,11 @@ export default function AdminPage() {
           {/* URL Health Tab */}
           <TabsContent value="url-health">
             <UrlHealthTab />
+          </TabsContent>
+
+          {/* TMDB Bulk Import Tab */}
+          <TabsContent value="tmdb-bulk">
+            <TmdbBulkImportTab />
           </TabsContent>
 
           {/* Subtitles Management Tab */}
@@ -609,7 +618,7 @@ function UrlHealthTab() {
               </div>
               <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
                 <div
-                  className="bg-primary h-3 rounded-full transition-all duration-500 ease-out"
+                  className={`h-3 rounded-full transition-all duration-500 ease-out ${isChecking ? 'bg-primary' : 'bg-green-500'}`}
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
@@ -7410,3 +7419,165 @@ function FeedbackManager() {
   );
 }
 
+
+// TMDB Bulk Import Tab Component
+export function TmdbBulkImportTab() {
+  const { toast } = useToast();
+  const [isChecking, setIsChecking] = useState(false);
+  const [type, setType] = useState('movie');
+  const [pages, setPages] = useState<number>(50);
+  const [placeholderUrl, setPlaceholderUrl] = useState('https://drive.google.com/file/d/PLACEHOLDER/preview');
+  const [progress, setProgress] = useState<{ checked: number; total: number; currentItem: string; isRunning: boolean }>({ checked: 0, total: 0, currentItem: '', isRunning: false });
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/admin/tmdb-bulk/status', { headers: getAuthHeaders() });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.isRunning) {
+          setIsChecking(true);
+          setProgress({ checked: data.checked, total: data.total, currentItem: data.currentItem, isRunning: true });
+          startPolling();
+        }
+      } catch {}
+    })();
+  }, []);
+
+  const startPolling = () => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await fetch('/api/admin/tmdb-bulk/status', { headers: getAuthHeaders() });
+        if (!res.ok) return;
+        const data = await res.json();
+        setProgress({ checked: data.checked, total: data.total, currentItem: data.currentItem || '', isRunning: data.isRunning });
+
+        if (!data.isRunning && data.checked > 0) {
+          if (pollRef.current) clearInterval(pollRef.current);
+          pollRef.current = null;
+          setIsChecking(false);
+          toast({ title: "Import Complete", description: "The background bulk import task has finished." });
+        }
+      } catch {}
+    }, 2000);
+  };
+
+  const runBulkImport = async () => {
+    setIsChecking(true);
+    setProgress({ checked: 0, total: 0, currentItem: 'Starting...', isRunning: true });
+    try {
+      const res = await fetch('/api/admin/tmdb-bulk/start', {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, pages, placeholderUrl }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to start bulk import");
+      }
+
+      toast({ title: "Bulk Import Started", description: "Fetching content in the background..." });
+      startPolling();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      setIsChecking(false);
+    }
+  };
+
+  const progressPercent = progress.total > 0 ? Math.round((progress.checked / progress.total) * 100) : 0;
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <RefreshCw className="w-5 h-5 text-primary" />
+            TMDB Bulk Import
+          </CardTitle>
+          <CardDescription>
+            Import popular content from TMDB in the background automatically. Skips existing titles and fetches full metadata.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col md:flex-row gap-4 items-end mb-6">
+            <div className="space-y-2 flex-1 max-w-[200px]">
+              <Label>Content Type</Label>
+              <Select value={type} onValueChange={setType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="movie">Movies</SelectItem>
+                  <SelectItem value="show">TV Shows</SelectItem>
+                  <SelectItem value="anime">Anime</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2 w-full max-w-[150px]">
+              <Label>Pages to Fetch</Label>
+              <Input
+                type="number"
+                min="1"
+                max="500"
+                value={pages}
+                onChange={(e: any) => setPages(parseInt(e.target.value) || 50)}
+              />
+            </div>
+
+            <div className="space-y-2 flex-1">
+              <Label>Placeholder URL</Label>
+              <Input
+                value={placeholderUrl}
+                onChange={(e: any) => setPlaceholderUrl(e.target.value)}
+                placeholder="https://drive.google.com/..."
+              />
+            </div>
+
+            <Button
+              onClick={runBulkImport}
+              disabled={isChecking}
+              className="w-full md:w-auto"
+            >
+              {isChecking ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Running...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Start Import
+                </>
+              )}
+            </Button>
+          </div>
+
+          {(isChecking || progress.checked > 0) && (
+            <div className="space-y-2 p-4 border rounded-md bg-muted/20">
+              <div className="flex justify-between text-sm text-muted-foreground mb-1">
+                <span className="font-medium text-foreground truncate max-w-[70%]">
+                  {isChecking ? `Processing: ${progress.currentItem}` : progress.currentItem === 'Completed' ? 'Import Finished' : 'Import Stopped'}
+                </span>
+                <span>{progress.checked} / {progress.total} checked ({progressPercent}%)</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+                <div
+                  className={"h-3 rounded-full transition-all duration-500 ease-out " + (isChecking ? 'bg-primary' : 'bg-green-500')}
+                  style={{ width: progressPercent + '%' }}
+                />
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

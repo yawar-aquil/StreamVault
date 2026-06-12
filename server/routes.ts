@@ -8537,6 +8537,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==========================================
 
   // ── URL Health Check: Background Job Pattern ──
+  // --- TMDB Bulk Import ---
+  app.post("/api/admin/tmdb-bulk/start", requireAdmin, async (req, res) => {
+    try {
+      const { type, pages, placeholderUrl } = req.body;
+      const { spawn } = await import("child_process");
+      const path = await import("path");
+      
+      const scriptPath = path.join(process.cwd(), "scripts", "bulk-add-tmdb.cjs");
+      const args = [
+        scriptPath,
+        `--type=${type || 'movie'}`,
+        `--pages=${pages || 50}`,
+        `--url=${placeholderUrl || 'https://drive.google.com/file/d/PLACEHOLDER/preview'}`
+      ];
+
+      const child = spawn("node", args, {
+        detached: true,
+        stdio: 'ignore'
+      });
+      child.unref();
+
+      res.json({ message: "Bulk import started successfully" });
+    } catch (err) {
+      console.error("Failed to start bulk import:", err);
+      res.status(500).json({ message: "Failed to start bulk import" });
+    }
+  });
+
+  app.get("/api/admin/tmdb-bulk/status", requireAdmin, async (req, res) => {
+    try {
+      const fs = await import("fs");
+      const path = await import("path");
+      const progressFile = path.join(process.cwd(), "data", "bulk-progress.json");
+      
+      if (fs.existsSync(progressFile)) {
+        const data = JSON.parse(fs.readFileSync(progressFile, 'utf-8'));
+        // If it hasn't updated in 10 minutes, consider it dead
+        if (data.isRunning && (Date.now() - data.timestamp > 10 * 60 * 1000)) {
+          data.isRunning = false;
+          data.currentItem = "Process timed out or crashed";
+        }
+        res.json(data);
+      } else {
+        res.json({ isRunning: false, checked: 0, total: 0, currentItem: "Not started" });
+      }
+    } catch (err) {
+      res.json({ isRunning: false, checked: 0, total: 0, currentItem: "Error reading status" });
+    }
+  });
+
   // In-memory job state (survives across requests, cleared on restart)
   let healthCheckJob: {
     status: 'idle' | 'running' | 'done' | 'error';

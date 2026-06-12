@@ -210,7 +210,7 @@ export function HeroTrailer({ youtubeId, backdropUrl, posterUrl, autoplay = true
                         position: 'absolute',
                         bottom: '1.5rem',
                         right: '1.5rem',
-                        zIndex: 50,
+                        zIndex: 30,
                         background: 'rgba(0,0,0,0.6)',
                         backdropFilter: 'blur(8px)',
                         border: '1px solid rgba(255,255,255,0.25)',
