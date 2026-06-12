@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, createContext, useContext, useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -54,6 +54,8 @@ import { GiftCoinsManager } from "@/components/admin/GiftCoinsManager";
 import { StreamingModeManager } from "@/components/admin/StreamingModeManager";
 import { SecuritySettings } from "@/components/admin/SecuritySettings";
 import { ManageModerators } from "@/components/admin/ManageModerators";
+
+export const AdminContext = createContext<{ userRole: "admin" | "moderator" }>({ userRole: "admin" });
 
 export default function AdminPage() {
   const { toast } = useToast();
@@ -743,6 +745,7 @@ function UrlHealthTab() {
 
 // Manage Shows Component
 function ManageShows({ shows }: { shows: Show[] }) {
+  const { userRole } = useContext(AdminContext);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [editingShow, setEditingShow] = useState<Show | null>(null);
