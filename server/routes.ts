@@ -1168,6 +1168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           referredBy: freshUser!.referredBy,
           referralCount: freshUser!.referralCount,
           coins: freshUser!.coins,
+          isModerator: freshUser!.isModerator || false,
         },
       });
     } catch (error) {
@@ -1281,7 +1282,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           badges: enrichedBadges,
           adFreeUntil: user.adFreeUntil || null,
           subscriptionType: user.subscriptionType || null,
-          isSubscribed: user.adFreeUntil && new Date(user.adFreeUntil) > new Date()
+          isSubscribed: user.adFreeUntil && new Date(user.adFreeUntil) > new Date(),
+          isModerator: user.isModerator || false,
         },
       });
     } catch (error) {
@@ -1435,7 +1437,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           adFreeUntil: user.adFreeUntil || null,
           subscriptionType: user.subscriptionType || null,
           subscriptionAutoRenew: user.subscriptionAutoRenew || false,
-          isSubscribed: user.adFreeUntil && new Date(user.adFreeUntil) > new Date()
+          isSubscribed: user.adFreeUntil && new Date(user.adFreeUntil) > new Date(),
+          isModerator: user.isModerator || false,
         },
       });
 
@@ -1509,6 +1512,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           socialLinks,
           favorites,
           coins: user.coins,
+          isModerator: user.isModerator || false,
         },
       });
     } catch (error) {

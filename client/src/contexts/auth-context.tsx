@@ -37,6 +37,7 @@ interface User {
     adFreeUntil?: string | null;
     subscriptionAutoRenew?: boolean;
     subscriptionType?: string | null;
+    isModerator?: boolean;
 }
 
 interface AuthContextType {
