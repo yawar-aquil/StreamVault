@@ -374,7 +374,7 @@ export interface IStorage {
 
   // XP History for time-based leaderboards
   addXpHistory(userId: string, amount: number, source: string): Promise<XpHistoryEntry>;
-  getLeaderboardByPeriod(period: 'daily' | 'weekly' | 'monthly', limit: number): Promise<{ userId: string; username: string; avatarUrl: string | null; xpGained: number; level: number }[]>;
+  getLeaderboardByPeriod(period: 'daily' | 'weekly' | 'monthly', limit: number): Promise<{ userId: string; username: string; avatarUrl: string | null; xpGained: number; level: number; isModerator?: boolean }[]>;
   getBadgeStats(): Promise<{ totalBadges: number; totalAwarded: number; popularBadges: { name: string; count: number }[] }>;
 
   // Account Deletion
@@ -3333,7 +3333,7 @@ export class MemStorage implements IStorage {
     return entry;
   }
 
-  async getLeaderboardByPeriod(period: 'daily' | 'weekly' | 'monthly', limit: number): Promise<{ userId: string; username: string; avatarUrl: string | null; xpGained: number; level: number }[]> {
+  async getLeaderboardByPeriod(period: 'daily' | 'weekly' | 'monthly', limit: number): Promise<{ userId: string; username: string; avatarUrl: string | null; xpGained: number; level: number; isModerator?: boolean }[]> {
     const now = new Date();
     let startDate: Date;
 

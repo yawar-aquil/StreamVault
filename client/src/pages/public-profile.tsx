@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from "@/components/ui/badge";
+import { RoleBadge } from "@/components/role-badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -234,6 +235,7 @@ export default function PublicProfile() {
                                 <div className="text-center md:text-left space-y-1">
                                     <div className="flex flex-col md:flex-row items-center gap-3 justify-center md:justify-start">
                                         <h2 className="text-3xl font-bold tracking-tight">{user.username}</h2>
+                                        <RoleBadge role={user.username.toLowerCase() === 'admin' ? 'admin' : (user as any).isModerator ? 'moderator' : null} />
 
                                         {/* Equipped Badge Icons */}
                                         <div className="flex items-center gap-1.5">

@@ -7,6 +7,7 @@ import { Link } from "wouter";
 import { User } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { RoleBadge } from '@/components/role-badge';
 
 interface SuggestedFriend extends User {
     mutualFriends?: number; // Optional if we calculate it on backend later

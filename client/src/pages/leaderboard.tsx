@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
+import { RoleBadge } from '@/components/role-badge';
 import { cn } from "@/lib/utils";
 
 interface LeaderboardUser {
@@ -173,6 +174,7 @@ export default function Leaderboard() {
                                 )}>
                                     {user.username}
                                 </h3>
+                                <RoleBadge role={user.username.toLowerCase() === 'admin' ? 'admin' : (user as any).isModerator ? 'moderator' : null} />
                                 <div className="text-sm font-bold text-muted-foreground bg-muted/30 px-3 py-1 rounded-full">
                                     {(user.xp || 0).toLocaleString()} XP
                                 </div>
@@ -236,8 +238,9 @@ export default function Leaderboard() {
 
                                 {/* Names & Badges */}
                                 <div className="flex-1 min-w-0 flex items-center gap-3">
-                                    <span className="font-semibold text-sm truncate group-hover:text-primary transition-colors">
+                                    <span className="font-semibold text-sm truncate group-hover:text-primary transition-colors flex items-center gap-1">
                                         {user.username}
+                                        <RoleBadge role={user.username.toLowerCase() === 'admin' ? 'admin' : (user as any).isModerator ? 'moderator' : null} />
                                     </span>
                                     {user.badges && user.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).length > 0 && (
                                         <div className="hidden sm:flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
