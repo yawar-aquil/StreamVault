@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { RoleBadge } from "@/components/role-badge";
+import { RoleBadge, getUserRole } from "@/components/role-badge";
 import {
     Dialog,
     DialogContent,
@@ -406,7 +406,7 @@ export default function WatchRooms() {
                                         <h3 className="font-semibold truncate">{room.contentTitle}</h3>
                                         <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                                             Hosted by <span className="font-medium">{room.hostUsername}</span>
-                                            <RoleBadge role={room.hostUsername.toLowerCase() === "admin" ? "admin" : (room as any).isModerator ? "moderator" : null} />
+                                            <RoleBadge role={getUserRole(room as any)} />
                                         </p>
                                         {room.description && (
                                             <p className="text-xs text-muted-foreground mt-2 line-clamp-2">"{room.description}"</p>
@@ -504,7 +504,7 @@ export default function WatchRooms() {
                                                 </span>
                                             </div>
                                             <span>Hosted by <span className="text-foreground">{room.hostUsername}</span></span>
-                                            <RoleBadge role={room.hostUsername.toLowerCase() === "admin" ? "admin" : (room as any).isModerator ? "moderator" : null} />
+                                            <RoleBadge role={getUserRole(room as any)} />
                                         </div>
 
                                         {/* Room Code */}

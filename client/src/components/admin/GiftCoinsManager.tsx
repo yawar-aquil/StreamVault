@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Gift, Users, CheckSquare, Square, Loader2 } from "lucide-react";
 import { getAuthHeaders } from "@/lib/auth";
-import { RoleBadge } from "@/components/role-badge";
+import { RoleBadge, getUserRole } from "@/components/role-badge";
 
 export function GiftCoinsManager() {
   const { toast } = useToast();
@@ -192,7 +192,7 @@ export function GiftCoinsManager() {
                 <div className="flex flex-col overflow-hidden">
                   <span className="font-medium truncate flex items-center gap-1">
                     {user.username}
-                    <RoleBadge role={(user.username.toLowerCase() === 'admin' || (user as any).isAdmin) ? 'admin' : (user as any).isModerator ? 'moderator' : null} />
+                    <RoleBadge role={getUserRole(user as any)} />
                   </span>
                   <span className="text-xs text-muted-foreground truncate">{user.email}</span>
                 </div>

@@ -6,12 +6,24 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { User, ShieldAlert, ShieldCheck } from "lucide-react";
-import { RoleBadge } from "@/components/role-badge";
+import { RoleBadge, getUserRole } from "@/components/role-badge";
+
+const CATEGORY_STYLES: Record<string, string> = {
+  content: "bg-blue-500/15 text-blue-400",
+  user: "bg-purple-500/15 text-purple-400",
+  moderation: "bg-orange-500/15 text-orange-400",
+  store: "bg-emerald-500/15 text-emerald-400",
+  settings: "bg-cyan-500/15 text-cyan-400",
+  security: "bg-red-500/15 text-red-400",
+  other: "bg-muted text-muted-foreground",
+};
 
 export function ManageModerators() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
+  const [logSearch, setLogSearch] = useState("");
+  const [logCategory, setLogCategory] = useState<string>("all");
 
   const { data: moderators = [] } = useQuery({
     queryKey: ["/api/admin/moderators"],
@@ -91,6 +103,22 @@ export function ManageModerators() {
     },
   });
 
+  // Derived: available categories + filtered/searched logs
+  const logCategories = Array.from(new Set((logs as any[]).map((l) => l.category).filter(Boolean)));
+  const filteredLogs = (logs as any[]).filter((log) => {
+    if (logCategory !== "all" && (log.category || "other") !== logCategory) return false;
+    if (logSearch.trim()) {
+      const q = logSearch.toLowerCase();
+      return (
+        (log.username || "").toLowerCase().includes(q) ||
+        (log.action || "").toLowerCase().includes(q) ||
+        (log.details || "").toLowerCase().includes(q) ||
+        (log.path || "").toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
+
   return (
     <div className="space-y-6">
       <div className="grid md:grid-cols-2 gap-6">
@@ -121,7 +149,7 @@ export function ManageModerators() {
                         <div>
                           <div className="flex items-center gap-2">
                             <p className="font-medium">{mod.username}</p>
-                            <RoleBadge role={mod.username.toLowerCase() === "admin" ? "admin" : "moderator"} />
+                            <RoleBadge role={getUserRole(mod)} />
                           </div>
                           <p className="text-xs text-muted-foreground">{mod.email}</p>
                         </div>
@@ -174,7 +202,7 @@ export function ManageModerators() {
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="font-medium">{user.username}</p>
-                        <RoleBadge role={(user.username.toLowerCase() === 'admin' || (user as any).isAdmin) ? 'admin' : (user as any).isModerator ? "moderator" : null} />
+                        <RoleBadge role={getUserRole(user)} />
                       </div>
                       <p className="text-xs text-muted-foreground">{user.email}</p>
                     </div>
@@ -198,48 +226,88 @@ export function ManageModerators() {
             <ShieldAlert className="w-5 h-5 text-primary" />
             Moderator Activity Logs
           </CardTitle>
-          <CardDescription>Recent actions performed by moderators</CardDescription>
+          <CardDescription>Full audit trail of moderator &amp; admin actions</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Moderator</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Details</TableHead>
-                <TableHead className="text-right">Time</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {logs.map((log: any) => (
-                <TableRow key={log.id}>
-                  <TableCell>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{log.username}</p>
-                        <RoleBadge role={(log.username.toLowerCase() === 'admin' || (log as any).isAdmin) ? 'admin' : (log as any).isModerator ? "moderator" : null} />
-                      </div>
-                      <p className="text-xs text-muted-foreground">{log.email}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium">{log.action}</TableCell>
-                  <TableCell className="text-muted-foreground max-w-xs truncate" title={log.details}>
-                    {log.details || "-"}
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground whitespace-nowrap">
-                    {new Date(log.createdAt).toLocaleString()}
-                  </TableCell>
-                </TableRow>
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            <Input
+              placeholder="Search by user, action, details..."
+              value={logSearch}
+              onChange={(e) => setLogSearch(e.target.value)}
+              className="sm:max-w-xs"
+            />
+            <div className="flex flex-wrap gap-1.5">
+              <Button
+                size="sm"
+                variant={logCategory === "all" ? "default" : "outline"}
+                onClick={() => setLogCategory("all")}
+              >
+                All
+              </Button>
+              {logCategories.map((cat) => (
+                <Button
+                  key={cat}
+                  size="sm"
+                  variant={logCategory === cat ? "default" : "outline"}
+                  onClick={() => setLogCategory(cat)}
+                  className="capitalize"
+                >
+                  {cat}
+                </Button>
               ))}
-              {logs.length === 0 && (
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                    No recent moderator activity
-                  </TableCell>
+                  <TableHead>Moderator</TableHead>
+                  <TableHead>Action</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Details</TableHead>
+                  <TableHead>IP</TableHead>
+                  <TableHead className="text-right">Time</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredLogs.map((log: any) => (
+                  <TableRow key={log.id}>
+                    <TableCell>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{log.username}</p>
+                          <RoleBadge role={getUserRole(log)} />
+                        </div>
+                        <p className="text-xs text-muted-foreground">{log.email}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium whitespace-nowrap">{log.action}</TableCell>
+                    <TableCell>
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${CATEGORY_STYLES[log.category || "other"] || CATEGORY_STYLES.other}`}>
+                        {log.category || "other"}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground max-w-xs truncate" title={`${log.details || ""}${log.path ? ` (${log.method || ""} ${log.path})` : ""}`}>
+                      {log.details || (log.path ? <span className="font-mono text-xs">{log.method} {log.path}</span> : "-")}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground font-mono whitespace-nowrap">{log.ipAddress || "-"}</TableCell>
+                    <TableCell className="text-right text-muted-foreground whitespace-nowrap">
+                      {new Date(log.createdAt).toLocaleString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filteredLogs.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      {logs.length === 0 ? "No recent moderator activity" : "No logs match your filters"}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

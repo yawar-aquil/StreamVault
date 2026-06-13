@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { RoleBadge } from '@/components/role-badge';
+import { RoleBadge, getUserRole } from '@/components/role-badge';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
@@ -187,7 +187,7 @@ export function ReferralSection({ showLeaderboard = true }: ReferralSectionProps
                                             {index + 1}
                                         </span>
                                         <span className="font-medium">{leader.username}</span>
-                                        <RoleBadge role={(leader.username.toLowerCase() === 'admin' || (leader as any).isAdmin) ? 'admin' : (leader as any).isModerator ? "moderator" : null} />
+                                        <RoleBadge role={getUserRole(leader as any)} />
                                     </div>
                                     <div className="flex items-center gap-1 text-sm">
                                         <Users className="w-4 h-4 text-muted-foreground" />

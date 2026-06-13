@@ -7,7 +7,7 @@ import { Link } from "wouter";
 import { User } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { RoleBadge } from '@/components/role-badge';
+import { RoleBadge, getUserRole } from '@/components/role-badge';
 
 interface SuggestedFriend extends User {
     mutualFriends?: number; // Optional if we calculate it on backend later
@@ -98,8 +98,9 @@ export function SuggestedFriends() {
                             </Link>
                             <div className="flex flex-col">
                                 <Link href={`/profile/${user.username}`}>
-                                    <span className="text-sm font-semibold group-hover:text-primary transition-colors cursor-pointer">
+                                    <span className="text-sm font-semibold group-hover:text-primary transition-colors cursor-pointer inline-flex items-center gap-1">
                                         {user.username}
+                                        <RoleBadge role={getUserRole(user as any)} />
                                     </span>
                                 </Link>
                                 <span className="text-[10px] text-muted-foreground uppercase tracking-wide">

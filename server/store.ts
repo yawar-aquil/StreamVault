@@ -3,6 +3,7 @@ import { storage } from './storage';
 import { verifyToken, type AuthRequest } from './auth';
 import { sendPurchaseReceiptEmail, sendCoinPurchaseReceiptEmail } from "./email-service";
 import { sendNotificationToUser, sendInventoryUpdate, logAndBroadcastActivity } from "./social";
+import { getRoleFlags } from "./utils/roles";
 
 const router = Router();
 
@@ -491,7 +492,8 @@ router.get('/users/search', async (req, res) => {
                 id: u.id,
                 username: u.username,
                 avatarUrl: u.avatarUrl,
-                badges: equipped // Return array of equipped badges
+                badges: equipped, // Return array of equipped badges
+                ...getRoleFlags(u),
             };
         }));
 

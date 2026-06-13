@@ -2,6 +2,7 @@ import type { Show, Episode, Movie, Anime, AnimeEpisode, Comment, CommentWithBad
 import { randomUUID } from "crypto";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
+import { isAdminUsername } from "./utils/roles";
 
 interface WatchlistEntry extends WatchlistItem {
   id: string;
@@ -338,10 +339,12 @@ export interface IStorage {
   getChallenges(type?: 'daily' | 'weekly'): Promise<Challenge[]>;
 
   // Moderators
-  logModeratorAction(userId: string, action: string, details?: string): Promise<ModeratorLog>;
+  logModeratorAction(userId: string, action: string, details?: string, meta?: { category?: string; targetType?: string; targetId?: string; method?: string; path?: string; ipAddress?: string }): Promise<ModeratorLog>;
   getModeratorLogs(): Promise<(ModeratorLog & { username: string; email: string })[]>;
   updateUserRole(userId: string, isModerator: boolean): Promise<User>;
   getModerators(): Promise<User[]>;
+  updateUserAdminRole(userId: string, isAdmin: boolean): Promise<User>;
+  getAdmins(): Promise<User[]>;
   getUserChallenges(userId: string): Promise<(UserChallenge & { challenge: Challenge })[]>;
   updateChallengeProgress(userId: string, challengeId: string, increment: number): Promise<UserChallenge>;
   claimChallengeReward(userId: string, challengeId: string): Promise<{ xpAwarded: number; badgeAwarded?: string }>;
@@ -374,7 +377,7 @@ export interface IStorage {
 
   // XP History for time-based leaderboards
   addXpHistory(userId: string, amount: number, source: string): Promise<XpHistoryEntry>;
-  getLeaderboardByPeriod(period: 'daily' | 'weekly' | 'monthly', limit: number): Promise<{ userId: string; username: string; avatarUrl: string | null; xpGained: number; level: number; isModerator?: boolean; badges: any; currentStreak: number }[]>;
+  getLeaderboardByPeriod(period: 'daily' | 'weekly' | 'monthly', limit: number): Promise<{ userId: string; username: string; avatarUrl: string | null; xpGained: number; level: number; isModerator?: boolean; isAdmin?: boolean; badges: any; currentStreak: number }[]>;
   getBadgeStats(): Promise<{ totalBadges: number; totalAwarded: number; popularBadges: { name: string; count: number }[] }>;
 
   // Account Deletion
@@ -801,9 +804,26 @@ export class MemStorage implements IStorage {
           console.log(`✅ Loaded ${data.users.length} users`);
         }
       }
+      this.bootstrapAdmin();
     } catch (error) {
       console.error("❌ Error loading users:", error);
     }
+  }
+
+  // One-time bootstrap: grant the configured ADMIN_USERNAME account the real
+  // isAdmin flag if it doesn't have it yet. After this, admin status lives in
+  // the DB column and can be granted/revoked to anyone — it is never inferred
+  // from the username again.
+  private bootstrapAdmin() {
+    let changed = false;
+    for (const user of Array.from(this.users.values())) {
+      if (isAdminUsername(user.username) && !user.isAdmin) {
+        user.isAdmin = true;
+        changed = true;
+        console.log(`✅ Bootstrapped admin flag for "${user.username}"`);
+      }
+    }
+    if (changed) this.saveUsers();
   }
 
   // Save users to users.json
@@ -1568,12 +1588,13 @@ export class MemStorage implements IStorage {
     return Promise.all(comments.map(async comment => {
       let authorBadges: Badge[] = [];
       let isModerator = false;
-      let isAdmin = comment.userName && comment.userName.toLowerCase() === (process.env.ADMIN_USERNAME || 'admin').toLowerCase();
+      let isAdmin = false;
       if (comment.userId) {
-        // Fetch user to check moderator status
+        // Fetch user to check admin/moderator status (from real DB columns)
         const commentUser = await this.getUserById(comment.userId);
         if (commentUser) {
           isModerator = commentUser.isModerator || false;
+          isAdmin = commentUser.isAdmin || false;
         }
 
         // Find equipped user badges
@@ -2810,12 +2831,18 @@ export class MemStorage implements IStorage {
   }
 
   // Moderators
-  async logModeratorAction(userId: string, action: string, details?: string): Promise<ModeratorLog> {
+  async logModeratorAction(userId: string, action: string, details?: string, meta?: { category?: string; targetType?: string; targetId?: string; method?: string; path?: string; ipAddress?: string }): Promise<ModeratorLog> {
     const log: ModeratorLog = {
       id: Math.random().toString(36).substring(2, 9),
       userId,
       action,
       details: details || null,
+      category: meta?.category || null,
+      targetType: meta?.targetType || null,
+      targetId: meta?.targetId || null,
+      method: meta?.method || null,
+      path: meta?.path || null,
+      ipAddress: meta?.ipAddress || null,
       createdAt: new Date(),
     };
     this.moderatorLogs.set(log.id, log);
@@ -2831,6 +2858,8 @@ export class MemStorage implements IStorage {
           ...log,
           username: user?.username || 'Unknown',
           email: user?.email || 'Unknown',
+          isAdmin: user?.isAdmin || false,
+          isModerator: user?.isModerator || false,
         };
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -2846,6 +2875,18 @@ export class MemStorage implements IStorage {
 
   async getModerators(): Promise<User[]> {
     return Array.from(this.users.values()).filter(u => u.isModerator);
+  }
+
+  async updateUserAdminRole(userId: string, isAdmin: boolean): Promise<User> {
+    const user = this.users.get(userId);
+    if (!user) throw new Error("User not found");
+    user.isAdmin = isAdmin;
+    this.saveUsers();
+    return user;
+  }
+
+  async getAdmins(): Promise<User[]> {
+    return Array.from(this.users.values()).filter(u => u.isAdmin);
   }
 
   // ============================================
@@ -2910,7 +2951,9 @@ export class MemStorage implements IStorage {
         ...review,
         username: user?.username || 'Unknown',
         avatarUrl: user?.avatarUrl || null,
-        authorBadges
+        authorBadges,
+        isAdmin: user?.isAdmin || false,
+        isModerator: user?.isModerator || false,
       };
     });
   }
@@ -2947,7 +2990,9 @@ export class MemStorage implements IStorage {
         username: user?.username || "Unknown User",
         avatarUrl: user?.avatarUrl || null,
         badges: userBadges,
-        contentTitle
+        contentTitle,
+        isAdmin: user?.isAdmin || false,
+        isModerator: user?.isModerator || false,
       };
     });
   }
@@ -3209,7 +3254,7 @@ export class MemStorage implements IStorage {
     this.saveUsers();
   }
 
-  async getReferralLeaderboard(limit: number): Promise<{ userId: string; username: string; avatarUrl: string | null; referralCount: number }[]> {
+  async getReferralLeaderboard(limit: number): Promise<{ userId: string; username: string; avatarUrl: string | null; referralCount: number; isAdmin?: boolean; isModerator?: boolean }[]> {
     return Array.from(this.users.values())
       .filter(u => (u.referralCount || 0) > 0)
       .sort((a, b) => (b.referralCount || 0) - (a.referralCount || 0))
@@ -3219,6 +3264,8 @@ export class MemStorage implements IStorage {
         username: u.username,
         avatarUrl: u.avatarUrl,
         referralCount: u.referralCount || 0,
+        isAdmin: u.isAdmin || false,
+        isModerator: u.isModerator || false,
       }));
   }
 
@@ -3333,7 +3380,7 @@ export class MemStorage implements IStorage {
     return entry;
   }
 
-  async getLeaderboardByPeriod(period: 'daily' | 'weekly' | 'monthly', limit: number): Promise<{ userId: string; username: string; avatarUrl: string | null; xpGained: number; level: number; isModerator?: boolean; badges: any; currentStreak: number }[]> {
+  async getLeaderboardByPeriod(period: 'daily' | 'weekly' | 'monthly', limit: number): Promise<{ userId: string; username: string; avatarUrl: string | null; xpGained: number; level: number; isModerator?: boolean; isAdmin?: boolean; badges: any; currentStreak: number }[]> {
     const now = new Date();
     let startDate: Date;
 
@@ -3371,7 +3418,8 @@ export class MemStorage implements IStorage {
           avatarUrl: user.avatarUrl,
           xpGained,
           level: user.level,
-          isModerator: user.isModerator,
+          isModerator: user.isModerator || false,
+          isAdmin: user.isAdmin || false,
           badges: user.badges,
           currentStreak: user.currentStreak || 0,
         });

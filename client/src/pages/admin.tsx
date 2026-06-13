@@ -54,6 +54,8 @@ import { GiftCoinsManager } from "@/components/admin/GiftCoinsManager";
 import { StreamingModeManager } from "@/components/admin/StreamingModeManager";
 import { SecuritySettings } from "@/components/admin/SecuritySettings";
 import { ManageModerators } from "@/components/admin/ManageModerators";
+import { ManageAdmins } from "@/components/admin/ManageAdmins";
+import { RoleBadge, getUserRole } from "@/components/role-badge";
 
 export const AdminContext = createContext<{ userRole: "admin" | "moderator" }>({ userRole: "admin" });
 
@@ -161,6 +163,7 @@ export default function AdminPage() {
               Users
             </TabsTrigger>}
             {userRole === 'admin' && <TabsTrigger value="moderators" className="gap-2"><UserIcon className="w-4 h-4" />Moderators</TabsTrigger>}
+            {userRole === 'admin' && <TabsTrigger value="admins" className="gap-2"><UserIcon className="w-4 h-4" />Admins</TabsTrigger>}
             <TabsTrigger value="shows">Shows</TabsTrigger>
             <TabsTrigger value="movies">Movies</TabsTrigger>
             <TabsTrigger value="anime">Anime</TabsTrigger>
@@ -234,6 +237,12 @@ export default function AdminPage() {
         {userRole === 'admin' && (
           <TabsContent value="moderators" className="mt-6">
             <ManageModerators />
+          </TabsContent>
+        )}
+
+        {userRole === 'admin' && (
+          <TabsContent value="admins" className="mt-6">
+            <ManageAdmins />
           </TabsContent>
         )}
 
@@ -3844,6 +3853,7 @@ function ReviewsModeration() {
                       <div>
                         <div className="flex items-center gap-1">
                           <div className="font-medium text-sm">{review.username}</div>
+                          <RoleBadge role={getUserRole(review as any)} />
                           {(review as any).badges && (review as any).badges.length > 0 && (
                             <div className="flex items-center gap-0.5">
                               {(review as any).badges
@@ -6101,7 +6111,10 @@ function AwardBadgeForm({ badges }: { badges: any[] }) {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{user.username}</p>
+                    <div className="flex items-center gap-1">
+                      <p className="font-medium text-sm truncate">{user.username}</p>
+                      <RoleBadge role={getUserRole(user as any)} />
+                    </div>
                     {user.badges && user.badges.length > 0 && (
                       <div className="flex items-center gap-0.5 ml-1">
                         {user.badges.filter((b: any) => b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'theme').sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime()).map((badge: any) => (
@@ -6154,6 +6167,7 @@ function AwardBadgeForm({ badges }: { badges: any[] }) {
                 )}
               </div>
               <span className="font-medium">{user.username}</span>
+              <RoleBadge role={getUserRole(user as any)} />
               <button
                 type="button"
                 onClick={() => removeUser(user.id)}
@@ -6291,7 +6305,10 @@ function ManageUserBadges() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{user.username}</p>
+                    <div className="flex items-center gap-1">
+                      <p className="font-medium text-sm truncate">{user.username}</p>
+                      <RoleBadge role={getUserRole(user as any)} />
+                    </div>
                     {user.badges && user.badges.length > 0 && (
                       <div className="flex items-center gap-0.5 ml-1">
                         {user.badges.filter((b: any) => b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'theme').sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime()).map((badge: any) => (
@@ -6317,6 +6334,7 @@ function ManageUserBadges() {
             <div className="flex items-center gap-2 p-2 bg-muted/50 rounded border">
               <UserIcon className="w-4 h-4" />
               <span className="font-semibold">{searchedUser.username}</span>
+              <RoleBadge role={getUserRole(searchedUser as any)} />
               <span className="text-muted-foreground text-sm">({userBadges.length} badges)</span>
             </div>
 

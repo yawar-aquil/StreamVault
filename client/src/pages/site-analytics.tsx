@@ -16,7 +16,13 @@ import {
     Play,
     Film,
     Tv,
-    Award
+    Award,
+    UserPlus,
+    ShieldCheck,
+    Activity,
+    Layers,
+    Sparkles,
+    MousePointerClick
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
@@ -28,7 +34,44 @@ interface SiteAnalytics {
         activeUsers: number;
         totalWatchTimeHours: number;
     };
+    userStats?: {
+        total: number;
+        newToday: number;
+        newWeek: number;
+        newMonth: number;
+        moderators: number;
+        admins: number;
+    };
+    library?: {
+        shows: number;
+        movies: number;
+        anime: number;
+        episodes: number;
+        badges: number;
+    };
+    engagement?: {
+        avgPagesPerSession: number;
+        bounceRate: number;
+        returningVisitors: number;
+        newVisitors: number;
+        totalSessions: number;
+    };
+    peak?: {
+        hour: number;
+        hourViews: number;
+        busiestDay: string;
+        busiestDayViews: number;
+    };
+    moderatorActivity?: {
+        today: number;
+        week: number;
+        total: number;
+        byCategory: Record<string, number>;
+        topModerators: { username: string; count: number }[];
+        recent: { username: string; action: string; details: string | null; category: string | null; createdAt: string }[];
+    };
     dailyViews: { date: string; views: number; visitors: number }[];
+    dailySignups?: { date: string; count: number }[];
     hourlyActivity: { hour: number; views: number }[];
     popularPages: { path: string; views: number }[];
     trafficSources: { source: string; visits: number }[];
@@ -36,6 +79,7 @@ interface SiteAnalytics {
     browsers: Record<string, number>;
     topShows: { id: string; title: string; watches: number; duration: number }[];
     topMovies: { id: string; title: string; watches: number; duration: number }[];
+    topAnime?: { id: string; title: string; watches: number; duration: number }[];
     recentPageViews: { timestamp: string; path: string; referrer: string }[];
     badgeStats?: {
         totalBadges: number;
@@ -43,6 +87,16 @@ interface SiteAnalytics {
         popularBadges: { name: string; count: number }[];
     };
 }
+
+const CATEGORY_STYLES: Record<string, string> = {
+    content: 'bg-blue-500/15 text-blue-400',
+    user: 'bg-purple-500/15 text-purple-400',
+    moderation: 'bg-orange-500/15 text-orange-400',
+    store: 'bg-emerald-500/15 text-emerald-400',
+    settings: 'bg-cyan-500/15 text-cyan-400',
+    security: 'bg-red-500/15 text-red-400',
+    other: 'bg-muted text-muted-foreground',
+};
 
 export default function SiteAnalytics() {
     const [, setLocation] = useLocation();
@@ -210,6 +264,64 @@ export default function SiteAnalytics() {
                                 )}
                             </div>
 
+                            {/* Audience & Library Cards */}
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+                                {analytics.userStats && (
+                                    <div className="bg-card p-6 rounded-xl border">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-muted-foreground text-sm">Registered Users</span>
+                                            <Users className="w-5 h-5 text-indigo-500" />
+                                        </div>
+                                        <p className="text-3xl font-bold">{analytics.userStats.total.toLocaleString()}</p>
+                                        <p className="text-xs text-green-500 mt-1">+{analytics.userStats.newToday} today</p>
+                                    </div>
+                                )}
+
+                                {analytics.userStats && (
+                                    <div className="bg-card p-6 rounded-xl border">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-muted-foreground text-sm">New This Week</span>
+                                            <UserPlus className="w-5 h-5 text-emerald-500" />
+                                        </div>
+                                        <p className="text-3xl font-bold">{analytics.userStats.newWeek.toLocaleString()}</p>
+                                        <p className="text-xs text-muted-foreground mt-1">{analytics.userStats.newMonth} this month</p>
+                                    </div>
+                                )}
+
+                                {analytics.engagement && (
+                                    <div className="bg-card p-6 rounded-xl border">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-muted-foreground text-sm">Pages / Session</span>
+                                            <MousePointerClick className="w-5 h-5 text-pink-500" />
+                                        </div>
+                                        <p className="text-3xl font-bold">{analytics.engagement.avgPagesPerSession}</p>
+                                        <p className="text-xs text-muted-foreground mt-1">{analytics.engagement.bounceRate}% bounce rate</p>
+                                    </div>
+                                )}
+
+                                {analytics.userStats && (
+                                    <div className="bg-card p-6 rounded-xl border">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-muted-foreground text-sm">Staff</span>
+                                            <ShieldCheck className="w-5 h-5 text-red-500" />
+                                        </div>
+                                        <p className="text-3xl font-bold">{analytics.userStats.moderators + analytics.userStats.admins}</p>
+                                        <p className="text-xs text-muted-foreground mt-1">{analytics.userStats.admins} admins · {analytics.userStats.moderators} mods</p>
+                                    </div>
+                                )}
+
+                                {analytics.library && (
+                                    <div className="bg-card p-6 rounded-xl border">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-muted-foreground text-sm">Content Library</span>
+                                            <Layers className="w-5 h-5 text-orange-500" />
+                                        </div>
+                                        <p className="text-3xl font-bold">{(analytics.library.shows + analytics.library.movies + analytics.library.anime).toLocaleString()}</p>
+                                        <p className="text-xs text-muted-foreground mt-1">{analytics.library.episodes.toLocaleString()} episodes</p>
+                                    </div>
+                                )}
+                            </div>
+
                             {/* Charts Row */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                                 {/* Daily Views Chart */}
@@ -278,7 +390,7 @@ export default function SiteAnalytics() {
                             </div>
 
                             {/* Content Stats Row */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                                 {/* Top Shows */}
                                 <div className="bg-card p-6 rounded-xl border">
                                     <div className="flex items-center gap-2 mb-4">
@@ -324,6 +436,31 @@ export default function SiteAnalytics() {
                                             </div>
                                         ))}
                                         {analytics.topMovies.length === 0 && (
+                                            <p className="text-muted-foreground text-sm">No watch data yet</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Top Anime */}
+                                <div className="bg-card p-6 rounded-xl border">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <Sparkles className="w-5 h-5 text-pink-500" />
+                                        <h2 className="font-semibold">Most Watched Anime</h2>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {(analytics.topAnime || []).slice(0, 5).map((anime, i) => (
+                                            <div key={anime.id} className="flex items-center gap-3">
+                                                <span className="text-muted-foreground w-4">{i + 1}</span>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-medium truncate">{anime.title}</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {anime.watches} plays • {formatDuration(anime.duration)}
+                                                    </p>
+                                                </div>
+                                                <Play className="w-4 h-4 text-pink-500" />
+                                            </div>
+                                        ))}
+                                        {(!analytics.topAnime || analytics.topAnime.length === 0) && (
                                             <p className="text-muted-foreground text-sm">No watch data yet</p>
                                         )}
                                     </div>
@@ -425,6 +562,83 @@ export default function SiteAnalytics() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Moderator Activity */}
+                            {analytics.moderatorActivity && (
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                                    {/* Summary + top mods */}
+                                    <div className="bg-card p-6 rounded-xl border">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <Activity className="w-5 h-5 text-orange-500" />
+                                            <h2 className="font-semibold">Moderator Activity</h2>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 mb-5">
+                                            <div className="text-center bg-muted/40 rounded-lg py-2">
+                                                <p className="text-xl font-bold">{analytics.moderatorActivity.today}</p>
+                                                <p className="text-[11px] text-muted-foreground">Today</p>
+                                            </div>
+                                            <div className="text-center bg-muted/40 rounded-lg py-2">
+                                                <p className="text-xl font-bold">{analytics.moderatorActivity.week}</p>
+                                                <p className="text-[11px] text-muted-foreground">This Week</p>
+                                            </div>
+                                            <div className="text-center bg-muted/40 rounded-lg py-2">
+                                                <p className="text-xl font-bold">{analytics.moderatorActivity.total}</p>
+                                                <p className="text-[11px] text-muted-foreground">All Time</p>
+                                            </div>
+                                        </div>
+
+                                        <p className="text-xs font-semibold text-muted-foreground mb-2">TOP MODERATORS</p>
+                                        <div className="space-y-2 mb-5">
+                                            {analytics.moderatorActivity.topModerators.map(m => (
+                                                <div key={m.username} className="flex items-center justify-between text-sm">
+                                                    <span className="truncate">{m.username}</span>
+                                                    <span className="font-medium">{m.count}</span>
+                                                </div>
+                                            ))}
+                                            {analytics.moderatorActivity.topModerators.length === 0 && (
+                                                <p className="text-muted-foreground text-sm">No actions logged yet</p>
+                                            )}
+                                        </div>
+
+                                        <p className="text-xs font-semibold text-muted-foreground mb-2">BY CATEGORY</p>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {Object.entries(analytics.moderatorActivity.byCategory).sort(([, a], [, b]) => b - a).map(([cat, count]) => (
+                                                <span key={cat} className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${CATEGORY_STYLES[cat] || CATEGORY_STYLES.other}`}>
+                                                    {cat} · {count}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Recent actions */}
+                                    <div className="bg-card p-6 rounded-xl border lg:col-span-2">
+                                        <h2 className="font-semibold mb-4">Recent Moderator Actions</h2>
+                                        <div className="space-y-2">
+                                            {analytics.moderatorActivity.recent.map((log, i) => (
+                                                <div key={i} className="flex items-center gap-3 py-2 border-b border-border/60 last:border-0">
+                                                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium shrink-0 ${CATEGORY_STYLES[log.category || 'other'] || CATEGORY_STYLES.other}`}>
+                                                        {log.category || 'other'}
+                                                    </span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-medium truncate">
+                                                            <span className="text-primary">{log.username}</span> — {log.action}
+                                                        </p>
+                                                        {log.details && (
+                                                            <p className="text-xs text-muted-foreground truncate">{log.details}</p>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                                                        {new Date(log.createdAt).toLocaleString()}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                            {analytics.moderatorActivity.recent.length === 0 && (
+                                                <p className="text-muted-foreground text-sm py-4 text-center">No moderator actions recorded yet</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Recent Activity */}
                             <div className="bg-card p-6 rounded-xl border">

@@ -33,6 +33,7 @@ export const users = pgTable("users", {
   settings: text("settings"), // JSON string for all user preferences
   lastActive: timestamp("last_active"),
   isModerator: boolean("is_moderator").default(false),
+  isAdmin: boolean("is_admin").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -43,6 +44,12 @@ export const moderatorLogs = pgTable("moderator_logs", {
   userId: varchar("user_id").notNull(),
   action: text("action").notNull(),
   details: text("details"),
+  category: text("category"), // 'content' | 'user' | 'moderation' | 'store' | 'settings' | 'security' | 'other'
+  targetType: text("target_type"), // e.g. 'show', 'movie', 'user', 'badge', 'review'
+  targetId: varchar("target_id"),
+  method: text("method"), // HTTP method of the action
+  path: text("path"), // request path
+  ipAddress: text("ip_address"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

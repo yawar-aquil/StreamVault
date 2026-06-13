@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { RoleBadge } from "@/components/role-badge";
+import { RoleBadge, getUserRole } from "@/components/role-badge";
 import { Search, UserPlus, Check, Wifi, WifiOff } from "lucide-react";
 import { useFriends } from "@/contexts/friends-context";
 import { useAuth } from "@/contexts/auth-context";
@@ -124,7 +124,7 @@ export function InviteFriendsModal({ roomCode, roomTitle, open, onOpenChange }: 
                                             <div className="flex flex-col">
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-medium text-sm">{friend.username}</span>
-                                                    <RoleBadge role={(friend.username.toLowerCase() === 'admin' || (friend as any).isAdmin) ? 'admin' : (friend as any).isModerator ? "moderator" : null} />
+                                                    <RoleBadge role={getUserRole(friend as any)} />
                                                 </div>
                                                 {/* Optional: Status indicator */}
                                             </div>

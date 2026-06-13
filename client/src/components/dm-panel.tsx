@@ -8,7 +8,7 @@ import { formatDistanceToNow, differenceInMinutes } from 'date-fns';
 import EmojiPicker, { Theme, SuggestionMode, SkinTonePickerLocation } from 'emoji-picker-react';
 import { useSocialSocket } from '@/hooks/use-social-socket';
 import { useVoiceCall } from '@/hooks/use-voice-call';
-import { RoleBadge } from '@/components/role-badge';
+import { RoleBadge, getUserRole } from '@/components/role-badge';
 import {
     Tooltip,
     TooltipContent,
@@ -717,7 +717,7 @@ export function DMPanel({ friendId, friend, onClose }: DMPanelProps) {
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                             <h3 className="font-semibold truncate">{friend?.username || 'Loading...'}</h3>
-                            {friend?.username && <RoleBadge role={(friend.username.toLowerCase() === 'admin' || (friend as any).isAdmin) ? 'admin' : (friend as any).isModerator ? "moderator" : null} />}
+                            {friend?.username && <RoleBadge role={getUserRole(friend as any)} />}
 
                             {friend?.badges && friend.badges.length > 0 && (
                                 <div className="flex items-center gap-1">

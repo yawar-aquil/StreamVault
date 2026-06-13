@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { MessageCircle, ThumbsUp, ThumbsDown, ChevronDown, MoreVertical, X } from "lucide-react";
 import type { Comment, CommentWithBadges } from "@shared/schema";
-import { RoleBadge } from "@/components/role-badge";
+import { RoleBadge, getUserRole } from "@/components/role-badge";
 import { formatDistanceToNow } from "date-fns";
 import {
   EmojiGifPicker,
@@ -238,7 +238,7 @@ function CommentItem({
           {/* Header: Username and timestamp */}
           <div className="flex items-center gap-2 mb-1">
             <span className="font-medium text-sm text-foreground">@{comment.userName.toLowerCase().replace(/\s+/g, '')}</span>
-            <RoleBadge role={comment.userName.toLowerCase() === "admin" ? "admin" : comment.isAdmin ? "admin" : comment.isModerator ? "moderator" : null} />
+            <RoleBadge role={getUserRole(comment as any)} />
 
             {/* Badges Display */}
             {comment.authorBadges && comment.authorBadges.length > 0 && (

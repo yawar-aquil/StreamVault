@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
-import { RoleBadge } from '@/components/role-badge';
+import { RoleBadge, getUserRole } from '@/components/role-badge';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
@@ -254,7 +254,7 @@ export function ReviewsSection({ contentType, contentId }: ReviewsSectionProps) 
                                         <div>
                                             <div className="flex items-center gap-2">
                                                 <p className="font-medium">{review.username}</p>
-                                                <RoleBadge role={review.username.toLowerCase() === "admin" ? "admin" : (review as any).isAdmin ? "admin" : (review as any).isModerator ? "moderator" : null} />
+                                                <RoleBadge role={getUserRole(review as any)} />
                                                 {/* User Badges */}
                                                 {review.authorBadges && review.authorBadges.length > 0 && (
                                                     <div className="flex gap-[2px]">

@@ -9,7 +9,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Show, Movie, Anime } from "@shared/schema";
 import { useAuth } from "@/contexts/auth-context";
-import { RoleBadge } from "@/components/role-badge";
+import { RoleBadge, getUserRole } from "@/components/role-badge";
 import { useAds } from "@/components/ad-manager";
 import { NotificationsDropdown } from "@/components/notifications-dropdown";
 import { cn, isIndianDomain } from "@/lib/utils";
@@ -112,6 +112,32 @@ export function Header() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Lock background scroll while the mobile menu overlay is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [mobileMenuOpen]);
+
+  // Feature shortcuts shown as a grid in the mobile menu
+  const mobileFeatures = [
+    { name: "Store", path: "/store", icon: Store, color: "text-purple-500" },
+    { name: "Rooms", path: "/watch-rooms", icon: PartyPopper, color: "text-pink-500" },
+    { name: "Watchlist", path: "/watchlist", icon: Bookmark, color: "text-blue-500" },
+    { name: "Leaderboard", path: "/leaderboard", icon: Medal, color: "text-yellow-400" },
+    { name: "Achievements", path: "/achievements", icon: Trophy, color: "text-purple-400" },
+    { name: "Community", path: "/community", icon: Users, color: "text-green-500" },
+    { name: "Polls", path: "/polls", icon: BarChart2, color: "text-blue-400" },
+    { name: "Challenges", path: "/challenges", icon: Target, color: "text-red-400" },
+    { name: "Referrals", path: "/referral-program", icon: Gift, color: "text-emerald-500" },
+    { name: "Blog", path: "/blog", icon: BookOpen, color: "text-orange-400" },
+    { name: "API Docs", path: "/api-docs", icon: Code, color: "text-cyan-400" },
+  ];
 
   return (
     <header className="sticky top-0 z-50 w-full h-16 sm:h-20 flex flex-col justify-center pointer-events-none">
@@ -358,7 +384,7 @@ export function Header() {
               {/* Live Search Results Dropdown */}
               {showResults && searchResults.length > 0 && (
                 <div className="absolute top-full mt-2 w-96 bg-background border border-border rounded-lg shadow-lg overflow-hidden z-50">
-                  {searchResults.map((item) => (
+                  {searchResults.map((item: any) => (
                     <Link key={item.id} href={item.type === 'anime' ? `/anime/${item.slug}` : item.type === 'show' ? `/show/${item.slug}` : `/movie/${item.slug}`}>
                       <div
                         className="flex items-center gap-3 p-3 hover:bg-accent cursor-pointer transition-colors"
@@ -433,7 +459,7 @@ export function Header() {
               <DropdownMenuContent align="end" className="w-48">
                 <div className="px-2 py-1.5 text-sm font-medium flex items-center gap-2">
                   {user?.username}
-                  {user?.username && <RoleBadge role={(user.username.toLowerCase() === 'admin' || (user as any).isAdmin) ? 'admin' : (user as any).isModerator ? "moderator" : null} />}
+                  {user?.username && <RoleBadge role={getUserRole(user as any)} />}
                   {user?.badges && (typeof user.badges === 'string' ? JSON.parse(user.badges) : user.badges)
                     .filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'feature')
                     .sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime())
@@ -543,251 +569,188 @@ export function Header() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu — full-screen overlay so it can never be cut off by the floating header */}
       {mobileMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 border-t border-border bg-background shadow-2xl max-h-[calc(100vh-4rem)] overflow-y-auto pointer-events-auto z-50">
-          <div className="container mx-auto px-4 py-4 space-y-2">
-            {/* Mobile Search */}
-            <div className="mb-4 relative">
-              <form onSubmit={handleSearch}>
-                <Input
-                  type="search"
-                  placeholder={t('nav.search')}
-                  value={searchQuery}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  data-testid="input-mobile-search"
-                />
-              </form>
+        <div className="md:hidden fixed inset-0 z-[60] pointer-events-auto">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+            onClick={() => setMobileMenuOpen(false)}
+          />
 
-              {/* Mobile Live Search Results */}
-              {showResults && searchResults.length > 0 && (
-                <div className="absolute top-full mt-2 w-full bg-background border border-border rounded-lg shadow-lg overflow-hidden z-50">
-                  {searchResults.map((item) => (
-                    <Link key={item.id} href={item.type === 'show' ? `/show/${item.slug}` : `/movie/${item.slug}`}>
-                      <div
-                        className="flex items-center gap-3 p-3 hover:bg-accent cursor-pointer transition-colors"
-                        onClick={() => {
-                          setShowResults(false);
-                          setSearchQuery("");
-                          setMobileMenuOpen(false);
-                        }}
-                      >
-                        <img
-                          src={item.posterUrl}
-                          alt={item.title}
-                          className="w-12 h-16 object-cover rounded"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{item.title}</p>
-                          <p className="text-sm text-muted-foreground truncate">
-                            {item.year} • {item.type === 'show' ? 'TV Series' : 'Movie'}
-                          </p>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                  {searchQuery.trim() && (
-                    <Link href={`/search?q=${encodeURIComponent(searchQuery)}`}>
-                      <div
-                        className="p-3 text-center text-sm text-primary hover:bg-accent cursor-pointer border-t border-border"
-                        onClick={() => {
-                          setShowResults(false);
-                          setSearchQuery("");
-                          setMobileMenuOpen(false);
-                        }}
-                      >
-                        View all results for "{searchQuery}"
-                      </div>
-                    </Link>
-                  )}
+          {/* Panel */}
+          <div
+            className="absolute inset-0 flex flex-col bg-background animate-in slide-in-from-top-4 duration-200"
+            style={{ paddingTop: "env(safe-area-inset-top)" }}
+          >
+            {/* Sticky top bar: brand + always-visible close button */}
+            <div className="flex items-center justify-between px-4 h-16 border-b border-border shrink-0">
+              <div className="flex items-center gap-2 text-lg font-black tracking-tight">
+                <div className="flex items-center justify-center w-8 h-8 rounded bg-primary">
+                  <Play className="w-4 h-4 text-primary-foreground fill-current" />
                 </div>
-              )}
+                <span>
+                  {"StreamVault".split("").map((char, i) => (
+                    <span key={i} className={i % 2 === 0 ? "text-red-500" : "text-foreground"}>{char}</span>
+                  ))}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-label="Close menu"
+                data-testid="button-mobile-menu-close"
+              >
+                <X className="h-5 w-5" />
+              </Button>
             </div>
 
-            {navigation.map((item) => (
-              <Link key={item.path} href={item.path}>
-                <div
-                  className={`block px-3 py-2 text-sm font-medium rounded-md hover-elevate active-elevate-2 cursor-pointer ${location === item.path
-                    ? "text-foreground bg-accent"
-                    : "text-muted-foreground"
-                    }`}
-                  onClick={() => setMobileMenuOpen(false)}
-                  data-testid={`link-mobile-${item.name.toLowerCase().replace(/\s+/g, "-")}`}
-                >
-                  {item.name}
-                </div>
-              </Link>
-            ))}
+            {/* Scrollable body */}
+            <div
+              className="flex-1 overflow-y-auto px-4 py-4 space-y-5"
+              style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1.5rem)" }}
+            >
+              {/* Search */}
+              <div className="relative">
+                <form onSubmit={handleSearch} className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    type="search"
+                    placeholder={t('nav.search')}
+                    value={searchQuery}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    className="pl-9 h-11 rounded-xl"
+                    data-testid="input-mobile-search"
+                  />
+                </form>
 
-            {/* Watch Rooms Link */}
-            <Link href="/watch-rooms">
-              <div
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover-elevate active-elevate-2 cursor-pointer ${location === "/watch-rooms"
-                  ? "text-foreground bg-accent"
-                  : "text-muted-foreground"
-                  }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <PartyPopper className="h-4 w-4" />
-                Watch Rooms
-              </div>
-            </Link>
-
-            {/* Store Link */}
-            <Link href="/store">
-              <div
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover-elevate active-elevate-2 cursor-pointer ${location === "/store"
-                  ? "text-foreground bg-accent"
-                  : "text-muted-foreground"
-                  }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Store className="h-4 w-4" />
-                Store
-              </div>
-            </Link>
-
-            {/* Watchlist Link */}
-            <Link href="/watchlist">
-              <div
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover-elevate active-elevate-2 cursor-pointer ${location === "/watchlist"
-                  ? "text-foreground bg-accent"
-                  : "text-muted-foreground"
-                  }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Bookmark className="h-4 w-4" />
-                {t('nav.watchlist')}
-              </div>
-            </Link>
-
-            {/* Leaderboard Link */}
-            <Link href="/leaderboard">
-              <div
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover-elevate active-elevate-2 cursor-pointer ${location === "/leaderboard"
-                  ? "text-foreground bg-accent"
-                  : "text-muted-foreground"
-                  }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Medal className="h-4 w-4" />
-                Leaderboard
-              </div>
-            </Link>
-
-            {/* Achievements Link */}
-            <Link href="/achievements">
-              <div
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover-elevate active-elevate-2 cursor-pointer ${location === "/achievements"
-                  ? "text-foreground bg-accent"
-                  : "text-muted-foreground"
-                  }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Trophy className="h-4 w-4" />
-                Achievements
-              </div>
-            </Link>
-
-            {/* Community Link */}
-            <Link href="/community">
-              <div
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover-elevate active-elevate-2 cursor-pointer ${location === "/community"
-                  ? "text-foreground bg-accent"
-                  : "text-muted-foreground"
-                  }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Users className="h-4 w-4" />
-                Community
-              </div>
-            </Link>
-
-            {/* Polls Link */}
-            <Link href="/polls">
-              <div
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover-elevate active-elevate-2 cursor-pointer ${location === "/polls"
-                  ? "text-foreground bg-accent"
-                  : "text-muted-foreground"
-                  }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <BarChart2 className="h-4 w-4" />
-                Polls
-              </div>
-            </Link>
-
-            {/* Challenges Link */}
-            <Link href="/challenges">
-              <div
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover-elevate active-elevate-2 cursor-pointer ${location === "/challenges"
-                  ? "text-foreground bg-accent"
-                  : "text-muted-foreground"
-                  }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Target className="h-4 w-4" />
-                Challenges
-              </div>
-            </Link>
-
-            {/* Referrals Link */}
-            <Link href="/referral-program">
-              <div
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover-elevate active-elevate-2 cursor-pointer ${location === "/referral-program"
-                  ? "text-foreground bg-accent"
-                  : "text-muted-foreground"
-                  }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Gift className="h-4 w-4" />
-                Referrals
-              </div>
-            </Link>
-
-            {/* Blog Link */}
-            <Link href="/blog">
-              <div
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover-elevate active-elevate-2 cursor-pointer ${location === "/blog"
-                  ? "text-foreground bg-accent"
-                  : "text-muted-foreground"
-                  }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <BookOpen className="h-4 w-4" />
-                Blog
-              </div>
-            </Link>
-
-            {/* API Docs Link */}
-            <Link href="/api-docs">
-              <div
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover-elevate active-elevate-2 cursor-pointer ${location === "/api-docs"
-                  ? "text-foreground bg-accent"
-                  : "text-muted-foreground"
-                  }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Code className="h-4 w-4" />
-                API Docs
-              </div>
-            </Link>
-
-            <div className="pt-2 border-t border-border">
-              <p className="px-3 py-2 text-xs font-semibold text-muted-foreground">
-                {t('footer.categories')}
-              </p>
-              {categories.map((category) => (
-                <Link key={category.path} href={category.path}>
-                  <div
-                    className="block px-3 py-2 text-sm text-muted-foreground rounded-md hover-elevate active-elevate-2 cursor-pointer"
-                    onClick={() => setMobileMenuOpen(false)}
-                    data-testid={`link-mobile-category-${category.name.toLowerCase().replace(/\s+/g, "-")}`}
-                  >
-                    {category.name}
+                {/* Live results */}
+                {showResults && searchResults.length > 0 && (
+                  <div className="mt-2 bg-card border border-border rounded-xl shadow-lg overflow-hidden">
+                    {searchResults.map((item: any) => (
+                      <Link key={item.id} href={item.type === 'anime' ? `/anime/${item.slug}` : item.type === 'show' ? `/show/${item.slug}` : `/movie/${item.slug}`}>
+                        <div
+                          className="flex items-center gap-3 p-3 hover:bg-accent cursor-pointer transition-colors"
+                          onClick={() => {
+                            setShowResults(false);
+                            setSearchQuery("");
+                            setMobileMenuOpen(false);
+                          }}
+                        >
+                          <img src={item.posterUrl} alt={item.title} className="w-10 h-14 object-cover rounded" />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{item.title}</p>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {item.year} • {item.type === 'anime' ? 'Anime' : item.type === 'show' ? 'TV Series' : 'Movie'}
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                    {searchQuery.trim() && (
+                      <Link href={`/search?q=${encodeURIComponent(searchQuery)}`}>
+                        <div
+                          className="p-3 text-center text-sm text-primary hover:bg-accent cursor-pointer border-t border-border"
+                          onClick={() => {
+                            setShowResults(false);
+                            setSearchQuery("");
+                            setMobileMenuOpen(false);
+                          }}
+                        >
+                          View all results for "{searchQuery}"
+                        </div>
+                      </Link>
+                    )}
                   </div>
+                )}
+              </div>
+
+              {/* Guest CTA — lets guests actually sign in/up from mobile */}
+              {!isAuthenticated && (
+                <Link href="/login">
+                  <Button
+                    className="w-full gap-2 h-11 rounded-xl"
+                    onClick={() => setMobileMenuOpen(false)}
+                    data-testid="button-mobile-join"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    Sign in / Join
+                  </Button>
                 </Link>
-              ))}
+              )}
+
+              {/* Primary navigation */}
+              <div className="space-y-1">
+                {navigation.map((item) => (
+                  <Link key={item.path} href={item.path}>
+                    <div
+                      className={`block px-3 py-2.5 text-sm font-medium rounded-lg transition-colors cursor-pointer ${location === item.path
+                        ? "text-foreground bg-accent"
+                        : "text-muted-foreground hover:bg-accent/60"
+                        }`}
+                      onClick={() => setMobileMenuOpen(false)}
+                      data-testid={`link-mobile-${item.name.toLowerCase().replace(/\s+/g, "-")}`}
+                    >
+                      {item.name}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              {/* Feature grid */}
+              <div>
+                <p className="px-1 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Explore
+                </p>
+                <div className="grid grid-cols-3 gap-2.5">
+                  {mobileFeatures.map((feature) => {
+                    const Icon = feature.icon;
+                    return (
+                      <Link key={feature.path} href={feature.path}>
+                        <div
+                          className="group flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl bg-accent/30 hover:bg-accent border border-white/5 hover:border-primary/20 transition-all cursor-pointer text-center"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          <Icon className={`h-5 w-5 ${feature.color} group-hover:scale-110 transition-transform`} />
+                          <span className="text-[11px] font-medium leading-tight">{feature.name}</span>
+                        </div>
+                      </Link>
+                    );
+                  })}
+
+                  {/* Theme toggle */}
+                  <div
+                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                    className="group flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl bg-accent/30 hover:bg-accent border border-white/5 hover:border-primary/20 transition-all cursor-pointer text-center"
+                  >
+                    {theme === 'dark' ? (
+                      <Sun className="h-5 w-5 text-yellow-500 group-hover:rotate-90 transition-transform" />
+                    ) : (
+                      <Moon className="h-5 w-5 text-indigo-500 group-hover:-rotate-12 transition-transform" />
+                    )}
+                    <span className="text-[11px] font-medium leading-tight">{theme === 'dark' ? 'Light' : 'Dark'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Categories */}
+              <div className="border-t border-border pt-3">
+                <p className="px-1 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t('footer.categories')}
+                </p>
+                {categories.map((category) => (
+                  <Link key={category.path} href={category.path}>
+                    <div
+                      className="block px-3 py-2 text-sm text-muted-foreground rounded-lg hover:bg-accent/60 cursor-pointer transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                      data-testid={`link-mobile-category-${category.name.toLowerCase().replace(/\s+/g, "-")}`}
+                    >
+                      {category.name}
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </div>
           </div>
         </div>

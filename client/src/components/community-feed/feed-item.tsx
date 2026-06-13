@@ -17,7 +17,7 @@ import {
     Reply
 } from "lucide-react";
 import { Link } from "wouter";
-import { RoleBadge } from "@/components/role-badge";
+import { RoleBadge, getUserRole } from "@/components/role-badge";
 import type { Activity, User } from "@shared/schema";
 import { motion } from "framer-motion";
 
@@ -201,7 +201,7 @@ export function FeedItem({ activity }: FeedItemProps) {
                             <Link href={`/profile/${user.username}`}>
                                 <span className="font-bold text-base hover:text-primary cursor-pointer transition-colors flex items-center gap-1">
                                     {user.username}
-                                    <RoleBadge role={(user.username.toLowerCase() === 'admin' || (user as any).isAdmin) ? 'admin' : (user as any).isModerator ? "moderator" : null} />
+                                    <RoleBadge role={getUserRole(user as any)} />
                                 </span>
                             </Link>
                             {user.equippedBadges && user.equippedBadges.filter((badge: any) => badge.category !== 'skin' && !badge.name?.includes('Skin') && badge.category !== 'theme' && badge.category !== 'feature').length > 0 && (

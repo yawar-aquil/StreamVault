@@ -11,6 +11,8 @@ interface User {
     avatarUrl?: string;
     authUserId?: string; // Actual authenticated user ID from database (for friend requests)
     badges?: any[];
+    isAdmin?: boolean;
+    isModerator?: boolean;
     isHost: boolean;
     isMuted: boolean;
 }
@@ -294,6 +296,13 @@ export function setupWatchTogether(httpServer: HttpServer): Server {
                         watchNamespace.to(room.code).emit('room:user-updated', { user });
                     }
                 });
+                storage.getUserById(data.authUserId).then(dbUser => {
+                    if (dbUser) {
+                        user.isAdmin = dbUser.isAdmin || false;
+                        user.isModerator = dbUser.isModerator || false;
+                        watchNamespace.to(room.code).emit('room:user-updated', { user });
+                    }
+                });
             }
 
             room.users.set(socket.id, user);
@@ -420,6 +429,15 @@ export function setupWatchTogether(httpServer: HttpServer): Server {
                 });
             } else if (existingUser?.badges) {
                 user.badges = existingUser.badges;
+            }
+            if (data.authUserId) {
+                storage.getUserById(data.authUserId).then(dbUser => {
+                    if (dbUser) {
+                        user.isAdmin = dbUser.isAdmin || false;
+                        user.isModerator = dbUser.isModerator || false;
+                        watchNamespace.to(room.code).emit('room:user-updated', { user });
+                    }
+                });
             }
 
             room.users.set(socket.id, user);

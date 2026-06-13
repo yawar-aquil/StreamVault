@@ -11,6 +11,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { setupSitemaps } from "./sitemap";
 import { searchShow, getShowDetails } from "./utils/tmdb";
+import { getRoleFlags } from "./utils/roles";
+import { describeAdminAction, extractTargetId, describeTarget } from "./utils/audit";
 import { sendContentRequestEmail, sendIssueReportEmail, sendPasswordResetEmail, sendCoinPurchaseReceiptEmail, sendEmailVerificationEmail, sendContentRequestCompletedEmail, sendIssueReportResolvedEmail, sendFeedbackEmail, sendFeedbackResolvedEmail } from "./email-service";
 import { createRazorpayOrder, verifyRazorpaySignature } from "./payment";
 import { convertCurrency } from "./currency";
@@ -72,6 +74,12 @@ async function requireAdmin(req: any, res: any, next: any) {
     const payload = verifyToken(token);
     if (payload && payload.userId) {
       const user = await storage.getUserById(payload.userId);
+      // A user with the real isAdmin flag is a full admin.
+      if (user && user.isAdmin) {
+        req.user = user;
+        req.isAdmin = true;
+        return next();
+      }
       if (user && user.isModerator) {
         // Log the unauthorized attempt
         await storage.logModeratorAction(
@@ -107,12 +115,13 @@ async function requireAdminOrModerator(req: any, res: any, next: any) {
   }
 
   const user = await storage.getUserById(payload.userId);
-  if (!user || !user.isModerator) {
+  if (!user || (!user.isModerator && !user.isAdmin)) {
     return res.status(403).json({ error: "Forbidden: Moderator access required" });
   }
 
   req.user = user;
-  req.isModerator = true;
+  req.isModerator = !!user.isModerator;
+  req.isAdmin = !!user.isAdmin;
   next();
 }
 
@@ -165,6 +174,51 @@ async function requireApiKey(req: any, res: any, next: any) {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const SUBSCRIBERS_FILE = path.join(__dirname, "..", "data", "subscribers.json");
+
+  // ============================================
+  // Automatic moderator/admin audit logging
+  // ----------------------------------------
+  // Records EVERY successful privileged mutation (POST/PUT/DELETE/PATCH under
+  // /api/admin) performed by a logged-in moderator or admin account. Runs as a
+  // response hook so req.user (set by requireAdmin/requireAdminOrModerator) is
+  // available, and enriches the entry from the response body. This guarantees a
+  // complete audit trail without instrumenting each route by hand.
+  app.use("/api/admin", (req: any, res, next) => {
+    const method = req.method.toUpperCase();
+    if (!["POST", "PUT", "PATCH", "DELETE"].includes(method)) return next();
+
+    const originalJson = res.json.bind(res);
+    res.json = (body: any) => {
+      try {
+        const ok = res.statusCode >= 200 && res.statusCode < 300;
+        const actor = req.user; // a real mod/admin account (not the legacy x-admin-token)
+        if (ok && actor?.id) {
+          const pathAfterPrefix = req.path.replace(/^\/api\/admin\/?/, "");
+          // Skip pure read-style POSTs (e.g. search) — they don't mutate state.
+          const isSearch = /(^|\/)search(\/|$)/.test(pathAfterPrefix);
+          if (!isSearch) {
+            const { action, category, targetType } = describeAdminAction(method, pathAfterPrefix);
+            const targetId = extractTargetId(pathAfterPrefix, body) || extractTargetId(pathAfterPrefix, req.body);
+            const detail = describeTarget(body) || describeTarget(req.body);
+            const ip = ((req.headers["x-forwarded-for"] as string) || req.socket?.remoteAddress || "")
+              .split(",")[0].trim() || undefined;
+            storage.logModeratorAction(actor.id, action, detail || undefined, {
+              category,
+              targetType: targetType || undefined,
+              targetId: targetId || undefined,
+              method,
+              path: req.path,
+              ipAddress: ip,
+            }).catch(() => {});
+          }
+        }
+      } catch {
+        // Never let audit logging break the response
+      }
+      return originalJson(body);
+    };
+    next();
+  });
 
   // External Availability API for Extension
   app.get("/api/external/availability", async (req, res) => {
@@ -1187,6 +1241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           referralCount: freshUser!.referralCount,
           coins: freshUser!.coins,
           isModerator: freshUser!.isModerator || false,
+          isAdmin: freshUser!.isAdmin || false,
         },
       });
     } catch (error) {
@@ -1302,6 +1357,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           subscriptionType: user.subscriptionType || null,
           isSubscribed: user.adFreeUntil && new Date(user.adFreeUntil) > new Date(),
           isModerator: user.isModerator || false,
+          isAdmin: user.isAdmin || false,
         },
       });
     } catch (error) {
@@ -1457,6 +1513,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           subscriptionAutoRenew: user.subscriptionAutoRenew || false,
           isSubscribed: user.adFreeUntil && new Date(user.adFreeUntil) > new Date(),
           isModerator: user.isModerator || false,
+          isAdmin: user.isAdmin || false,
         },
       });
 
@@ -1531,6 +1588,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           favorites,
           coins: user.coins,
           isModerator: user.isModerator || false,
+          isAdmin: user.isAdmin || false,
         },
       });
     } catch (error) {
@@ -1628,6 +1686,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           username: u.username,
           avatarUrl: u.avatarUrl,
           badges: equipped,
+          ...getRoleFlags(u),
         };
       }));
 
@@ -1709,7 +1768,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         socialLinks,
         favorites,
         badges: allBadges,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
+        ...getRoleFlags(user),
       };
 
       res.json(publicProfile);
@@ -1799,6 +1859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         favorites,
         badges: allBadges,
         isModerator: user.isModerator || false,
+        isAdmin: user.isAdmin || false,
         createdAt: user.createdAt,
         // Friend status needs to be checked relative to current user
         isFriend: false, // Will be computed or fetched if needed?
@@ -1931,6 +1992,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             username: fromUser.username,
             avatarUrl: fromUser.avatarUrl,
             badges,
+            ...getRoleFlags(fromUser),
           } : null,
         };
       }));
@@ -2132,6 +2194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           username: friendUser?.username || 'Unknown',
           avatarUrl: friendUser?.avatarUrl || null,
           isModerator: friendUser?.isModerator || false,
+          isAdmin: friendUser?.isAdmin || false,
           badges,
           lastActive: friendUser?.lastActive,
           createdAt: f.createdAt,
@@ -2280,6 +2343,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         socialLinks,
         favorites: enrichedFavorites,
         createdAt: user.createdAt,
+        ...getRoleFlags(user),
       });
     } catch (error) {
       console.error("Get user profile error:", error);
@@ -2403,7 +2467,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           level: u.level,
           badges: getFilteredBadges(u.badges as string), 
           currentStreak: u.currentStreak,
-          isModerator: u.isModerator || false
+          isModerator: u.isModerator || false,
+          isAdmin: u.isAdmin || false
         }));
 
         return res.json(publicLeaderboard);
@@ -2420,7 +2485,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           level: u.level,
           badges: getFilteredBadges(u.badges as string), // Use filtered list
           currentStreak: u.currentStreak || 0,
-          isModerator: u.isModerator || false
+          isModerator: u.isModerator || false,
+          isAdmin: u.isAdmin || false
         }));
 
         return res.json(publicLeaderboard);
@@ -3768,6 +3834,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             avatarUrl: friend.avatarUrl,
             equippedBadge: friend.equippedBadge,
             lastActive: friend.lastActive,
+            ...getRoleFlags(friend),
           } : null,
         };
       }));
@@ -3843,7 +3910,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         xp: user.xp,
         level: user.level,
         badges: user.badges, // Return badges so frontend can display them
-        isModerator: user.isModerator || false
+        isModerator: user.isModerator || false,
+        isAdmin: user.isAdmin || false
       });
     } catch (error) {
       console.error("Get user profile error:", error);
@@ -5580,7 +5648,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/shows", requireAdminOrModerator, async (req, res) => {
     try {
       const show = await storage.createShow(req.body);
-      if ((req as any).isModerator) { await storage.logModeratorAction((req as any).user.id, 'Create Show', `Created show: ${show.title}`); }
       res.json(show);
     } catch (error) {
       res.status(500).json({ error: "Failed to create show" });
@@ -5593,7 +5660,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { showId } = req.params;
       console.log("Updating show:", showId, "with data:", req.body);
       const show = await storage.updateShow(showId, req.body);
-      if ((req as any).isModerator && show) { await storage.logModeratorAction((req as any).user.id, 'Update Show', `Updated show: ${show.title}`); }
       console.log("Updated show:", show);
       res.json(show);
     } catch (error: any) {
@@ -5636,7 +5702,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/movies", requireAdminOrModerator, async (req, res) => {
     try {
       const movie = await storage.createMovie(req.body);
-      if ((req as any).isModerator) { await storage.logModeratorAction((req as any).user.id, 'Create Movie', `Created movie: ${movie.title}`); }
       res.json(movie);
     } catch (error) {
       res.status(500).json({ error: "Failed to create movie" });
@@ -5648,7 +5713,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { movieId } = req.params;
       const movie = await storage.updateMovie(movieId, req.body);
-      if ((req as any).isModerator && movie) { await storage.logModeratorAction((req as any).user.id, 'Update Movie', `Updated movie: ${movie.title}`); }
       res.json(movie);
     } catch (error: any) {
       res.status(500).json({ error: "Failed to update movie", details: error.message });
@@ -5672,7 +5736,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/anime", requireAdminOrModerator, async (req, res) => {
     try {
       const anime = await storage.createAnime(req.body);
-      if ((req as any).isModerator) { await storage.logModeratorAction((req as any).user.id, 'Create Anime', `Created anime: ${anime.title}`); }
       res.json(anime);
     } catch (error) {
       res.status(500).json({ error: "Failed to create anime" });
@@ -5786,7 +5849,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { animeId } = req.params;
       const anime = await storage.updateAnime(animeId, req.body);
-      if ((req as any).isModerator && anime) { await storage.logModeratorAction((req as any).user.id, 'Update Anime', `Updated anime: ${anime.title}`); }
       res.json(anime);
     } catch (error: any) {
       res.status(500).json({ error: "Failed to update anime", details: error.message });
@@ -5825,7 +5887,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { episodeId } = req.params;
       const episode = await storage.updateAnimeEpisode(episodeId, req.body);
-      if ((req as any).isModerator && episode) { await storage.logModeratorAction((req as any).user.id, 'Update Anime Episode', `Updated anime episode: ${episode.title || "Episode " + episode.episodeNumber}`); }
       res.json(episode);
     } catch (error: any) {
       res.status(500).json({ error: "Failed to update anime episode", details: error.message });
@@ -5847,7 +5908,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/episodes", requireAdminOrModerator, async (req, res) => {
     try {
       const episode = await storage.createEpisode(req.body);
-      if ((req as any).isModerator) { await storage.logModeratorAction((req as any).user.id, 'Create Episode', `Created episode: ${episode.title || "Episode " + episode.episodeNumber}`); }
       res.json(episode);
     } catch (error) {
       res.status(500).json({ error: "Failed to create episode" });
@@ -5947,7 +6007,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { episodeId } = req.params;
       const episode = await storage.updateEpisode(episodeId, req.body);
-      if ((req as any).isModerator && episode) { await storage.logModeratorAction((req as any).user.id, 'Update Episode', `Updated episode: ${episode.title || "Episode " + episode.episodeNumber}`); }
       res.json(episode);
     } catch (error) {
       res.status(500).json({ error: "Failed to update episode" });
@@ -8812,6 +8871,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Badge stats
       const badgeStats = await storage.getBadgeStats();
 
+      // ---- Registered user stats ----
+      const allUsers = await storage.getAllUsers();
+      const asDate = (d: any) => (d instanceof Date ? d : new Date(d));
+      const newUsersToday = allUsers.filter(u => u.createdAt && asDate(u.createdAt) >= today).length;
+      const newUsersWeek = allUsers.filter(u => u.createdAt && asDate(u.createdAt) >= weekAgo).length;
+      const newUsersMonth = allUsers.filter(u => u.createdAt && asDate(u.createdAt) >= monthAgo).length;
+      const moderatorsCount = allUsers.filter(u => u.isModerator).length;
+      const adminsCount = allUsers.filter(u => u.isAdmin).length;
+
+      // Daily signups (last 7 days)
+      const dailySignups: { date: string; count: number }[] = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+        const nextDate = new Date(date.getTime() + 24 * 60 * 60 * 1000);
+        dailySignups.push({
+          date: date.toISOString().split("T")[0],
+          count: allUsers.filter(u => u.createdAt && asDate(u.createdAt) >= date && asDate(u.createdAt) < nextDate).length,
+        });
+      }
+
+      // ---- Content library counts ----
+      const [allShows, allMovies, allAnimeList, allEpisodes, allAnimeEpisodes] = await Promise.all([
+        storage.getAllShows(),
+        storage.getAllMovies(),
+        storage.getAllAnime(),
+        storage.getAllEpisodes(),
+        storage.getAllAnimeEpisodes(),
+      ]);
+
+      // ---- Engagement metrics ----
+      const sessionPageCounts: Record<string, number> = {};
+      siteAnalytics.pageViews.forEach(p => {
+        sessionPageCounts[p.sessionId] = (sessionPageCounts[p.sessionId] || 0) + 1;
+      });
+      const sessionCounts = Object.values(sessionPageCounts);
+      const totalSessions = sessionCounts.length || 1;
+      const avgPagesPerSession = Math.round((siteAnalytics.pageViews.length / totalSessions) * 10) / 10;
+      const returningVisitors = sessionCounts.filter(c => c > 1).length;
+      const bounceRate = Math.round((sessionCounts.filter(c => c === 1).length / totalSessions) * 100);
+
+      // ---- Top anime (watch events) ----
+      const animeWatchCounts: Record<string, { title: string; watches: number; duration: number }> = {};
+      siteAnalytics.watchEvents.forEach(w => {
+        if ((w.contentType as string) === "anime") {
+          if (!animeWatchCounts[w.contentId]) animeWatchCounts[w.contentId] = { title: w.contentTitle, watches: 0, duration: 0 };
+          animeWatchCounts[w.contentId].watches++;
+          animeWatchCounts[w.contentId].duration += w.duration;
+        }
+      });
+      const topAnime = Object.entries(animeWatchCounts)
+        .sort(([, a], [, b]) => b.watches - a.watches)
+        .slice(0, 10)
+        .map(([id, data]) => ({ id, ...data }));
+
+      // ---- Peak activity ----
+      const peakHour = hourlyActivity.reduce((mx, h) => (h.views > mx.views ? h : mx), { hour: 0, views: 0 });
+      const busiestDay = dailyViews.reduce((mx, d) => (d.views > mx.views ? d : mx), { date: "", views: 0, visitors: 0 });
+
+      // ---- Moderator activity summary ----
+      const modLogs = await storage.getModeratorLogs();
+      const modActionsToday = modLogs.filter(l => asDate(l.createdAt) >= today).length;
+      const modActionsWeek = modLogs.filter(l => asDate(l.createdAt) >= weekAgo).length;
+      const modByCategory: Record<string, number> = {};
+      const modCountByUser: Record<string, number> = {};
+      modLogs.forEach(l => {
+        const cat = (l as any).category || "other";
+        modByCategory[cat] = (modByCategory[cat] || 0) + 1;
+        modCountByUser[l.username] = (modCountByUser[l.username] || 0) + 1;
+      });
+      const topModerators = Object.entries(modCountByUser)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5)
+        .map(([username, count]) => ({ username, count }));
+      const recentModActions = modLogs.slice(0, 8).map(l => ({
+        username: l.username,
+        action: l.action,
+        details: l.details,
+        category: (l as any).category || null,
+        createdAt: l.createdAt,
+      }));
+
       res.json({
         overview: {
           pageViews: { today: todayViews, week: weekViews, month: monthViews, total: totalViews },
@@ -8819,7 +8959,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
           activeUsers,
           totalWatchTimeHours: Math.round(totalWatchTime / 3600 * 10) / 10
         },
+        userStats: {
+          total: allUsers.length,
+          newToday: newUsersToday,
+          newWeek: newUsersWeek,
+          newMonth: newUsersMonth,
+          moderators: moderatorsCount,
+          admins: adminsCount,
+        },
+        library: {
+          shows: allShows.length,
+          movies: allMovies.length,
+          anime: allAnimeList.length,
+          episodes: allEpisodes.length + allAnimeEpisodes.length,
+          badges: badgeStats.totalBadges,
+        },
+        engagement: {
+          avgPagesPerSession,
+          bounceRate,
+          returningVisitors,
+          newVisitors: totalSessions - returningVisitors,
+          totalSessions,
+        },
+        peak: {
+          hour: peakHour.hour,
+          hourViews: peakHour.views,
+          busiestDay: busiestDay.date,
+          busiestDayViews: busiestDay.views,
+        },
+        moderatorActivity: {
+          today: modActionsToday,
+          week: modActionsWeek,
+          total: modLogs.length,
+          byCategory: modByCategory,
+          topModerators,
+          recent: recentModActions,
+        },
         dailyViews,
+        dailySignups,
         hourlyActivity,
         popularPages,
         trafficSources,
@@ -8827,6 +9004,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         browsers: browserCounts,
         topShows,
         topMovies,
+        topAnime,
         recentPageViews,
         badgeStats
       });
@@ -9584,6 +9762,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(user);
     } catch (err) {
       res.status(500).json({ error: "Failed to demote user" });
+    }
+  });
+
+  // Admin management (grant/revoke the real isAdmin flag). Admin-only.
+  app.get("/api/admin/admins", requireAdmin, async (req, res) => {
+    try {
+      const admins = await storage.getAdmins();
+      res.json(admins);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to fetch admins" });
+    }
+  });
+
+  app.post("/api/admin/admins/promote", requireAdmin, async (req, res) => {
+    try {
+      const { userId } = req.body;
+      const user = await storage.updateUserAdminRole(userId, true);
+      res.json(user);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to promote user to admin" });
+    }
+  });
+
+  app.post("/api/admin/admins/demote", requireAdmin, async (req, res) => {
+    try {
+      const { userId } = req.body;
+      // Safety: never allow removing the last admin, so the platform can't get locked out.
+      const admins = await storage.getAdmins();
+      if (admins.length <= 1 && admins.some(a => a.id === userId)) {
+        return res.status(400).json({ error: "Cannot remove the last remaining admin" });
+      }
+      const user = await storage.updateUserAdminRole(userId, false);
+      res.json(user);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to demote admin" });
     }
   });
 
