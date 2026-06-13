@@ -1,7 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Search as SearchIcon, SlidersHorizontal, Loader2 } from "lucide-react";
+import { useInView } from "react-intersection-observer";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -10,6 +11,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ShowCard } from "@/components/show-card";
 import { MovieCard } from "@/components/movie-card";
 import { Skeleton } from "@/components/ui/skeleton";
+
+const ALL_GENRES = [
+  "Action", "Action & Adventure", "Adventure", "Animation", "Comedy", 
+  "Crime", "Documentary", "Drama", "Family", "Fantasy", "History", 
+  "Horror", "Music", "Mystery", "Romance", "Sci-Fi & Fantasy", 
+  "Science Fiction", "Soap", "TV Movie", "Thriller", "War", 
+  "War & Politics", "Western"
+];
 import { SEO } from "@/components/seo";
 import {
   Sheet,
@@ -28,119 +37,58 @@ export default function Search() {
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [yearRange, setYearRange] = useState<[number, number]>([1900, 2030]);
+  const [currentTab, setCurrentTab] = useState<string>("all");
+  const { ref, inView } = useInView();
 
-  const { data: shows, isLoading: showsLoading } = useQuery<Show[]>({
-    queryKey: ["/api/shows"],
+  // Reset page when search params change
+  const handleFilterChange = (setter: any, value: any) => {
+    setter(value);
+  };
+
+  const { 
+    data, 
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
+  } = useInfiniteQuery({
+    queryKey: [
+      "/api/search/advanced",
+      { q: searchQuery, type: currentTab, genres: selectedGenres.join(","), year: yearRange.join("-"), limit: 60 }
+    ],
+    queryFn: async ({ pageParam = 1 }) => {
+      const params = new URLSearchParams({
+        q: searchQuery,
+        type: currentTab,
+        genres: selectedGenres.join(","),
+        year: `${yearRange[0]}-${yearRange[1]}`,
+        page: pageParam.toString(),
+        limit: "60"
+      });
+      const res = await fetch(`/api/search/advanced?${params}`);
+      if (!res.ok) throw new Error("Failed to fetch search results");
+      return res.json() as Promise<{
+        items: (Movie | Show | Anime & { mediaType: 'movie' | 'show' | 'anime' })[];
+        totalCount: number;
+        totalPages: number;
+        page: number;
+      }>;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
   });
 
-  const { data: movies, isLoading: moviesLoading } = useQuery<Movie[]>({
-    queryKey: ["/api/movies"],
-  });
+  useEffect(() => {
+    if (inView && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const { data: anime, isLoading: animeLoading } = useQuery<Anime[]>({
-    queryKey: ["/api/anime"],
-  });
-
-  const isLoading = showsLoading || moviesLoading || animeLoading;
-
-  const allGenres = useMemo(() => {
-    const genres = new Set<string>();
-
-    shows?.forEach((show) => {
-      const showGenres = show.genres?.split(',').map(g => g.trim()).filter(g => g.length > 0) || [];
-      showGenres.forEach((g) => genres.add(g));
-    });
-
-    movies?.forEach((movie) => {
-      const movieGenres = movie.genres?.split(',').map(g => g.trim()).filter(g => g.length > 0) || [];
-      movieGenres.forEach((g) => genres.add(g));
-    });
-
-    anime?.forEach((a) => {
-      const animeGenres = a.genres?.split(',').map(g => g.trim()).filter(g => g.length > 0) || [];
-      animeGenres.forEach((g) => genres.add(g));
-    });
-
-    return Array.from(genres).filter(g => g.length > 0).sort();
-  }, [shows, movies, anime]);
-
-  const filteredShows = useMemo(() => {
-    if (!shows) return [];
-
-    return shows.filter((show) => {
-      const genres = show.genres?.split(',').map(g => g.trim()) || [];
-
-      const matchesQuery =
-        !searchQuery ||
-        show.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        show.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        genres.some((g) =>
-          g.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-
-      const matchesGenre =
-        selectedGenres.length === 0 ||
-        genres.some((g) => selectedGenres.includes(g));
-
-      const matchesYear =
-        show.year >= yearRange[0] && show.year <= yearRange[1];
-
-      return matchesQuery && matchesGenre && matchesYear;
-    });
-  }, [shows, searchQuery, selectedGenres, yearRange]);
-
-  const filteredMovies = useMemo(() => {
-    if (!movies) return [];
-
-    return movies.filter((movie) => {
-      const genres = movie.genres?.split(',').map(g => g.trim()) || [];
-
-      const matchesQuery =
-        !searchQuery ||
-        movie.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        movie.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        genres.some((g) =>
-          g.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-
-      const matchesGenre =
-        selectedGenres.length === 0 ||
-        genres.some((g) => selectedGenres.includes(g));
-
-      const matchesYear =
-        movie.year >= yearRange[0] && movie.year <= yearRange[1];
-
-      return matchesQuery && matchesGenre && matchesYear;
-    });
-  }, [movies, searchQuery, selectedGenres, yearRange]);
-
-  const filteredAnime = useMemo(() => {
-    if (!anime) return [];
-
-    return anime.filter((a) => {
-      const genres = a.genres?.split(',').map(g => g.trim()) || [];
-
-      const matchesQuery =
-        !searchQuery ||
-        a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        a.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        genres.some((g) =>
-          g.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-
-      const matchesGenre =
-        selectedGenres.length === 0 ||
-        genres.some((g) => selectedGenres.includes(g));
-
-      const matchesYear =
-        a.year >= yearRange[0] && a.year <= yearRange[1];
-
-      return matchesQuery && matchesGenre && matchesYear;
-    });
-  }, [anime, searchQuery, selectedGenres, yearRange]);
+  const filteredItems = data?.pages.flatMap(page => page.items) || [];
+  const totalCount = data?.pages[0]?.totalCount;
 
   const toggleGenre = (genre: string) => {
-    setSelectedGenres((prev) =>
+    handleFilterChange(setSelectedGenres, (prev: string[]) =>
       prev.includes(genre)
         ? prev.filter((g) => g !== genre)
         : [...prev, genre]
@@ -157,7 +105,7 @@ export default function Search() {
       <div>
         <h3 className="font-semibold mb-3">Genres</h3>
         <div className="space-y-2">
-          {allGenres.map((genre) => (
+          {ALL_GENRES.map((genre) => (
             <div key={genre} className="flex items-center space-x-2">
               <Checkbox
                 id={`genre-${genre}`}
@@ -187,7 +135,7 @@ export default function Search() {
               max="2030"
               value={yearRange[0]}
               onChange={(e) =>
-                setYearRange([parseInt(e.target.value) || 1900, yearRange[1]])
+                handleFilterChange(setYearRange, [parseInt(e.target.value) || 1900, yearRange[1]])
               }
               className="w-24"
               data-testid="input-year-from"
@@ -199,7 +147,7 @@ export default function Search() {
               max="2030"
               value={yearRange[1]}
               onChange={(e) =>
-                setYearRange([yearRange[0], parseInt(e.target.value) || 2030])
+                handleFilterChange(setYearRange, [yearRange[0], parseInt(e.target.value) || 2030])
               }
               className="w-24"
               data-testid="input-year-to"
@@ -242,7 +190,7 @@ export default function Search() {
                 type="search"
                 placeholder="Search for shows, movies, anime, genres, actors..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleFilterChange(setSearchQuery, e.target.value)}
                 className="pl-10"
                 data-testid="input-search-query"
               />
@@ -283,41 +231,39 @@ export default function Search() {
 
           {/* Results */}
           <div className="flex-1">
-            <Tabs defaultValue="all" className="w-full">
-              <TabsList className="mb-6">
+            <Tabs value={currentTab} onValueChange={(val) => handleFilterChange(setCurrentTab, val)} className="w-full">
+              <TabsList className="mb-6 flex flex-wrap h-auto gap-2">
                 <TabsTrigger value="all">
-                  All ({filteredShows.length + filteredMovies.length + filteredAnime.length})
+                  All {currentTab === 'all' && totalCount !== undefined ? `(${totalCount})` : ''}
                 </TabsTrigger>
                 <TabsTrigger value="shows">
-                  Shows ({filteredShows.length})
+                  Shows {currentTab === 'shows' && totalCount !== undefined ? `(${totalCount})` : ''}
                 </TabsTrigger>
                 <TabsTrigger value="movies">
-                  Movies ({filteredMovies.length})
+                  Movies {currentTab === 'movies' && totalCount !== undefined ? `(${totalCount})` : ''}
                 </TabsTrigger>
                 <TabsTrigger value="anime">
-                  Anime ({filteredAnime.length})
+                  Anime {currentTab === 'anime' && totalCount !== undefined ? `(${totalCount})` : ''}
                 </TabsTrigger>
               </TabsList>
 
-              {/* All Tab */}
-              <TabsContent value="all">
+              {/* All Tabs use the same content area now, since the items are fetched based on currentTab */}
+              <div className="min-h-[400px]">
                 {isLoading ? (
                   <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
                     {[...Array(12)].map((_, i) => (
                       <Skeleton key={i} className="aspect-[2/3]" />
                     ))}
                   </div>
-                ) : filteredShows.length + filteredMovies.length + filteredAnime.length > 0 ? (
+                ) : filteredItems.length > 0 ? (
                   <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
-                    {filteredShows.map((show) => (
-                      <ShowCard key={`show-${show.id}`} show={show} />
-                    ))}
-                    {filteredMovies.map((movie) => (
-                      <MovieCard key={`movie-${movie.id}`} movie={movie} />
-                    ))}
-                    {filteredAnime.map((a) => (
-                      <ShowCard key={`anime-${a.id}`} show={a} />
-                    ))}
+                    {filteredItems.map((item) => {
+                      if (item.mediaType === 'movie') {
+                        return <MovieCard key={`movie-${item.id}`} movie={item as Movie} />;
+                      } else {
+                        return <ShowCard key={`${item.mediaType}-${item.id}`} show={item as any} />;
+                      }
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-12">
@@ -328,82 +274,23 @@ export default function Search() {
                     </p>
                   </div>
                 )}
-              </TabsContent>
-
-              {/* Shows Tab */}
-              <TabsContent value="shows">
-                {isLoading ? (
-                  <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
-                    {[...Array(12)].map((_, i) => (
-                      <Skeleton key={i} className="aspect-[2/3]" />
-                    ))}
+              </div>
+              
+              {/* Bottom Pagination / Loading Indicator */}
+              <div ref={ref} className="mt-8 mb-4 flex justify-center py-4">
+                {isFetchingNextPage ? (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                    Loading more results...
                   </div>
-                ) : filteredShows.length > 0 ? (
-                  <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
-                    {filteredShows.map((show) => (
-                      <ShowCard key={show.id} show={show} />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <SearchIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No shows found</h3>
-                    <p className="text-muted-foreground">
-                      Try adjusting your search or filters
-                    </p>
-                  </div>
-                )}
-              </TabsContent>
-
-              {/* Movies Tab */}
-              <TabsContent value="movies">
-                {isLoading ? (
-                  <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
-                    {[...Array(12)].map((_, i) => (
-                      <Skeleton key={i} className="aspect-[2/3]" />
-                    ))}
-                  </div>
-                ) : filteredMovies.length > 0 ? (
-                  <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
-                    {filteredMovies.map((movie) => (
-                      <MovieCard key={movie.id} movie={movie} />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <SearchIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No movies found</h3>
-                    <p className="text-muted-foreground">
-                      Try adjusting your search or filters
-                    </p>
-                  </div>
-                )}
-              </TabsContent>
-
-              {/* Anime Tab */}
-              <TabsContent value="anime">
-                {isLoading ? (
-                  <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
-                    {[...Array(12)].map((_, i) => (
-                      <Skeleton key={i} className="aspect-[2/3]" />
-                    ))}
-                  </div>
-                ) : filteredAnime.length > 0 ? (
-                  <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
-                    {filteredAnime.map((a) => (
-                      <ShowCard key={a.id} show={a} />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <SearchIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No anime found</h3>
-                    <p className="text-muted-foreground">
-                      Try adjusting your search or filters
-                    </p>
-                  </div>
-                )}
-              </TabsContent>
+                ) : hasNextPage ? (
+                  <Button variant="outline" onClick={() => fetchNextPage()}>
+                    Load More
+                  </Button>
+                ) : filteredItems.length > 0 ? (
+                  <p className="text-muted-foreground">You've reached the end of the results</p>
+                ) : null}
+              </div>
             </Tabs>
           </div>
         </div>

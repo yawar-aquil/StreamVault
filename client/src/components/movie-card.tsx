@@ -67,7 +67,7 @@ export function MovieCard({
   return (
     <Link href={`/movie/${movie.slug}`}>
       <div
-        className="group relative overflow-visible cursor-pointer hover:z-50 transition-all duration-300"
+        className="group relative overflow-visible cursor-pointer hover:z-40 transition-all duration-300"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >

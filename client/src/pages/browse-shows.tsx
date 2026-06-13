@@ -1,13 +1,47 @@
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { ShowCard } from "@/components/show-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SEO } from "@/components/seo";
+import { Button } from "@/components/ui/button";
+import { useEffect } from "react";
+import { useInView } from "react-intersection-observer";
 import type { Show } from "@shared/schema";
 
+interface PaginatedResponse {
+  items: Show[];
+  totalCount: number;
+  totalPages: number;
+  page: number;
+}
+
 export default function BrowseShows() {
-  const { data: shows, isLoading } = useQuery<Show[]>({
-    queryKey: ["/api/shows"],
+  const { ref, inView } = useInView();
+
+  const { 
+    data, 
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
+  } = useInfiniteQuery<PaginatedResponse>({
+    queryKey: ["/api/shows", { paginate: true, limit: 60 }],
+    queryFn: async ({ pageParam = 1 }) => {
+      const res = await fetch(`/api/shows?paginate=true&page=${pageParam}&limit=60`);
+      if (!res.ok) throw new Error("Failed to fetch");
+      return res.json();
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
   });
+
+  useEffect(() => {
+    if (inView && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const shows = data?.pages.flatMap(page => page.items) || [];
+  const totalCount = data?.pages[0]?.totalCount || 0;
 
   return (
     <div className="min-h-screen">
@@ -17,11 +51,13 @@ export default function BrowseShows() {
         canonical="https://streamvault.live/browse/shows"
       />
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">All Shows</h1>
-          <p className="text-muted-foreground">
-            Browse all {shows?.length || 0} shows in our collection
-          </p>
+        <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-4xl font-bold mb-2">All TV Shows</h1>
+            <p className="text-muted-foreground">
+              Browse all {totalCount} TV shows in our collection
+            </p>
+          </div>
         </div>
 
         {isLoading ? (
@@ -49,6 +85,22 @@ export default function BrowseShows() {
             <p className="text-muted-foreground">No shows available</p>
           </div>
         )}
+
+        {/* Bottom Pagination / Loading Indicator */}
+        <div ref={ref} className="mt-8 flex justify-center py-4">
+          {isFetchingNextPage ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+              Loading more shows...
+            </div>
+          ) : hasNextPage ? (
+            <Button variant="outline" onClick={() => fetchNextPage()}>
+              Load More
+            </Button>
+          ) : shows.length > 0 ? (
+            <p className="text-muted-foreground">You've reached the end of the list</p>
+          ) : null}
+        </div>
       </div>
     </div>
   );

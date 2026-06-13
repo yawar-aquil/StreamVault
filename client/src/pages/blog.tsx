@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Calendar, User, ArrowRight, Film, Tv, Search, X, Sparkles } from "lucide-react";
+import { useInView } from "react-intersection-observer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -25,82 +26,85 @@ interface ContentPost {
 
 export default function Blog() {
   const [searchQuery, setSearchQuery] = useState("");
+  const { ref, inView } = useInView();
 
-  const { data: shows, isLoading: showsLoading } = useQuery<Show[]>({
-    queryKey: ["/api/shows"],
+  const { data: showsData } = useQuery({
+    queryKey: ["/api/search/advanced", { type: "shows", limit: 1 }],
+    queryFn: async () => {
+      const res = await fetch("/api/search/advanced?type=shows&limit=1");
+      return res.json();
+    }
   });
 
-  const { data: movies, isLoading: moviesLoading } = useQuery<Movie[]>({
-    queryKey: ["/api/movies"],
+  const { data: moviesData } = useQuery({
+    queryKey: ["/api/search/advanced", { type: "movies", limit: 1 }],
+    queryFn: async () => {
+      const res = await fetch("/api/search/advanced?type=movies&limit=1");
+      return res.json();
+    }
   });
 
-  const { data: anime, isLoading: animeLoading } = useQuery<Anime[]>({
-    queryKey: ["/api/anime"],
+  const { data: animeData } = useQuery({
+    queryKey: ["/api/search/advanced", { type: "anime", limit: 1 }],
+    queryFn: async () => {
+      const res = await fetch("/api/search/advanced?type=anime&limit=1");
+      return res.json();
+    }
   });
 
-  const isLoading = showsLoading || moviesLoading || animeLoading;
+  const { 
+    data, 
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
+  } = useInfiniteQuery({
+    queryKey: ["/api/search/advanced", { q: searchQuery, type: "all", sort: "year", limit: 60 }],
+    queryFn: async ({ pageParam = 1 }) => {
+      const params = new URLSearchParams({
+        q: searchQuery,
+        type: "all",
+        sort: "year",
+        page: pageParam.toString(),
+        limit: "60"
+      });
+      const res = await fetch(`/api/search/advanced?${params}`);
+      if (!res.ok) throw new Error("Failed to fetch");
+      return res.json();
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
+  });
 
-  // Convert shows and movies to content posts (no custom blog posts - they're used for detailed content only)
-  const allPosts: ContentPost[] = [
-    // Movies
-    ...(movies?.map((movie) => ({
-      type: "movie" as const,
-      slug: movie.slug,
-      title: movie.title,
-      description: movie.description,
-      posterUrl: movie.posterUrl,
-      backdropUrl: movie.backdropUrl,
-      year: movie.year,
-      genres: movie.genres,
-      rating: movie.rating,
-      imdbRating: movie.imdbRating,
-      cast: movie.cast,
-    })) || []),
-    // Shows
-    ...(shows?.map((show) => ({
-      type: "show" as const,
-      slug: show.slug,
-      title: show.title,
-      description: show.description,
-      posterUrl: show.posterUrl,
-      backdropUrl: show.backdropUrl,
-      year: show.year,
-      genres: show.genres,
-      rating: show.rating,
-      imdbRating: show.imdbRating,
-      cast: show.cast,
-    })) || []),
-    // Anime
-    ...(anime?.map((a) => ({
-      type: "anime" as const,
-      slug: a.slug,
-      title: a.title,
-      description: a.description || '',
-      posterUrl: a.posterUrl || '',
-      backdropUrl: a.backdropUrl || '',
-      year: a.year,
-      genres: a.genres || '',
-      rating: a.rating || '',
-      imdbRating: a.imdbRating,
-      cast: a.cast,
-    })) || []),
-  ];
+  useEffect(() => {
+    if (inView && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const allItems = data?.pages.flatMap(page => page.items) || [];
+  const totalCount = data?.pages[0]?.totalCount || 0;
+
+  const allPosts: ContentPost[] = allItems.map(item => ({
+    type: item.mediaType,
+    slug: item.slug,
+    title: item.title,
+    description: item.description || '',
+    posterUrl: item.posterUrl || '',
+    backdropUrl: item.backdropUrl || '',
+    year: item.year,
+    genres: item.genres || '',
+    rating: item.rating || '',
+    imdbRating: item.imdbRating,
+    cast: item.cast,
+  }));
 
   // Sort by year (newest first), but put Dhurandhar at the top as featured
-  const sortedPosts = allPosts.sort((a, b) => {
+  const filteredPosts = allPosts.sort((a, b) => {
     if (a.slug === "dhurandhar") return -1;
     if (b.slug === "dhurandhar") return 1;
-    return b.year - a.year;
+    return 0; // Maintain existing order from the API which is by year
   });
-
-  // Filter posts based on search query
-  const filteredPosts = searchQuery.trim()
-    ? sortedPosts.filter((post) =>
-      post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.genres.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-    : sortedPosts;
 
   const blogStructuredData = {
     "@context": "https://schema.org",
@@ -159,7 +163,7 @@ export default function Blog() {
           </div>
           {searchQuery && (
             <p className="text-sm text-muted-foreground mt-2">
-              Found {filteredPosts.length} result{filteredPosts.length !== 1 ? "s" : ""} for "{searchQuery}"
+              Found {totalCount} result{totalCount !== 1 ? "s" : ""} for "{searchQuery}"
             </p>
           )}
         </div>
@@ -170,22 +174,22 @@ export default function Blog() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <div className="bg-card border border-border rounded-lg p-4 text-center">
             <Film className="w-6 h-6 mx-auto mb-2 text-primary" />
-            <p className="text-2xl font-bold">{movies?.length || 0}</p>
+            <p className="text-2xl font-bold">{moviesData?.totalCount || 0}</p>
             <p className="text-sm text-muted-foreground">Movies</p>
           </div>
           <div className="bg-card border border-border rounded-lg p-4 text-center">
             <Tv className="w-6 h-6 mx-auto mb-2 text-primary" />
-            <p className="text-2xl font-bold">{shows?.length || 0}</p>
+            <p className="text-2xl font-bold">{showsData?.totalCount || 0}</p>
             <p className="text-sm text-muted-foreground">TV Shows</p>
           </div>
           <div className="bg-card border border-border rounded-lg p-4 text-center">
             <Sparkles className="w-6 h-6 mx-auto mb-2 text-primary" />
-            <p className="text-2xl font-bold">{anime?.length || 0}</p>
+            <p className="text-2xl font-bold">{animeData?.totalCount || 0}</p>
             <p className="text-sm text-muted-foreground">Anime</p>
           </div>
           <div className="bg-card border border-border rounded-lg p-4 text-center">
             <User className="w-6 h-6 mx-auto mb-2 text-primary" />
-            <p className="text-2xl font-bold">{filteredPosts.length}</p>
+            <p className="text-2xl font-bold">{totalCount}</p>
             <p className="text-sm text-muted-foreground">Articles</p>
           </div>
           <div className="bg-card border border-border rounded-lg p-4 text-center">
@@ -239,7 +243,7 @@ export default function Blog() {
         <div className="mb-8">
           <h2 className="text-2xl font-bold mb-4">{searchQuery ? "Search Results" : "All Articles"}</h2>
           <p className="text-muted-foreground mb-6">
-            Browse {filteredPosts.length} articles about movies and TV shows
+            Browse {totalCount} articles about movies and TV shows
           </p>
         </div>
 
@@ -259,7 +263,7 @@ export default function Blog() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {(searchQuery ? filteredPosts : filteredPosts.slice(1)).map((post) => (
-              <Link key={`${post.type}-${post.slug}`} href={`/blog/${post.type}/${post.slug}`}>
+              <Link key={`${post.type}-${post.slug}-${post.title}`} href={`/blog/${post.type}/${post.slug}`}>
                 <article className="bg-card border border-border rounded-lg overflow-hidden group cursor-pointer hover:border-primary/50 transition-colors">
                   <div className="aspect-video relative overflow-hidden">
                     <img
@@ -300,6 +304,22 @@ export default function Blog() {
             ))}
           </div>
         )}
+
+        {/* Bottom Pagination / Loading Indicator */}
+        <div ref={ref} className="mt-8 flex justify-center py-4">
+          {isFetchingNextPage ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+              Loading more articles...
+            </div>
+          ) : hasNextPage ? (
+            <Button variant="outline" onClick={() => fetchNextPage()}>
+              Load More
+            </Button>
+          ) : filteredPosts.length > 0 ? (
+            <p className="text-muted-foreground">You've reached the end of the list</p>
+          ) : null}
+        </div>
       </div>
     </div>
   );

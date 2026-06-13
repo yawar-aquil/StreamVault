@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Search, Filter, Film, Tv, Grid, List, X } from "lucide-react";
+import { Search, Filter, Film, Tv, Grid, List, X, Sparkles } from "lucide-react";
+import { useInView } from "react-intersection-observer";
 import { SEO } from "@/components/seo";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Show, Movie, Anime } from "@shared/schema";
-import { Sparkles } from "lucide-react";
+
+const ALL_GENRES = [
+  "Action", "Action & Adventure", "Adventure", "Animation", "Comedy", 
+  "Crime", "Documentary", "Drama", "Family", "Fantasy", "History", 
+  "Horror", "Music", "Mystery", "Romance", "Sci-Fi & Fantasy", 
+  "Science Fiction", "Soap", "TV Movie", "Thriller", "War", 
+  "War & Politics", "Western"
+];
 
 type ContentType = "all" | "shows" | "movies" | "anime";
 type SortOption = "title" | "year" | "rating";
@@ -24,98 +32,56 @@ export default function Browse() {
   const [searchQuery, setSearchQuery] = useState("");
   const [contentType, setContentType] = useState<ContentType>("all");
   const [selectedGenre, setSelectedGenre] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<SortOption>("title");
+  const [sortBy, setSortBy] = useState<SortOption>("year"); // Changed default to year since that's "newest first"
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const { ref, inView } = useInView();
 
-  const { data: shows, isLoading: showsLoading } = useQuery<Show[]>({
-    queryKey: ["/api/shows"],
+  // Reset page when filters change
+  const handleFilterChange = (setter: any, value: any) => {
+    setter(value);
+  };
+
+  const { 
+    data, 
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
+  } = useInfiniteQuery({
+    queryKey: [
+      "/api/search/advanced",
+      { q: searchQuery, type: contentType, genres: selectedGenre !== "all" ? selectedGenre : "", sort: sortBy, limit: 60 }
+    ],
+    queryFn: async ({ pageParam = 1 }) => {
+      const params = new URLSearchParams({
+        q: searchQuery,
+        type: contentType,
+        genres: selectedGenre !== "all" ? selectedGenre : "",
+        sort: sortBy,
+        page: pageParam.toString(),
+        limit: "60"
+      });
+      const res = await fetch(`/api/search/advanced?${params}`);
+      if (!res.ok) throw new Error("Failed to fetch search results");
+      return res.json() as Promise<{
+        items: (Movie | Show | Anime & { mediaType: 'movie' | 'show' | 'anime' })[];
+        totalCount: number;
+        totalPages: number;
+        page: number;
+      }>;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
   });
 
-  const { data: movies, isLoading: moviesLoading } = useQuery<Movie[]>({
-    queryKey: ["/api/movies"],
-  });
-
-  const { data: anime, isLoading: animeLoading } = useQuery<Anime[]>({
-    queryKey: ["/api/anime"],
-  });
-
-  const isLoading = showsLoading || moviesLoading || animeLoading;
-
-  // Extract all unique genres
-  const allGenres = useMemo(() => {
-    const genres = new Set<string>();
-    shows?.forEach((show) => {
-      show.genres?.split(",").forEach((g) => {
-        const trimmed = g.trim();
-        if (trimmed) genres.add(trimmed);
-      });
-    });
-    movies?.forEach((movie) => {
-      movie.genres?.split(",").forEach((g) => {
-        const trimmed = g.trim();
-        if (trimmed) genres.add(trimmed);
-      });
-    });
-    anime?.forEach((a) => {
-      a.genres?.split(",").forEach((g) => {
-        const trimmed = g.trim();
-        if (trimmed) genres.add(trimmed);
-      });
-    });
-    return Array.from(genres).filter(g => g.length > 0).sort();
-  }, [shows, movies, anime]);
-
-  // Filter and sort content
-  const filteredContent = useMemo(() => {
-    let content: (Show | Movie | Anime)[] = [];
-
-    if (contentType === "all" || contentType === "shows") {
-      content = [...content, ...(shows || [])];
+  useEffect(() => {
+    if (inView && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
     }
-    if (contentType === "all" || contentType === "movies") {
-      content = [...content, ...(movies || [])];
-    }
-    if (contentType === "all" || contentType === "anime") {
-      content = [...content, ...(anime || [])];
-    }
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      content = content.filter(
-        (item) =>
-          item.title.toLowerCase().includes(query) ||
-          item.description?.toLowerCase().includes(query) ||
-          item.genres?.toLowerCase().includes(query) ||
-          item.cast?.toLowerCase().includes(query)
-      );
-    }
-
-    // Genre filter
-    if (selectedGenre !== "all") {
-      content = content.filter((item) =>
-        item.genres?.toLowerCase().includes(selectedGenre.toLowerCase())
-      );
-    }
-
-    // Sort
-    content.sort((a, b) => {
-      switch (sortBy) {
-        case "title":
-          return a.title.localeCompare(b.title);
-        case "year":
-          return (b.year || 0) - (a.year || 0);
-        case "rating":
-          return (
-            parseFloat(b.imdbRating || "0") - parseFloat(a.imdbRating || "0")
-          );
-        default:
-          return 0;
-      }
-    });
-
-    return content;
-  }, [shows, movies, anime, contentType, searchQuery, selectedGenre, sortBy]);
+  const filteredContent = data?.pages.flatMap(page => page.items) || [];
+  const totalCount = data?.pages[0]?.totalCount || 0;
 
   // Helper to check if item is a movie
   const isMovie = (item: Show | Movie | Anime): item is Movie => {
@@ -131,7 +97,7 @@ export default function Browse() {
     setSearchQuery("");
     setContentType("all");
     setSelectedGenre("all");
-    setSortBy("title");
+    setSortBy("year");
   };
 
   const hasActiveFilters =
@@ -165,8 +131,7 @@ export default function Browse() {
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">Browse</h1>
           <p className="text-muted-foreground">
-            Explore our collection of {shows?.length || 0} shows and{" "}
-            {movies?.length || 0} movies
+            Explore our collection of {totalCount} items
           </p>
         </div>
 
@@ -178,7 +143,7 @@ export default function Browse() {
             <Input
               placeholder="Search by title, genre, cast..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleFilterChange(setSearchQuery, e.target.value)}
               className="pl-10 bg-card"
             />
           </div>
@@ -190,7 +155,7 @@ export default function Browse() {
               <Button
                 size="sm"
                 variant={contentType === "all" ? "default" : "ghost"}
-                onClick={() => setContentType("all")}
+                onClick={() => handleFilterChange(setContentType, "all")}
                 className="gap-1"
               >
                 All
@@ -198,7 +163,7 @@ export default function Browse() {
               <Button
                 size="sm"
                 variant={contentType === "shows" ? "default" : "ghost"}
-                onClick={() => setContentType("shows")}
+                onClick={() => handleFilterChange(setContentType, "shows")}
                 className="gap-1"
               >
                 <Tv className="w-4 h-4" />
@@ -207,7 +172,7 @@ export default function Browse() {
               <Button
                 size="sm"
                 variant={contentType === "movies" ? "default" : "ghost"}
-                onClick={() => setContentType("movies")}
+                onClick={() => handleFilterChange(setContentType, "movies")}
                 className="gap-1"
               >
                 <Film className="w-4 h-4" />
@@ -216,7 +181,7 @@ export default function Browse() {
               <Button
                 size="sm"
                 variant={contentType === "anime" ? "default" : "ghost"}
-                onClick={() => setContentType("anime")}
+                onClick={() => handleFilterChange(setContentType, "anime")}
                 className="gap-1"
               >
                 <Sparkles className="w-4 h-4" />
@@ -225,14 +190,14 @@ export default function Browse() {
             </div>
 
             {/* Genre Filter */}
-            <Select value={selectedGenre} onValueChange={setSelectedGenre}>
+            <Select value={selectedGenre} onValueChange={(v) => handleFilterChange(setSelectedGenre, v)}>
               <SelectTrigger className="w-[150px] bg-card">
                 <Filter className="w-4 h-4 mr-2" />
                 <SelectValue placeholder="Genre" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Genres</SelectItem>
-                {allGenres.map((genre) => (
+                {ALL_GENRES.map((genre) => (
                   <SelectItem key={genre} value={genre}>
                     {genre}
                   </SelectItem>
@@ -241,7 +206,7 @@ export default function Browse() {
             </Select>
 
             {/* Sort */}
-            <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+            <Select value={sortBy} onValueChange={(v) => handleFilterChange(setSortBy, v as SortOption)}>
               <SelectTrigger className="w-[140px] bg-card">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
@@ -287,7 +252,7 @@ export default function Browse() {
 
         {/* Results Count */}
         <div className="mb-4 text-sm text-muted-foreground">
-          Showing {filteredContent.length} results
+          Showing {filteredContent.length} results on this page (Total: {totalCount})
         </div>
 
         {/* Content Grid/List */}
@@ -370,6 +335,22 @@ export default function Browse() {
             ))}
           </div>
         )}
+
+        {/* Bottom Pagination / Loading Indicator */}
+        <div ref={ref} className="mt-8 flex justify-center py-4">
+          {isFetchingNextPage ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+              Loading more items...
+            </div>
+          ) : hasNextPage ? (
+            <Button variant="outline" onClick={() => fetchNextPage()}>
+              Load More
+            </Button>
+          ) : filteredContent.length > 0 ? (
+            <p className="text-muted-foreground">You've reached the end of the list</p>
+          ) : null}
+        </div>
       </div>
     </div>
   );

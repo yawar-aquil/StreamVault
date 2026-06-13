@@ -4631,17 +4631,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Sort newest first
       shows.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-      const limit = parseInt(req.query.limit as string) || 0;
+      const paginate = req.query.paginate === 'true';
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || (paginate ? 200 : 0);
       
+      let totalCount = shows.length;
+      let totalPages = limit > 0 ? Math.ceil(totalCount / limit) : 1;
+
       // Restrict external API users to 1 item per request
       if ((req as any).apiKey) {
         shows = shows.slice(0, 1);
+        totalCount = 1;
+        totalPages = 1;
+      } else if (paginate && limit > 0) {
+        // Handle true pagination
+        const startIndex = (page - 1) * limit;
+        shows = shows.slice(startIndex, startIndex + limit);
       } else if (req.query.limit === 'all') {
         // Return all items for admin
       } else if (limit > 0) {
         shows = shows.slice(0, limit);
       } else {
-        shows = shows.slice(0, 200); // Default limit to prevent frontend freeze
+        // Default limit to prevent frontend freeze, prioritizing featured/trending
+        const featuredAndTrending = shows.filter(s => s.featured || s.trending);
+        const others = shows.filter(s => !s.featured && !s.trending);
+        
+        // Take all featured/trending, and fill the rest of the 200 slots with newest 'others'
+        shows = [...featuredAndTrending, ...others].slice(0, 200);
       }
       
       // Strip heavy fields to reduce JSON payload size
@@ -4651,7 +4667,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: s.description ? s.description.substring(0, 150) + "..." : "", // Truncate description
       }));
 
-      res.json(optimizedShows);
+      if (paginate) {
+        res.json({
+          items: optimizedShows,
+          totalCount,
+          totalPages,
+          page
+        });
+      } else {
+        res.json(optimizedShows);
+      }
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch shows" });
     }
@@ -4813,17 +4838,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Sort newest first
       movies.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-      const limit = parseInt(req.query.limit as string) || 0;
+      const paginate = req.query.paginate === 'true';
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || (paginate ? 200 : 0);
       
+      let totalCount = movies.length;
+      let totalPages = limit > 0 ? Math.ceil(totalCount / limit) : 1;
+
       // Restrict external API users to 1 item per request
       if ((req as any).apiKey) {
         movies = movies.slice(0, 1);
+        totalCount = 1;
+        totalPages = 1;
+      } else if (paginate && limit > 0) {
+        // Handle true pagination
+        const startIndex = (page - 1) * limit;
+        movies = movies.slice(startIndex, startIndex + limit);
       } else if (req.query.limit === 'all') {
         // Return all items for admin
       } else if (limit > 0) {
         movies = movies.slice(0, limit);
       } else {
-        movies = movies.slice(0, 200); // Default limit to prevent frontend freeze
+        // Default limit to prevent frontend freeze, prioritizing featured/trending
+        const featuredAndTrending = movies.filter(m => m.featured || m.trending);
+        const others = movies.filter(m => !m.featured && !m.trending);
+        
+        // Take all featured/trending, and fill the rest of the 200 slots with newest 'others'
+        movies = [...featuredAndTrending, ...others].slice(0, 200);
       }
       
       // Strip heavy fields to reduce JSON payload size
@@ -4835,7 +4876,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: m.description ? m.description.substring(0, 150) + "..." : "", // Truncate description
       }));
 
-      res.json(optimizedMovies);
+      if (paginate) {
+        res.json({
+          items: optimizedMovies,
+          totalCount,
+          totalPages,
+          page
+        });
+      } else {
+        res.json(optimizedMovies);
+      }
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch movies" });
     }
@@ -4881,17 +4931,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Sort newest first
       anime.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-      const limit = parseInt(req.query.limit as string) || 0;
+      const paginate = req.query.paginate === 'true';
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || (paginate ? 200 : 0);
       
+      let totalCount = anime.length;
+      let totalPages = limit > 0 ? Math.ceil(totalCount / limit) : 1;
+
       // Restrict external API users to 1 item per request
       if ((req as any).apiKey) {
         anime = anime.slice(0, 1);
+        totalCount = 1;
+        totalPages = 1;
+      } else if (paginate && limit > 0) {
+        // Handle true pagination
+        const startIndex = (page - 1) * limit;
+        anime = anime.slice(startIndex, startIndex + limit);
       } else if (req.query.limit === 'all') {
         // Return all items for admin
       } else if (limit > 0) {
         anime = anime.slice(0, limit);
       } else {
-        anime = anime.slice(0, 200); // Default limit to prevent frontend freeze
+        // Default limit to prevent frontend freeze, prioritizing featured/trending
+        const featuredAndTrending = anime.filter(a => a.featured || a.trending);
+        const others = anime.filter(a => !a.featured && !a.trending);
+        
+        // Take all featured/trending, and fill the rest of the 200 slots with newest 'others'
+        anime = [...featuredAndTrending, ...others].slice(0, 200);
       }
       
       // Strip heavy fields to reduce JSON payload size
@@ -4901,7 +4967,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: a.description ? a.description.substring(0, 150) + "..." : "", // Truncate description
       }));
 
-      res.json(optimizedAnime);
+      if (paginate) {
+        res.json({
+          items: optimizedAnime,
+          totalCount,
+          totalPages,
+          page
+        });
+      } else {
+        res.json(optimizedAnime);
+      }
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch anime" });
     }
@@ -4921,6 +4996,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(anime);
     } catch (error) {
       res.status(500).json({ error: "Failed to search anime" });
+    }
+  });
+
+  // Advanced Paginated Search
+  app.get("/api/search/advanced", requireApiKey, async (req, res) => {
+    try {
+      const q = (req.query.q as string || "").toLowerCase();
+      const type = req.query.type as string || "all";
+      const genresStr = req.query.genres as string;
+      const year = req.query.year as string;
+      const sort = req.query.sort as string || "year";
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+
+      const selectedGenres = genresStr ? genresStr.split(",").map(g => g.trim().toLowerCase()) : [];
+      let minYear = 0, maxYear = 9999;
+      if (year && year !== "all") {
+        if (year.includes("-")) {
+          const parts = year.split("-");
+          minYear = parseInt(parts[0]) || 0;
+          maxYear = parseInt(parts[1]) || 9999;
+        } else {
+          minYear = parseInt(year);
+          maxYear = parseInt(year);
+        }
+      }
+
+      let allItems: any[] = [];
+      
+      if (type === "all" || type === "movies") {
+        const movies = await storage.getAllMovies();
+        allItems = allItems.concat(movies.map(m => ({ ...m, mediaType: 'movie' })));
+      }
+      if (type === "all" || type === "shows") {
+        const shows = await storage.getAllShows();
+        allItems = allItems.concat(shows.map(s => ({ ...s, mediaType: 'show' })));
+      }
+      if (type === "all" || type === "anime") {
+        const anime = await storage.getAllAnime();
+        // Sometimes anime use releaseDate, sometimes they use firstAirDate (like shows). We handle both below.
+        allItems = allItems.concat(anime.map(a => ({ ...a, mediaType: 'anime' })));
+      }
+
+      // Filter
+      let filtered = allItems.filter(item => {
+        // Query match
+        let matchesQuery = true;
+        if (q) {
+          matchesQuery = 
+            (item.title && item.title.toLowerCase().includes(q)) || 
+            (item.description && item.description.toLowerCase().includes(q)) || 
+            (item.genres && item.genres.toLowerCase().includes(q)) ||
+            (item.castDetails && item.castDetails.toLowerCase().includes(q));
+        }
+
+        // Genre match (must match ALL selected genres if multiple are provided, or ANY? 
+        // Typically it's ANY or ALL. The frontend did: matchesGenre = selectedGenres.length === 0 || selectedGenres.some(g => genres.includes(g.toLowerCase()));
+        let matchesGenre = true;
+        if (selectedGenres.length > 0) {
+          const itemGenres = (item.genres || "").toLowerCase();
+          matchesGenre = selectedGenres.some(g => itemGenres.includes(g));
+        }
+
+        // Year match
+        let matchesYear = true;
+        if (year && year !== "all") {
+          let itemYear = 0;
+          if (item.releaseDate) {
+            itemYear = new Date(item.releaseDate).getFullYear();
+          } else if (item.year) {
+            itemYear = parseInt(item.year);
+          } else if (item.firstAirDate) {
+            itemYear = new Date(item.firstAirDate).getFullYear();
+          }
+          if (itemYear) {
+            matchesYear = itemYear >= minYear && itemYear <= maxYear;
+          } else {
+            matchesYear = false; // no year data to match
+          }
+        }
+
+        return matchesQuery && matchesGenre && matchesYear;
+      });
+
+      // Sort
+      filtered.sort((a, b) => {
+        if (sort === "title") {
+          return (a.title || "").localeCompare(b.title || "");
+        } else if (sort === "rating") {
+          const ratingA = parseFloat(a.imdbRating || "0");
+          const ratingB = parseFloat(b.imdbRating || "0");
+          return ratingB - ratingA;
+        } else {
+          // default: year (newest first based on release/air date or createdAt)
+          const yearA = a.releaseDate ? new Date(a.releaseDate).getTime() : a.firstAirDate ? new Date(a.firstAirDate).getTime() : new Date(a.createdAt).getTime();
+          const yearB = b.releaseDate ? new Date(b.releaseDate).getTime() : b.firstAirDate ? new Date(b.firstAirDate).getTime() : new Date(b.createdAt).getTime();
+          return yearB - yearA;
+        }
+      });
+
+      // Paginate
+      const totalCount = filtered.length;
+      const totalPages = Math.ceil(totalCount / limit) || 1;
+      const startIndex = (page - 1) * limit;
+      const paginatedItems = filtered.slice(startIndex, startIndex + limit);
+
+      // Strip heavy fields
+      const optimizedItems = paginatedItems.map(item => ({
+        ...item,
+        castDetails: null,
+        audioTracks: null,
+        description: item.description ? item.description.substring(0, 150) + "..." : "",
+      }));
+
+      res.json({
+        items: optimizedItems,
+        totalCount,
+        totalPages,
+        page
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Advanced search failed" });
     }
   });
 

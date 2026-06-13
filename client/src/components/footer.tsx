@@ -1,8 +1,8 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Instagram, Twitter, Send, Facebook } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from 'react-i18next';
 import { LanguageSelector } from "@/components/language-selector";
@@ -14,6 +14,13 @@ export function Footer() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { t } = useTranslation();
+
+  const [location] = useLocation();
+
+  // Hide footer on specific routes
+  if (location.startsWith("/watch-together") || location.startsWith("/watch-rooms") || location.startsWith("/room")) {
+    return null;
+  }
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,14 +92,14 @@ export function Footer() {
   ];
 
   return (
-    <footer className="border-t border-border bg-card mt-20">
+    <footer className="border-t border-border bg-card mt-20 overflow-hidden">
       <AdContainer type="footer" className="mb-8" />
       <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-12 mb-12">
           {/* Quick Links */}
-          <div>
-            <h3 className="font-semibold mb-4">{t('footer.quickLinks')}</h3>
-            <ul className="space-y-2">
+          <div className="col-span-1">
+            <h3 className="font-semibold mb-4 text-primary">{t('footer.quickLinks')}</h3>
+            <ul className="space-y-3">
               {quickLinks.map((link) => (
                 <li key={link.path}>
                   <Link href={link.path}>
@@ -109,9 +116,9 @@ export function Footer() {
           </div>
 
           {/* Categories */}
-          <div>
-            <h3 className="font-semibold mb-4">{t('footer.categories')}</h3>
-            <ul className="space-y-2">
+          <div className="col-span-1">
+            <h3 className="font-semibold mb-4 text-primary">{t('footer.categories')}</h3>
+            <ul className="space-y-3">
               {categories.map((category) => (
                 <li key={category.path}>
                   <Link href={category.path}>
@@ -128,9 +135,9 @@ export function Footer() {
           </div>
 
           {/* Support */}
-          <div>
-            <h3 className="font-semibold mb-4">{t('footer.support')}</h3>
-            <ul className="space-y-2">
+          <div className="col-span-1">
+            <h3 className="font-semibold mb-4 text-primary">{t('footer.support')}</h3>
+            <ul className="space-y-3">
               {support.map((item) => (
                 <li key={item.path}>
                   <Link href={item.path}>
@@ -165,15 +172,15 @@ export function Footer() {
           </div>
 
           {/* Social & Newsletter */}
-          <div>
-            <h3 className="font-semibold mb-4">{t('footer.stayConnected')}</h3>
+          <div className="col-span-2 md:col-span-1 pt-6 md:pt-0 border-t border-border md:border-0">
+            <h3 className="font-semibold mb-4 text-primary">{t('footer.stayConnected')}</h3>
 
             {/* Social Icons */}
-            <div className="flex gap-2 mb-4">
+            <div className="flex flex-wrap gap-2 mb-6">
               <Button
                 variant="outline"
                 size="icon"
-                className="h-9 w-9"
+                className="h-9 w-9 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-300"
                 asChild
                 data-testid="button-social-twitter"
               >
@@ -189,7 +196,7 @@ export function Footer() {
               <Button
                 variant="outline"
                 size="icon"
-                className="h-9 w-9"
+                className="h-9 w-9 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-300"
                 asChild
                 data-testid="button-social-instagram"
               >
@@ -205,7 +212,7 @@ export function Footer() {
               <Button
                 variant="outline"
                 size="icon"
-                className="h-9 w-9"
+                className="h-9 w-9 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-300"
                 asChild
                 data-testid="button-social-telegram"
               >
@@ -221,7 +228,7 @@ export function Footer() {
               <Button
                 variant="outline"
                 size="icon"
-                className="h-9 w-9"
+                className="h-9 w-9 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-300"
                 asChild
                 data-testid="button-social-facebook"
               >
@@ -237,7 +244,7 @@ export function Footer() {
               <Button
                 variant="outline"
                 size="icon"
-                className="h-9 w-9"
+                className="h-9 w-9 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-300"
                 asChild
                 data-testid="button-social-whatsapp"
               >
@@ -263,25 +270,27 @@ export function Footer() {
             </div>
 
             {/* Newsletter */}
-            <form onSubmit={handleNewsletterSubmit} className="space-y-2">
-              <label className="text-sm text-muted-foreground">
+            <form onSubmit={handleNewsletterSubmit} className="space-y-3">
+              <label className="text-sm text-muted-foreground block">
                 {t('footer.subscribe')}
               </label>
               <div className="flex gap-2">
                 <Input
                   type="email"
-                  placeholder="Your email" // Could translate this too if I had a key
+                  placeholder="Your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  className="bg-background/50 backdrop-blur"
                   data-testid="input-newsletter-email"
                 />
                 <Button
                   type="submit"
                   data-testid="button-newsletter-submit"
                   disabled={isSubmitting}
+                  className="transition-all active:scale-95"
                 >
-                  {isSubmitting ? "..." : t('footer.subscribe')}
+                  {isSubmitting ? "..." : "Join"}
                 </Button>
               </div>
             </form>
@@ -289,14 +298,33 @@ export function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-border pt-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
-            <p>{t('footer.copyright')}</p>
-            <div className="flex items-center gap-4">
-              <LanguageSelector />
-              <p>{t('footer.tagline')}</p>
-            </div>
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground z-10 relative">
+          <p>{t('footer.copyright')}</p>
+          <div className="flex items-center gap-4">
+            <LanguageSelector />
+            <p className="hidden md:block">{t('footer.tagline')}</p>
           </div>
+        </div>
+      </div>
+
+      {/* Giant StreamVault Typography Effect */}
+      <div className="w-full flex justify-center items-end overflow-visible pt-16 pb-8 select-none mt-4 cursor-default">
+        <div className="flex text-[12vw] leading-[0.8] font-black tracking-tighter uppercase">
+          {"STREAMVAULT".split("").map((char, i) => {
+            const isRed = i % 2 === 0;
+            return (
+              <span
+                key={i}
+                className={`text-foreground/10 transition-all duration-200 ease-out hover:-translate-y-6 hover:scale-[1.15] ${
+                  isRed 
+                    ? "hover:text-primary hover:drop-shadow-[0_0_20px_hsl(var(--primary)/0.6)]" 
+                    : "hover:text-foreground hover:drop-shadow-[0_0_20px_hsl(var(--foreground)/0.5)]"
+                }`}
+              >
+                {char}
+              </span>
+            );
+          })}
         </div>
       </div>
     </footer>

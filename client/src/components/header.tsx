@@ -38,17 +38,28 @@ export function Header() {
   const searchRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
 
-  const { data: shows } = useQuery<Show[]>({
-    queryKey: ["/api/shows"],
+  const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const { data: searchData } = useQuery({
+    queryKey: ["/api/search/advanced", debouncedQuery],
+    queryFn: async () => {
+      if (!debouncedQuery.trim()) return { items: [] };
+      const res = await fetch(`/api/search/advanced?q=${encodeURIComponent(debouncedQuery)}&limit=8`);
+      if (!res.ok) throw new Error("Failed to search");
+      const data = await res.json();
+      return { ...data, items: data.items.map((item: any) => ({ ...item, type: item.mediaType })) };
+    },
+    enabled: debouncedQuery.trim().length > 0,
   });
 
-  const { data: movies } = useQuery<Movie[]>({
-    queryKey: ["/api/movies"],
-  });
-
-  const { data: anime } = useQuery<Anime[]>({
-    queryKey: ["/api/anime"],
-  });
+  const searchResults = searchData?.items || [];
 
   const navigation = [
     { name: t('nav.home'), path: "/" },
@@ -64,21 +75,6 @@ export function Header() {
     { name: "Comedy", path: "/category/comedy" },
     { name: "Horror & Mystery", path: "/category/horror" },
   ];
-
-  // Filter shows, movies, and anime based on search query
-  const searchResults = searchQuery.trim()
-    ? [
-      ...(shows?.filter((show) =>
-        show.title.toLowerCase().includes(searchQuery.toLowerCase())
-      ).map(show => ({ ...show, type: 'show' as const })) || []),
-      ...(movies?.filter((movie) =>
-        movie.title.toLowerCase().includes(searchQuery.toLowerCase())
-      ).map(movie => ({ ...movie, type: 'movie' as const })) || []),
-      ...(anime?.filter((a) =>
-        a.title.toLowerCase().includes(searchQuery.toLowerCase())
-      ).map(a => ({ ...a, type: 'anime' as const })) || [])
-    ].slice(0, 8)
-    : [];
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -105,9 +101,26 @@ export function Header() {
     setShowResults(value.trim().length > 0);
   };
 
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  // Handle scroll to add floating effect
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4">
+    <header className="sticky top-0 z-50 w-full h-16 sm:h-20 flex flex-col justify-center pointer-events-none">
+      <div className={cn(
+        "pointer-events-auto mx-auto flex items-center justify-between gap-4 transition-all duration-300 ease-out",
+        isScrolled 
+          ? "h-16 w-[98%] max-w-[1500px] bg-background/80 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/50 rounded-3xl px-8 translate-y-3" 
+          : "h-16 sm:h-20 w-full max-w-[1600px] bg-background/95 backdrop-blur-md border-b border-border/40 rounded-none px-4 lg:px-8 translate-y-0"
+      )}>
         {/* Logo */}
         <Link href="/">
           <div
