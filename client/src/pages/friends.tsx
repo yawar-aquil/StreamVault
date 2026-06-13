@@ -39,7 +39,6 @@ import {
 import { useFriends } from '@/contexts/friends-context';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { formatDistanceToNow } from 'date-fns';
 import { DMPanel } from '@/components/dm-panel';
 import { UserProfileModal } from '@/components/user-profile-modal';
 import { useSocialSocket } from '@/hooks/use-social-socket';

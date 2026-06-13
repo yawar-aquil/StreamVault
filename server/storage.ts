@@ -1564,12 +1564,18 @@ export class MemStorage implements IStorage {
 
 
   // Comments
-  private enrichCommentsWithBadges(comments: Comment[]): CommentWithBadges[] {
-    return comments.map(comment => {
+  private async enrichCommentsWithBadges(comments: Comment[]): Promise<CommentWithBadges[]> {
+    return Promise.all(comments.map(async comment => {
       let authorBadges: Badge[] = [];
       let isModerator = false;
       let isAdmin = comment.userName && comment.userName.toLowerCase() === (process.env.ADMIN_USERNAME || 'admin').toLowerCase();
       if (comment.userId) {
+        // Fetch user to check moderator status
+        const commentUser = await this.getUserById(comment.userId);
+        if (commentUser) {
+          isModerator = commentUser.isModerator || false;
+        }
+
         // Find equipped user badges
         const userBadges = Array.from(this.userBadges.values())
           .filter(ub => ub.userId === comment.userId && ub.equipped);
@@ -1584,29 +1590,29 @@ export class MemStorage implements IStorage {
           // Sort by display priority (descending)
           .sort((a, b) => (b.displayPriority || 0) - (a.displayPriority || 0));
       }
-      return { ...comment, authorBadges };
-    });
+      return { ...comment, authorBadges, isAdmin, isModerator };
+    }));
   }
 
   async getCommentsByEpisodeId(episodeId: string): Promise<CommentWithBadges[]> {
     const comments = Array.from(this.comments.values())
       .filter(comment => comment.episodeId === episodeId)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    return this.enrichCommentsWithBadges(comments);
+    return await this.enrichCommentsWithBadges(comments);
   }
 
   async getCommentsByMovieId(movieId: string): Promise<CommentWithBadges[]> {
     const comments = Array.from(this.comments.values())
       .filter(comment => comment.movieId === movieId)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    return this.enrichCommentsWithBadges(comments);
+    return await this.enrichCommentsWithBadges(comments);
   }
 
   async getCommentsByBlogPostId(blogPostId: string): Promise<CommentWithBadges[]> {
     const comments = Array.from(this.comments.values())
       .filter(comment => comment.blogPostId === blogPostId)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    return this.enrichCommentsWithBadges(comments);
+    return await this.enrichCommentsWithBadges(comments);
   }
 
   async createComment(comment: InsertComment): Promise<Comment> {
