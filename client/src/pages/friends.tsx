@@ -602,6 +602,7 @@ export default function Friends() {
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2">
                                             <h3 className="font-semibold">{resultUser.username}</h3>
+                                            <RoleBadge role={resultUser.username.toLowerCase() === "admin" ? "admin" : (resultUser as any).isModerator ? "moderator" : null} />
                                             {/* Equipped Badges */}
                                             {resultUser.badges && (
                                                 <div className="flex items-center gap-1">

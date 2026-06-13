@@ -254,7 +254,7 @@ export function ReviewsSection({ contentType, contentId }: ReviewsSectionProps) 
                                         <div>
                                             <div className="flex items-center gap-2">
                                                 <p className="font-medium">{review.username}</p>
-                                                <RoleBadge role={(review as any).isAdmin ? "admin" : (review as any).isModerator ? "moderator" : null} />
+                                                <RoleBadge role={review.username.toLowerCase() === "admin" ? "admin" : (review as any).isAdmin ? "admin" : (review as any).isModerator ? "moderator" : null} />
                                                 {/* User Badges */}
                                                 {review.authorBadges && review.authorBadges.length > 0 && (
                                                     <div className="flex gap-[2px]">

@@ -238,7 +238,7 @@ function CommentItem({
           {/* Header: Username and timestamp */}
           <div className="flex items-center gap-2 mb-1">
             <span className="font-medium text-sm text-foreground">@{comment.userName.toLowerCase().replace(/\s+/g, '')}</span>
-            <RoleBadge role={comment.isAdmin ? "admin" : comment.isModerator ? "moderator" : null} />
+            <RoleBadge role={comment.userName.toLowerCase() === "admin" ? "admin" : comment.isAdmin ? "admin" : comment.isModerator ? "moderator" : null} />
 
             {/* Badges Display */}
             {comment.authorBadges && comment.authorBadges.length > 0 && (

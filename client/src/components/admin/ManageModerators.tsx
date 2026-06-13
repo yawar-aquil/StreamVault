@@ -119,9 +119,9 @@ export function ManageModerators() {
                           {mod.username.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <div className="flex items-center">
+                          <div className="flex items-center gap-2">
                             <p className="font-medium">{mod.username}</p>
-                            <RoleBadge role="moderator" />
+                            <RoleBadge role={mod.username.toLowerCase() === "admin" ? "admin" : "moderator"} />
                           </div>
                           <p className="text-xs text-muted-foreground">{mod.email}</p>
                         </div>
@@ -172,7 +172,10 @@ export function ManageModerators() {
                 .map((user: any) => (
                   <div key={user.id} className="flex items-center justify-between p-3 rounded-md bg-muted/50">
                     <div>
-                      <p className="font-medium">{user.username}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{user.username}</p>
+                        <RoleBadge role={user.username.toLowerCase() === "admin" ? "admin" : (user as any).isModerator ? "moderator" : null} />
+                      </div>
                       <p className="text-xs text-muted-foreground">{user.email}</p>
                     </div>
                     <Button
@@ -212,7 +215,10 @@ export function ManageModerators() {
                 <TableRow key={log.id}>
                   <TableCell>
                     <div>
-                      <p className="font-medium">{log.username}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{log.username}</p>
+                        <RoleBadge role={log.username.toLowerCase() === "admin" ? "admin" : (log as any).isModerator ? "moderator" : null} />
+                      </div>
                       <p className="text-xs text-muted-foreground">{log.email}</p>
                     </div>
                   </TableCell>
