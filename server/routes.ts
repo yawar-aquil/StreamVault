@@ -2108,6 +2108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           friendId,
           username: friendUser?.username || 'Unknown',
           avatarUrl: friendUser?.avatarUrl || null,
+          isModerator: friendUser?.isModerator || false,
           badges,
           lastActive: friendUser?.lastActive,
           createdAt: f.createdAt,

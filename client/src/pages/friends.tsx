@@ -2,6 +2,18 @@ import { useState, useEffect } from 'react';
 import { useLocation, useSearch } from 'wouter';
 import { differenceInMinutes, parseISO } from 'date-fns';
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { formatDistanceToNow } from 'date-fns';
+import { RoleBadge } from "@/components/role-badge";
+import {
     Users,
     UserPlus,
     Search,
@@ -339,6 +351,7 @@ export default function Friends() {
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
                                             <h3 className="font-semibold">{friend.username}</h3>
+                                            <RoleBadge role={friend.username.toLowerCase() === "admin" ? "admin" : (friend as any).isModerator ? "moderator" : null} />
                                             {/* Equipped Badges */}
                                             {friend.badges && friend.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).length > 0 && (
                                                 <div className="flex items-center gap-0.5">
