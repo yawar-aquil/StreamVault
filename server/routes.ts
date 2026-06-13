@@ -59,14 +59,32 @@ function getSessionId(req: any): string {
 }
 
 // Admin authentication middleware
-function requireAdmin(req: any, res: any, next: any) {
+async function requireAdmin(req: any, res: any, next: any) {
   const authToken = req.headers["x-admin-token"];
 
-  if (!authToken || !adminSessions.has(authToken)) {
-    return res.status(401).json({ error: "Unauthorized" });
+  if (authToken && adminSessions.has(authToken)) {
+    return next();
   }
 
-  next();
+  // If no admin token, check if it's a moderator trying to access admin routes
+  const token = req.cookies?.authToken || req.headers.authorization?.replace('Bearer ', '');
+  if (token) {
+    const payload = verifyToken(token);
+    if (payload && payload.userId) {
+      const user = await storage.getUserById(payload.userId);
+      if (user && user.isModerator) {
+        // Log the unauthorized attempt
+        await storage.logModeratorAction(
+          user.id,
+          'Unauthorized Access Attempt',
+          `Attempted to access admin-only route: ${req.method} ${req.path}`
+        );
+        return res.status(403).json({ error: "Forbidden: Admin access required. This incident has been logged." });
+      }
+    }
+  }
+
+  return res.status(401).json({ error: "Unauthorized" });
 }
 
 // Admin or Moderator authentication middleware
@@ -1780,6 +1798,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         socialLinks,
         favorites,
         badges: allBadges,
+        isModerator: user.isModerator || false,
         createdAt: user.createdAt,
         // Friend status needs to be checked relative to current user
         isFriend: false, // Will be computed or fetched if needed?
@@ -2382,8 +2401,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           avatarUrl: u.avatarUrl,
           xp: u.xpGained,
           level: u.level,
-          badges: [], // Keeping empty for period views as per previous logic, or could be fetched
-          currentStreak: 0
+          badges: getFilteredBadges(u.badges as string), 
+          currentStreak: u.currentStreak,
+          isModerator: u.isModerator || false
         }));
 
         return res.json(publicLeaderboard);
@@ -2399,7 +2419,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           xp: u.xp,
           level: u.level,
           badges: getFilteredBadges(u.badges as string), // Use filtered list
-          currentStreak: u.currentStreak || 0
+          currentStreak: u.currentStreak || 0,
+          isModerator: u.isModerator || false
         }));
 
         return res.json(publicLeaderboard);
@@ -3821,7 +3842,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         favorites,
         xp: user.xp,
         level: user.level,
-        badges: user.badges // Return badges so frontend can display them
+        badges: user.badges, // Return badges so frontend can display them
+        isModerator: user.isModerator || false
       });
     } catch (error) {
       console.error("Get user profile error:", error);
@@ -5558,7 +5580,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/shows", requireAdminOrModerator, async (req, res) => {
     try {
       const show = await storage.createShow(req.body);
-      if ((req as any).isModerator) { await storage.logModeratorAction((req as any).user.id, `Created show: ${show.title}`); }
+      if ((req as any).isModerator) { await storage.logModeratorAction((req as any).user.id, 'Create Show', `Created show: ${show.title}`); }
       res.json(show);
     } catch (error) {
       res.status(500).json({ error: "Failed to create show" });
@@ -5571,7 +5593,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { showId } = req.params;
       console.log("Updating show:", showId, "with data:", req.body);
       const show = await storage.updateShow(showId, req.body);
-      if ((req as any).isModerator && show) { await storage.logModeratorAction((req as any).user.id, `Updated show: ${show.title}`); }
+      if ((req as any).isModerator && show) { await storage.logModeratorAction((req as any).user.id, 'Update Show', `Updated show: ${show.title}`); }
       console.log("Updated show:", show);
       res.json(show);
     } catch (error: any) {
@@ -5614,7 +5636,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/movies", requireAdminOrModerator, async (req, res) => {
     try {
       const movie = await storage.createMovie(req.body);
-      if ((req as any).isModerator) { await storage.logModeratorAction((req as any).user.id, `Created movie: ${movie.title}`); }
+      if ((req as any).isModerator) { await storage.logModeratorAction((req as any).user.id, 'Create Movie', `Created movie: ${movie.title}`); }
       res.json(movie);
     } catch (error) {
       res.status(500).json({ error: "Failed to create movie" });
@@ -5626,7 +5648,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { movieId } = req.params;
       const movie = await storage.updateMovie(movieId, req.body);
-      if ((req as any).isModerator && movie) { await storage.logModeratorAction((req as any).user.id, `Updated movie: ${movie.title}`); }
+      if ((req as any).isModerator && movie) { await storage.logModeratorAction((req as any).user.id, 'Update Movie', `Updated movie: ${movie.title}`); }
       res.json(movie);
     } catch (error: any) {
       res.status(500).json({ error: "Failed to update movie", details: error.message });
@@ -5650,7 +5672,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/anime", requireAdminOrModerator, async (req, res) => {
     try {
       const anime = await storage.createAnime(req.body);
-      if ((req as any).isModerator) { await storage.logModeratorAction((req as any).user.id, `Created anime: ${anime.title}`); }
+      if ((req as any).isModerator) { await storage.logModeratorAction((req as any).user.id, 'Create Anime', `Created anime: ${anime.title}`); }
       res.json(anime);
     } catch (error) {
       res.status(500).json({ error: "Failed to create anime" });
@@ -5764,7 +5786,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { animeId } = req.params;
       const anime = await storage.updateAnime(animeId, req.body);
-      if ((req as any).isModerator && anime) { await storage.logModeratorAction((req as any).user.id, `Updated anime: ${anime.title}`); }
+      if ((req as any).isModerator && anime) { await storage.logModeratorAction((req as any).user.id, 'Update Anime', `Updated anime: ${anime.title}`); }
       res.json(anime);
     } catch (error: any) {
       res.status(500).json({ error: "Failed to update anime", details: error.message });
@@ -5803,7 +5825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { episodeId } = req.params;
       const episode = await storage.updateAnimeEpisode(episodeId, req.body);
-      if ((req as any).isModerator && episode) { await storage.logModeratorAction((req as any).user.id, `Updated anime episode: ${episode.title || "Episode " + episode.episodeNumber}`); }
+      if ((req as any).isModerator && episode) { await storage.logModeratorAction((req as any).user.id, 'Update Anime Episode', `Updated anime episode: ${episode.title || "Episode " + episode.episodeNumber}`); }
       res.json(episode);
     } catch (error: any) {
       res.status(500).json({ error: "Failed to update anime episode", details: error.message });
@@ -5825,7 +5847,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/episodes", requireAdminOrModerator, async (req, res) => {
     try {
       const episode = await storage.createEpisode(req.body);
-      if ((req as any).isModerator) { await storage.logModeratorAction((req as any).user.id, `Created episode: ${episode.title || "Episode " + episode.episodeNumber}`); }
+      if ((req as any).isModerator) { await storage.logModeratorAction((req as any).user.id, 'Create Episode', `Created episode: ${episode.title || "Episode " + episode.episodeNumber}`); }
       res.json(episode);
     } catch (error) {
       res.status(500).json({ error: "Failed to create episode" });
@@ -5925,7 +5947,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { episodeId } = req.params;
       const episode = await storage.updateEpisode(episodeId, req.body);
-      if ((req as any).isModerator && episode) { await storage.logModeratorAction((req as any).user.id, `Updated episode: ${episode.title || "Episode " + episode.episodeNumber}`); }
+      if ((req as any).isModerator && episode) { await storage.logModeratorAction((req as any).user.id, 'Update Episode', `Updated episode: ${episode.title || "Episode " + episode.episodeNumber}`); }
       res.json(episode);
     } catch (error) {
       res.status(500).json({ error: "Failed to update episode" });
@@ -8253,8 +8275,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const SUBTITLE_CACHE_DIR = path.join(process.cwd(), 'data', 'subtitles');
       
       // Ensure cache directory exists
-      if (!fs.existsSync(SUBTITLE_CACHE_DIR)) {
-          fs.mkdirSync(SUBTITLE_CACHE_DIR, { recursive: true });
+      if (!existsSync(SUBTITLE_CACHE_DIR)) {
+          mkdirSync(SUBTITLE_CACHE_DIR, { recursive: true });
       }
 
       // Format as VTT if needed
@@ -8263,7 +8285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const cachedPath = path.join(SUBTITLE_CACHE_DIR, `${contentHash}.vtt`);
-      fs.writeFileSync(cachedPath, content, 'utf-8');
+      writeFileSync(cachedPath, content, 'utf-8');
 
       const savedFileName = path.basename(cachedPath);
       const localUrl = `/api/subtitles/file/${contentHash}`;
@@ -8383,7 +8405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Cache-Control', 'public, max-age=86400');
 
       const fs = await import('fs');
-      const content = fs.readFileSync(cachedPath, 'utf-8');
+      const content = readFileSync(cachedPath, 'utf-8');
       res.send(content);
     } catch (error: any) {
       console.error("❌ Subtitle file error:", error.message);
@@ -8544,6 +8566,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     activeSessions: new Map<string, { lastSeen: Date; pages: number }>()
   };
 
+  const analyticsFilePath = path.join(process.cwd(), 'data', 'site_analytics.json');
+
+  // Try to load existing analytics
+  try {
+    if (existsSync(analyticsFilePath)) {
+      const data = JSON.parse(readFileSync(analyticsFilePath, 'utf-8'));
+      if (data.pageViews) {
+        siteAnalytics.pageViews = data.pageViews.map((p: any) => ({ ...p, timestamp: new Date(p.timestamp) }));
+      }
+      if (data.watchEvents) {
+        siteAnalytics.watchEvents = data.watchEvents.map((w: any) => ({ ...w, timestamp: new Date(w.timestamp) }));
+      }
+      console.log(`[Analytics] Loaded ${siteAnalytics.pageViews.length} page views and ${siteAnalytics.watchEvents.length} watch events`);
+    }
+  } catch (e) {
+    console.error('Failed to load analytics:', e);
+  }
+
+  function saveAnalytics() {
+    try {
+      if (!existsSync(path.dirname(analyticsFilePath))) {
+        mkdirSync(path.dirname(analyticsFilePath), { recursive: true });
+      }
+      writeFileSync(analyticsFilePath, JSON.stringify({
+        pageViews: siteAnalytics.pageViews,
+        watchEvents: siteAnalytics.watchEvents
+      }));
+    } catch (e) {
+      console.error('Failed to save analytics:', e);
+    }
+  }
+
   // Clean up old sessions every 5 minutes
   setInterval(() => {
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
@@ -8552,6 +8606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         siteAnalytics.activeSessions.delete(sessionId);
       }
     });
+    saveAnalytics();
   }, 60 * 1000);
 
   // Track page view
@@ -8576,6 +8631,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       session.lastSeen = new Date();
       session.pages++;
       siteAnalytics.activeSessions.set(sessionId, session);
+      
+      saveAnalytics();
 
       res.json({ success: true });
     } catch (error) {
@@ -8597,6 +8654,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         duration: duration || 0,
         sessionId: sessionId || "anonymous"
       });
+
+      saveAnalytics();
 
       res.json({ success: true });
     } catch (error) {
@@ -8888,8 +8947,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const path = await import("path");
       const progressFile = path.join(process.cwd(), "data", "bulk-progress.json");
       
-      if (fs.existsSync(progressFile)) {
-        const data = JSON.parse(fs.readFileSync(progressFile, 'utf-8'));
+      if (existsSync(progressFile)) {
+        const data = JSON.parse(readFileSync(progressFile, 'utf-8'));
         // If it hasn't updated in 10 minutes, consider it dead
         if (data.isRunning && (Date.now() - data.timestamp > 10 * 60 * 1000)) {
           data.isRunning = false;

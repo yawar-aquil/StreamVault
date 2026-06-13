@@ -134,19 +134,19 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-bold mb-2">Admin Dashboard</h1>
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">Admin Dashboard</h1>
             <p className="text-muted-foreground">Manage your StreamVault content</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setLocation('/admin/analytics')}>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={() => setLocation('/admin/analytics')}>
               📈 Site Analytics
             </Button>
-            <Button variant="outline" onClick={() => setLocation('/admin/widget')}>
+            <Button variant="outline" size="sm" onClick={() => setLocation('/admin/widget')}>
               📊 Widget Analytics
             </Button>
-            <Button variant="outline" onClick={handleLogout}>
+            <Button variant="outline" size="sm" onClick={handleLogout}>
               <LogOut className="w-4 h-4 mr-2" />
               Logout
             </Button>
@@ -154,9 +154,10 @@ export default function AdminPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="flex flex-wrap h-auto gap-2 mb-8 bg-muted/50 p-1">
-            {userRole === 'admin' && <TabsTrigger value="users" className="gap-2">
-              <UserIcon className="w-4 h-4" />
+          <div className="w-full overflow-x-auto pb-2 mb-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <TabsList className="flex w-max h-auto gap-2 bg-muted/50 p-1">
+              {userRole === 'admin' && <TabsTrigger value="users" className="gap-2">
+                <UserIcon className="w-4 h-4" />
               Users
             </TabsTrigger>}
             {userRole === 'admin' && <TabsTrigger value="moderators" className="gap-2"><UserIcon className="w-4 h-4" />Moderators</TabsTrigger>}
@@ -228,7 +229,8 @@ export default function AdminPage() {
               <ShieldAlert className="w-4 h-4" />
               Security
             </TabsTrigger>
-          </TabsList>
+            </TabsList>
+          </div>
         {userRole === 'admin' && (
           <TabsContent value="moderators" className="mt-6">
             <ManageModerators />
@@ -855,7 +857,7 @@ function ManageShows({ shows }: { shows: Show[] }) {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>All Shows ({shows.length})</CardTitle>
-              <CardDescription>Manage your content library</CardDescription>
+              <CardDescription>Manage your shows library</CardDescription>
             </div>
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
@@ -2449,8 +2451,8 @@ function ManageMovies({ movies }: { movies: Movie[] }) {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Manage Movies</CardTitle>
-            <CardDescription>View, edit, and delete movies</CardDescription>
+            <CardTitle>All Movies ({movies.length})</CardTitle>
+            <CardDescription>Manage your movies library</CardDescription>
           </div>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
@@ -3919,11 +3921,15 @@ function CommentsModeration() {
   const queryClient = useQueryClient();
 
   const { data: shows = [] } = useQuery<Show[]>({
-    queryKey: ["/api/shows"],
+    queryKey: ["/api/shows?limit=all"],
   });
 
   const { data: movies = [] } = useQuery<Movie[]>({
-    queryKey: ["/api/movies"],
+    queryKey: ["/api/movies?limit=all"],
+  });
+
+  const { data: animeList = [] } = useQuery<Anime[]>({
+    queryKey: ["/api/anime?limit=all"],
   });
 
   const { data: comments = [], isLoading } = useQuery({
@@ -4006,13 +4012,31 @@ function CommentsModeration() {
                 const episode = allEpisodes.find((e: Episode) => e.id === comment.episodeId);
                 if (episode) {
                   const show = shows.find((s: Show) => s.id === episode.showId);
-                  contentInfo = {
-                    type: 'Episode',
-                    title: show?.title || 'Unknown Show',
-                    subtitle: `S${episode.season}E${episode.episodeNumber}: ${episode.title}`,
-                    link: `/watch/${show?.slug}?season=${episode.season}&episode=${episode.episodeNumber}`
-                  };
-                }
+                  const anime = !show ? animeList.find((a: Anime) => a.id === episode.showId) : null;
+                  
+                  if (show) {
+                    contentInfo = {
+                      type: 'Episode',
+                      title: show.title,
+                      subtitle: `S${episode.season}E${episode.episodeNumber}: ${episode.title}`,
+                      link: `/watch/${show.slug}?season=${episode.season}&episode=${episode.episodeNumber}`
+                    };
+                  } else if (anime) {
+                    contentInfo = {
+                      type: 'Anime Episode',
+                      title: anime.title,
+                      subtitle: `E${episode.episodeNumber}: ${episode.title}`,
+                      link: `/watch-anime/${anime.slug}?episode=${episode.episodeNumber}`
+                    };
+                  } else {
+                    contentInfo = {
+                      type: 'Episode',
+                      title: 'Unknown Show',
+                      subtitle: `S${episode.season}E${episode.episodeNumber}: ${episode.title}`,
+                      link: '#'
+                    };
+                  }
+                } // This closes if (episode) {
               } else if (comment.movieId) {
                 const movie = movies.find((m: Movie) => m.id === comment.movieId);
                 if (movie) {

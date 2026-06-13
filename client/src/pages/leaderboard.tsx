@@ -313,7 +313,10 @@ export default function Leaderboard() {
                                         username={leader.username}
                                         className="w-8 h-8"
                                     />
-                                    <span className="flex-1 font-medium truncate">{leader.username}</span>
+                                    <span className="flex-1 font-medium truncate flex items-center gap-1">
+                                        {leader.username}
+                                        <RoleBadge role={leader.username.toLowerCase() === 'admin' ? 'admin' : (leader as any).isModerator ? 'moderator' : null} />
+                                    </span>
                                     <div className="flex items-center gap-1 text-purple-400">
                                         <UserPlus className="w-4 h-4" />
                                         <span className="font-bold">{leader.referralCount}</span>
@@ -378,7 +381,19 @@ export default function Leaderboard() {
                                             username={user.username}
                                             className="w-8 h-8"
                                         />
-                                        <span className="flex-1 font-medium truncate">{user.username}</span>
+                                        <span className="flex-1 font-medium truncate flex items-center gap-1">
+                                            {user.username}
+                                            <RoleBadge role={user.username.toLowerCase() === 'admin' ? 'admin' : (user as any).isModerator ? 'moderator' : null} />
+                                        </span>
+                                        {user.badges && user.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).length > 0 && (
+                                            <div className="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
+                                                {user.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime()).slice(0, 5).map((badge: any) => (
+                                                    <div key={badge.id} className="text-muted-foreground" title={badge.name}>
+                                                        {renderBadge(badge)}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                         <div className="flex items-center gap-2">
                                             <span className={cn(
                                                 "text-[10px] px-1.5 py-0.5 rounded-full font-bold",

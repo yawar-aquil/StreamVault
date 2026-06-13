@@ -114,11 +114,11 @@ export function Header() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 w-full h-16 sm:h-20 flex flex-col justify-center pointer-events-none">
+    <header className="sticky top-0 z-[100] w-full h-16 sm:h-20 flex flex-col justify-center pointer-events-none">
       <div className={cn(
         "pointer-events-auto mx-auto flex items-center justify-between gap-4 transition-all duration-300 ease-out",
         isScrolled 
-          ? "h-16 w-[98%] max-w-[1500px] bg-background/80 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/50 rounded-3xl px-8 translate-y-3" 
+          ? "h-20 w-[99%] max-w-[1700px] bg-background/80 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/50 rounded-[2rem] px-10 translate-y-4" 
           : "h-16 sm:h-20 w-full max-w-[1600px] bg-background/95 backdrop-blur-md border-b border-border/40 rounded-none px-4 lg:px-8 translate-y-0"
       )}>
         {/* Logo */}
@@ -130,7 +130,11 @@ export function Header() {
             <div className="flex items-center justify-center w-8 h-8 rounded bg-primary">
               <Play className="w-4 h-4 text-primary-foreground fill-current" />
             </div>
-            <span className="hidden sm:inline">StreamVault</span>
+            <span className="hidden sm:inline font-black tracking-tight">
+              {"StreamVault".split("").map((char, i) => (
+                <span key={i} className={i % 2 === 0 ? "text-red-500" : "text-white"}>{char}</span>
+              ))}
+            </span>
           </div>
         </Link>
 

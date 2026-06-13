@@ -87,6 +87,7 @@ export default function Friends() {
         xp?: number;
         level?: number;
         badges?: any[];
+        isModerator?: boolean;
     } | null>(null);
 
     // Handle ?dm=friendId URL parameter
@@ -155,6 +156,7 @@ export default function Friends() {
         let xp: number | undefined;
         let level: number | undefined;
         let badges: any[] | undefined;
+        let isModerator: boolean | undefined;
 
         try {
             const response = await fetch(`/api/users/${friendId}/profile`, { cache: 'no-store' });
@@ -166,6 +168,7 @@ export default function Friends() {
                 xp = profile.xp;
                 level = profile.level;
                 badges = profile.badges ? (typeof profile.badges === 'string' ? JSON.parse(profile.badges) : profile.badges) : [];
+                isModerator = profile.isModerator;
             }
         } catch (error) {
             console.error('Failed to fetch user profile:', error);
@@ -180,7 +183,8 @@ export default function Friends() {
             favorites,
             xp,
             level,
-            badges
+            badges,
+            isModerator
         });
     };
 

@@ -159,11 +159,11 @@ export function StreakDisplay({ compact = false }: { compact?: boolean }) {
 
     // Full version for profile
     return (
-        <div className="relative rounded-2xl overflow-hidden border border-orange-500/20">
+        <div className="relative rounded-2xl border border-orange-500/20">
             {/* Animated gradient background */}
-            <div className={`absolute inset-0 bg-gradient-to-br ${hasActiveStreak ? 'from-orange-500/10 via-red-500/8 to-yellow-500/10' : 'from-muted/30 to-muted/10'}`} />
+            <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${hasActiveStreak ? 'from-orange-500/10 via-red-500/8 to-yellow-500/10' : 'from-muted/30 to-muted/10'}`} />
             {hasActiveStreak && streak.currentStreak >= 7 && (
-                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute inset-0 pointer-events-none">
                     <motion.div
                         className={`absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 rounded-full ${tier.bgGlow} blur-3xl`}
                         animate={{ opacity: [0.05, 0.15, 0.05] }}

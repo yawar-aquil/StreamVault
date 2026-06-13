@@ -374,7 +374,7 @@ export interface IStorage {
 
   // XP History for time-based leaderboards
   addXpHistory(userId: string, amount: number, source: string): Promise<XpHistoryEntry>;
-  getLeaderboardByPeriod(period: 'daily' | 'weekly' | 'monthly', limit: number): Promise<{ userId: string; username: string; avatarUrl: string | null; xpGained: number; level: number; isModerator?: boolean }[]>;
+  getLeaderboardByPeriod(period: 'daily' | 'weekly' | 'monthly', limit: number): Promise<{ userId: string; username: string; avatarUrl: string | null; xpGained: number; level: number; isModerator?: boolean; badges: any; currentStreak: number }[]>;
   getBadgeStats(): Promise<{ totalBadges: number; totalAwarded: number; popularBadges: { name: string; count: number }[] }>;
 
   // Account Deletion
@@ -3333,7 +3333,7 @@ export class MemStorage implements IStorage {
     return entry;
   }
 
-  async getLeaderboardByPeriod(period: 'daily' | 'weekly' | 'monthly', limit: number): Promise<{ userId: string; username: string; avatarUrl: string | null; xpGained: number; level: number; isModerator?: boolean }[]> {
+  async getLeaderboardByPeriod(period: 'daily' | 'weekly' | 'monthly', limit: number): Promise<{ userId: string; username: string; avatarUrl: string | null; xpGained: number; level: number; isModerator?: boolean; badges: any; currentStreak: number }[]> {
     const now = new Date();
     let startDate: Date;
 
@@ -3371,6 +3371,9 @@ export class MemStorage implements IStorage {
           avatarUrl: user.avatarUrl,
           xpGained,
           level: user.level,
+          isModerator: user.isModerator,
+          badges: user.badges,
+          currentStreak: user.currentStreak || 0,
         });
       }
     }

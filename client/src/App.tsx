@@ -174,7 +174,7 @@ function Router() {
           <AdBanner />
         </div>
       )}
-      {location === '/' && <Footer />}
+      {!(isWatchTogether || location.startsWith('/create-room') || location.startsWith('/admin')) && <Footer />}
       {!isWatchTogether && <Chatbot />}
       <InstallPrompt />
       <NotificationPrompt />

@@ -257,6 +257,7 @@ function WatchTogetherContent() {
         xp?: number;
         level?: number;
         badges?: any[];
+        isModerator?: boolean;
         equippedSkin?: any;
         equippedProfileEffect?: any;
         socialLinks?: {
@@ -1038,6 +1039,7 @@ function WatchTogetherContent() {
         let equippedProfileEffect: any | undefined;
         let socialLinks: any = null;
         let favorites: any = null;
+        let isModerator: boolean | undefined;
 
         if (roomUser.authUserId) {
             try {
@@ -1052,6 +1054,7 @@ function WatchTogetherContent() {
                     equippedProfileEffect = profile.equippedProfileEffect;
                     socialLinks = profile.socialLinks;
                     favorites = profile.favorites;
+                    isModerator = profile.isModerator;
                 }
             } catch (error) {
                 console.error('Failed to fetch user profile:', error);
@@ -1071,6 +1074,7 @@ function WatchTogetherContent() {
             equippedProfileEffect,
             socialLinks,
             favorites,
+            isModerator,
         });
     };
 
