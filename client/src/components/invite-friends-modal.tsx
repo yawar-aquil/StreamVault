@@ -124,7 +124,7 @@ export function InviteFriendsModal({ roomCode, roomTitle, open, onOpenChange }: 
                                             <div className="flex flex-col">
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-medium text-sm">{friend.username}</span>
-                                                    <RoleBadge role={friend.username.toLowerCase() === "admin" ? "admin" : (friend as any).isModerator ? "moderator" : null} />
+                                                    <RoleBadge role={(friend.username.toLowerCase() === 'admin' || (friend as any).isAdmin) ? 'admin' : (friend as any).isModerator ? "moderator" : null} />
                                                 </div>
                                                 {/* Optional: Status indicator */}
                                             </div>

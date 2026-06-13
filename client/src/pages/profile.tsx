@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/contexts/auth-context';
+import { RoleBadge } from "@/components/role-badge";
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -288,7 +289,10 @@ export default function ProfilePage() {
                             <div className="flex-1 w-full space-y-6">
                                 <div className="text-center md:text-left space-y-1">
                                     <div className="flex flex-col md:flex-row items-center gap-3 justify-center md:justify-start">
-                                        <h2 className="text-3xl font-bold tracking-tight">{user?.username}</h2>
+                                        <div className="flex items-center gap-2">
+                                            <h2 className="text-3xl font-bold tracking-tight">{user?.username}</h2>
+                                            {user && <RoleBadge role={(user.username.toLowerCase() === 'admin' || (user as any).isAdmin) ? 'admin' : (user as any).isModerator ? 'moderator' : null} />}
+                                        </div>
 
                                         {/* Equipped Badges Display */}
                                         <div className="flex items-center gap-1.5">

@@ -235,7 +235,7 @@ export default function PublicProfile() {
                                 <div className="text-center md:text-left space-y-1">
                                     <div className="flex flex-col md:flex-row items-center gap-3 justify-center md:justify-start">
                                         <h2 className="text-3xl font-bold tracking-tight">{user.username}</h2>
-                                        <RoleBadge role={user.username.toLowerCase() === 'admin' ? 'admin' : (user as any).isModerator ? 'moderator' : null} />
+                                        <RoleBadge role={(user.username.toLowerCase() === 'admin' || (user as any).isAdmin) ? 'admin' : (user as any).isModerator ? 'moderator' : null} />
 
                                         {/* Equipped Badge Icons */}
                                         <div className="flex items-center gap-1.5">

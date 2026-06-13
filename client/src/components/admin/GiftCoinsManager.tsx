@@ -192,7 +192,7 @@ export function GiftCoinsManager() {
                 <div className="flex flex-col overflow-hidden">
                   <span className="font-medium truncate flex items-center gap-1">
                     {user.username}
-                    <RoleBadge role={user.username.toLowerCase() === 'admin' ? 'admin' : (user as any).isModerator ? 'moderator' : null} />
+                    <RoleBadge role={(user.username.toLowerCase() === 'admin' || (user as any).isAdmin) ? 'admin' : (user as any).isModerator ? 'moderator' : null} />
                   </span>
                   <span className="text-xs text-muted-foreground truncate">{user.email}</span>
                 </div>

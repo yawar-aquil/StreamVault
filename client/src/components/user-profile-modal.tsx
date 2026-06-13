@@ -193,7 +193,7 @@ export function UserProfileModal({ isOpen, onClose, user, isFriend }: UserProfil
                                 <div className="text-center">
                                     <h3 className="text-lg font-semibold flex items-center justify-center gap-2">
                                         {user.username}
-                                        <RoleBadge role={user.username.toLowerCase() === "admin" ? "admin" : (user as any).isModerator ? "moderator" : null} />
+                                        <RoleBadge role={(user.username.toLowerCase() === 'admin' || (user as any).isAdmin) ? 'admin' : (user as any).isModerator ? "moderator" : null} />
                                     </h3>
                                     {/* Equipped Badges */}
                                     {user.badges && (

@@ -174,7 +174,7 @@ export function ManageModerators() {
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="font-medium">{user.username}</p>
-                        <RoleBadge role={user.username.toLowerCase() === "admin" ? "admin" : (user as any).isModerator ? "moderator" : null} />
+                        <RoleBadge role={(user.username.toLowerCase() === 'admin' || (user as any).isAdmin) ? 'admin' : (user as any).isModerator ? "moderator" : null} />
                       </div>
                       <p className="text-xs text-muted-foreground">{user.email}</p>
                     </div>
@@ -217,7 +217,7 @@ export function ManageModerators() {
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="font-medium">{log.username}</p>
-                        <RoleBadge role={log.username.toLowerCase() === "admin" ? "admin" : (log as any).isModerator ? "moderator" : null} />
+                        <RoleBadge role={(log.username.toLowerCase() === 'admin' || (log as any).isAdmin) ? 'admin' : (log as any).isModerator ? "moderator" : null} />
                       </div>
                       <p className="text-xs text-muted-foreground">{log.email}</p>
                     </div>

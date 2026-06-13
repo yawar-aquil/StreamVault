@@ -1577,7 +1577,7 @@ function WatchTogetherContent() {
                                                             <div className="flex items-center gap-1 overflow-hidden">
                                                                 {roomUser.isHost && <Crown className="h-3 w-3 text-yellow-500 flex-shrink-0" />}
                                                                 <span className="text-sm font-medium whitespace-nowrap truncate">{roomUser.username}</span>
-                                                                <RoleBadge role={roomUser.username.toLowerCase() === "admin" ? "admin" : (roomUser as any).isModerator ? "moderator" : null} />
+                                                                <RoleBadge role={(roomUser.username.toLowerCase() === 'admin' || (roomUser as any).isAdmin) ? 'admin' : (roomUser as any).isModerator ? "moderator" : null} />
                                                                 {/* Badges - max 3 shown */}
                                                                 {roomUser.badges && (
                                                                     <div className="flex items-center gap-0.5 flex-shrink-0">
@@ -2099,7 +2099,7 @@ function WatchTogetherContent() {
                                                                     >
                                                                         {msg.username}
                                                                     </button>
-                                                                    <RoleBadge role={msg.username.toLowerCase() === "admin" ? "admin" : (msg as any).isModerator ? "moderator" : null} />
+                                                                    <RoleBadge role={(msg.username.toLowerCase() === 'admin' || (msg as any).isAdmin) ? 'admin' : (msg as any).isModerator ? "moderator" : null} />
                                                                     {/* Badges */}
                                                                     {msg.badges && (
                                                                         <div className="flex items-center gap-0.5">

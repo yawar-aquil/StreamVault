@@ -187,7 +187,7 @@ export function ReferralSection({ showLeaderboard = true }: ReferralSectionProps
                                             {index + 1}
                                         </span>
                                         <span className="font-medium">{leader.username}</span>
-                                        <RoleBadge role={leader.username.toLowerCase() === "admin" ? "admin" : (leader as any).isModerator ? "moderator" : null} />
+                                        <RoleBadge role={(leader.username.toLowerCase() === 'admin' || (leader as any).isAdmin) ? 'admin' : (leader as any).isModerator ? "moderator" : null} />
                                     </div>
                                     <div className="flex items-center gap-1 text-sm">
                                         <Users className="w-4 h-4 text-muted-foreground" />

@@ -354,7 +354,7 @@ export default function Friends() {
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
                                             <h3 className="font-semibold">{friend.username}</h3>
-                                            <RoleBadge role={friend.username.toLowerCase() === "admin" ? "admin" : (friend as any).isModerator ? "moderator" : null} />
+                                            <RoleBadge role={(friend.username.toLowerCase() === 'admin' || (friend as any).isAdmin) ? 'admin' : (friend as any).isModerator ? "moderator" : null} />
                                             {/* Equipped Badges */}
                                             {friend.badges && friend.badges.filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin')).length > 0 && (
                                                 <div className="flex items-center gap-0.5">
@@ -606,7 +606,7 @@ export default function Friends() {
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2">
                                             <h3 className="font-semibold">{resultUser.username}</h3>
-                                            <RoleBadge role={resultUser.username.toLowerCase() === "admin" ? "admin" : (resultUser as any).isModerator ? "moderator" : null} />
+                                            <RoleBadge role={(resultUser.username.toLowerCase() === 'admin' || (resultUser as any).isAdmin) ? 'admin' : (resultUser as any).isModerator ? "moderator" : null} />
                                             {/* Equipped Badges */}
                                             {resultUser.badges && (
                                                 <div className="flex items-center gap-1">

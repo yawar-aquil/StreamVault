@@ -433,7 +433,7 @@ export function Header() {
               <DropdownMenuContent align="end" className="w-48">
                 <div className="px-2 py-1.5 text-sm font-medium flex items-center gap-2">
                   {user?.username}
-                  {user?.username && <RoleBadge role={user.username.toLowerCase() === "admin" ? "admin" : (user as any).isModerator ? "moderator" : null} />}
+                  {user?.username && <RoleBadge role={(user.username.toLowerCase() === 'admin' || (user as any).isAdmin) ? 'admin' : (user as any).isModerator ? "moderator" : null} />}
                   {user?.badges && (typeof user.badges === 'string' ? JSON.parse(user.badges) : user.badges)
                     .filter((b: any) => b.equipped && b.category !== 'theme' && b.category !== 'skin' && !b.name.includes('Skin') && b.category !== 'feature')
                     .sort((a: any, b: any) => new Date(a.equippedAt || 0).getTime() - new Date(b.equippedAt || 0).getTime())
@@ -545,7 +545,7 @@ export function Header() {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-border bg-background">
+        <div className="md:hidden absolute top-full left-0 right-0 border-t border-border bg-background shadow-2xl max-h-[calc(100vh-4rem)] overflow-y-auto pointer-events-auto z-50">
           <div className="container mx-auto px-4 py-4 space-y-2">
             {/* Mobile Search */}
             <div className="mb-4 relative">
@@ -627,10 +627,23 @@ export function Header() {
                   : "text-muted-foreground"
                   }`}
                 onClick={() => setMobileMenuOpen(false)}
-                data-testid="link-mobile-watch-rooms"
               >
-                <Users className="h-4 w-4" />
+                <PartyPopper className="h-4 w-4" />
                 Watch Rooms
+              </div>
+            </Link>
+
+            {/* Store Link */}
+            <Link href="/store">
+              <div
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover-elevate active-elevate-2 cursor-pointer ${location === "/store"
+                  ? "text-foreground bg-accent"
+                  : "text-muted-foreground"
+                  }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Store className="h-4 w-4" />
+                Store
               </div>
             </Link>
 
@@ -642,10 +655,121 @@ export function Header() {
                   : "text-muted-foreground"
                   }`}
                 onClick={() => setMobileMenuOpen(false)}
-                data-testid="link-mobile-watchlist"
               >
                 <Bookmark className="h-4 w-4" />
                 {t('nav.watchlist')}
+              </div>
+            </Link>
+
+            {/* Leaderboard Link */}
+            <Link href="/leaderboard">
+              <div
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover-elevate active-elevate-2 cursor-pointer ${location === "/leaderboard"
+                  ? "text-foreground bg-accent"
+                  : "text-muted-foreground"
+                  }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Medal className="h-4 w-4" />
+                Leaderboard
+              </div>
+            </Link>
+
+            {/* Achievements Link */}
+            <Link href="/achievements">
+              <div
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover-elevate active-elevate-2 cursor-pointer ${location === "/achievements"
+                  ? "text-foreground bg-accent"
+                  : "text-muted-foreground"
+                  }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Trophy className="h-4 w-4" />
+                Achievements
+              </div>
+            </Link>
+
+            {/* Community Link */}
+            <Link href="/community">
+              <div
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover-elevate active-elevate-2 cursor-pointer ${location === "/community"
+                  ? "text-foreground bg-accent"
+                  : "text-muted-foreground"
+                  }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Users className="h-4 w-4" />
+                Community
+              </div>
+            </Link>
+
+            {/* Polls Link */}
+            <Link href="/polls">
+              <div
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover-elevate active-elevate-2 cursor-pointer ${location === "/polls"
+                  ? "text-foreground bg-accent"
+                  : "text-muted-foreground"
+                  }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <BarChart2 className="h-4 w-4" />
+                Polls
+              </div>
+            </Link>
+
+            {/* Challenges Link */}
+            <Link href="/challenges">
+              <div
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover-elevate active-elevate-2 cursor-pointer ${location === "/challenges"
+                  ? "text-foreground bg-accent"
+                  : "text-muted-foreground"
+                  }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Target className="h-4 w-4" />
+                Challenges
+              </div>
+            </Link>
+
+            {/* Referrals Link */}
+            <Link href="/referral-program">
+              <div
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover-elevate active-elevate-2 cursor-pointer ${location === "/referral-program"
+                  ? "text-foreground bg-accent"
+                  : "text-muted-foreground"
+                  }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Gift className="h-4 w-4" />
+                Referrals
+              </div>
+            </Link>
+
+            {/* Blog Link */}
+            <Link href="/blog">
+              <div
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover-elevate active-elevate-2 cursor-pointer ${location === "/blog"
+                  ? "text-foreground bg-accent"
+                  : "text-muted-foreground"
+                  }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <BookOpen className="h-4 w-4" />
+                Blog
+              </div>
+            </Link>
+
+            {/* API Docs Link */}
+            <Link href="/api-docs">
+              <div
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover-elevate active-elevate-2 cursor-pointer ${location === "/api-docs"
+                  ? "text-foreground bg-accent"
+                  : "text-muted-foreground"
+                  }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Code className="h-4 w-4" />
+                API Docs
               </div>
             </Link>
 
