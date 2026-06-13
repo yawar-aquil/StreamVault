@@ -114,7 +114,7 @@ export function Header() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-[100] w-full h-16 sm:h-20 flex flex-col justify-center pointer-events-none">
+    <header className="sticky top-0 z-50 w-full h-16 sm:h-20 flex flex-col justify-center pointer-events-none">
       <div className={cn(
         "pointer-events-auto mx-auto flex items-center justify-between gap-4 transition-all duration-300 ease-out",
         isScrolled 
