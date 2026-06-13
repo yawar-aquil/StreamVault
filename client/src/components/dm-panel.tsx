@@ -47,6 +47,8 @@ interface Friend {
     avatarUrl: string | null;
     badges?: any[];
     lastActive?: string | null;
+    isModerator?: boolean;
+    isAdmin?: boolean;
 }
 
 interface DMPanelProps {

@@ -684,6 +684,8 @@ export default function Friends() {
                         avatarUrl: friends.find(f => f.friendId === selectedDMFriendId)!.avatarUrl,
                         badges: friends.find(f => f.friendId === selectedDMFriendId)!.badges,
                         lastActive: friends.find(f => f.friendId === selectedDMFriendId)!.lastActive,
+                        isModerator: (friends.find(f => f.friendId === selectedDMFriendId) as any)!.isModerator,
+                        isAdmin: (friends.find(f => f.friendId === selectedDMFriendId) as any)!.isAdmin,
                     } : null}
                     onClose={() => setSelectedDMFriendId(null)}
                 />
