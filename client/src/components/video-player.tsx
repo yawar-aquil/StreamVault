@@ -1,8 +1,9 @@
-import { AudioLines, Check } from 'lucide-react';
+import { AudioLines, Check, Play, Pause, RotateCcw, RotateCw } from 'lucide-react';
 
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/auth-context';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { createPortal } from 'react-dom';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
@@ -235,6 +236,10 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
     const lastSeekTime = useRef<number>(0);
     const [isPaused, setIsPaused] = useState(!autoplay); // Default to paused unless autoplay
     const [isIdle, setIsIdle] = useState(true); // Track if player is idle/unstarted
+    const [isBuffering, setIsBuffering] = useState(false); // Netflix-style buffering spinner
+    const [showMobileControls, setShowMobileControls] = useState(false); // tap-to-reveal on mobile
+    const mobileControlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const isMobile = useIsMobile();
     const [playerContainer, setPlayerContainer] = useState<HTMLElement | null>(null);
     const [proxyHealthy, setProxyHealthy] = useState(false);
 
@@ -447,6 +452,7 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
         player.on('play', () => {
             setIsPaused(false);
             setIsIdle(false);
+            setIsBuffering(false);
             const { isHost, syncMode, onPlay } = callbacksRef.current;
             if (isHost || !syncMode) onPlay?.();
         });
@@ -460,6 +466,11 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
         player.on('idle', () => {
             setIsPaused(true);
         });
+
+        // Netflix-style buffering spinner state
+        player.on('buffer', () => setIsBuffering(true));
+        player.on('bufferFull', () => setIsBuffering(false));
+        player.on('time', () => setIsBuffering(false));
 
         player.on('seek', (e: { offset: number; position: number }) => {
             const { isHost, syncMode, onSeek } = callbacksRef.current;
@@ -510,6 +521,82 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
         return '';
     };
 
+    // --- Mobile center controls (Netflix-style: ⟲10  ▶/⏸  10⟳) ---
+    const revealMobileControls = () => {
+        setShowMobileControls(true);
+        if (mobileControlsTimer.current) clearTimeout(mobileControlsTimer.current);
+        mobileControlsTimer.current = setTimeout(() => setShowMobileControls(false), 3500);
+    };
+
+    const mobileTogglePlay = () => {
+        const p = playerRef.current;
+        if (!p) return;
+        if (p.getState?.() === 'playing') p.pause(); else p.play();
+        revealMobileControls();
+    };
+
+    const mobileSkip = (delta: number) => {
+        const p = playerRef.current;
+        if (!p) return;
+        const pos = p.getPosition?.() || 0;
+        const dur = p.getDuration?.() || 0;
+        let next = pos + delta;
+        if (next < 0) next = 0;
+        if (dur && next > dur) next = dur;
+        lastSeekTime.current = next;
+        p.seek(next);
+        revealMobileControls();
+    };
+
+    const MobileCenterControls = (
+        <div
+            className="absolute inset-0 z-30 md:hidden"
+            onClick={revealMobileControls}
+        >
+            <div
+                className={`absolute inset-0 flex items-center justify-center gap-8 transition-opacity duration-300 ${showMobileControls || isPaused || isBuffering ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            >
+                {/* Rewind 10s */}
+                <button
+                    onClick={(e) => { e.stopPropagation(); mobileSkip(-10); }}
+                    className="relative flex items-center justify-center w-12 h-12 rounded-full bg-black/50 active:bg-black/70 text-white transition-transform active:scale-90"
+                    aria-label="Rewind 10 seconds"
+                >
+                    <RotateCcw className="w-7 h-7" />
+                    <span className="absolute text-[9px] font-bold">10</span>
+                </button>
+
+                {/* Play / Pause */}
+                <button
+                    onClick={(e) => { e.stopPropagation(); mobileTogglePlay(); }}
+                    className="flex items-center justify-center w-16 h-16 rounded-full bg-black/50 active:bg-black/70 text-white transition-transform active:scale-90"
+                    aria-label={isPaused ? 'Play' : 'Pause'}
+                >
+                    {isPaused ? <Play className="w-9 h-9 fill-white ml-1" /> : <Pause className="w-9 h-9 fill-white" />}
+                </button>
+
+                {/* Forward 10s */}
+                <button
+                    onClick={(e) => { e.stopPropagation(); mobileSkip(10); }}
+                    className="relative flex items-center justify-center w-12 h-12 rounded-full bg-black/50 active:bg-black/70 text-white transition-transform active:scale-90"
+                    aria-label="Forward 10 seconds"
+                >
+                    <RotateCw className="w-7 h-7" />
+                    <span className="absolute text-[9px] font-bold">10</span>
+                </button>
+            </div>
+        </div>
+    );
+
+    // Netflix-style red buffering spinner
+    const BufferingSpinner = (
+        <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+            <svg className="sv-netflix-spinner" viewBox="0 0 100 100">
+                <path d="M 50 6 A 44 44 0 1 0 93.33154113253715 42.35948018265508 L 93.33154113253715 42.35948018265508 L 93.56951842150025 44.13497904790192 L 93.73483947929266 45.91717735867647 L 93.82735370654136 47.7031057203878 L 93.84703170596498 49.48979359460872 L 93.7939651254764 51.2742742399326 L 93.66836630012381 53.05358963814906 L 93.47056769380507 54.824795397559484 L 93.20102114202378 56.584965625302424 L 92.86029689728363 58.331197760628385 L 92.44908247904482 60.060617361138966 L 91.96818133048856 61.7703828340981 L 91.41851128465393 63.457690105028966 L 90.80110284282483 65.11977721592592 L 90.11709726835286 66.75392884554294 L 89.36774449940447 68.35748074436165 L 88.5544008844164 69.92782407699627 L 87.67852674433236 71.46240966496146 L 86.74168376597714 72.95875212290365 L 85.74553223119597 74.41443388159001 L 84.69182808665562 75.82710909114553 L 83.58241985945935 77.19450739824111 L 82.41924542397622 78.51443759115716 L 81.20432862552529 79.78479110687573 L 79.93977576678276 81.00354539459589 L 78.62777196300021 82.16876713031539 L 77.27057737232948 83.27861527737882 L 75.87052330774866 84.33134398815801 L 74.43000823726749 85.32530534230445 L 72.95149367926832 86.25895191729218 L 71.4375 87.1308391872578 L 69.89060212039254 87.93962774643731 L 68.31342513950277 88.68408535379669 L 66.70863988202257 89.36308879575999 L 65.07895837740006 89.97562556424398 L 63.427129278222 90.52079534752389 L 61.75593322559502 90.9978113317693 L 60.068178169337905 91.40600131140977 L 58.36669465086025 91.74480860681082 L 56.654331056648815 92.01379278806567 L 54.933948850322295 92.21263020403256 L 53.20841779123262 92.34111431607465 L 51.48061114760362 92.39915583628513 L 49.753400912190195 92.38678267030764 L 48.02965302842544 92.30413966518651 L 46.31222263498971 92.15148816300697 L 44.60394933669334 91.92920536140684 L 42.907652509505304 91.63778348236218 L 41.22612664749054 91.27782875096659 L 39.56213675933569 90.85006018623704 L 37.91841382204531 90.35530820628996 L 36.29765029928442 89.79451305053624 L 34.702495731719964 89.16872302184427 L 33.135552406583244 88.47909255191578 L 31.599371113528463 87.72688009340753 L 30.096446993708334 86.91344584261591 L 28.629215488818197 86.0402492968158 L 27.200048396683435 85.1088466506153 L 25.811250039773952 84.12088803594749 L 24.465053552831854 83.07811461057378 L 23.163617295586977 81.98235550021732 L 21.909021396317875 80.83552459968004 L 20.70326443178553 79.63961723852245 L 19.548260248831784 78.39670671710228 L 18.445834932687045 77.10894071897253 L 17.39772392678013 75.77853760583706 L 16.40556930858031 74.40778260144495 L 15.470917225734489 72.99902387098028 L 14.59521549648722 71.55466850266599 L 13.779811378089768 70.07717839845142 L 13.025949506618808 68.5690660807941 L 12.33477001133194 67.03289042267167 L 11.707306806391685 65.47125230807717 L 11.144486062488319 63.886790230353306 L 10.64712486058724 62.2821758358114 L 10.215930029718997 60.660109420160055 L 9.851497170419584 59.023315385332225 L 9.554309865116302 57.374537664353696 L 9.324739076439997 55.71653512193469 L 9.163042734129462 54.05207693849256 L 9.069365510878008 52.38393798532951 L 9.043738787156322 50.71489419868721 L 9.086080804730535 49.04771796039173 L 9.196197008279874 47.38517349277403 L 9.373780574206037 45.730012275516344 L 9.618413125415202 44.08496849202298 L 9.929565630545994 42.45275451285177 L 10.306599485811482 40.83605642366681 L 10.74876777732198 39.23752960508588 L 11.255216721458368 37.65979437169539 L 11.824987280572472 36.105431677394705 L 12.45701695100415 34.57697889410735 L 13.15014172012198 33.076925670762265 L 13.903098188818745 31.607709879301606 L 14.714525855623556 30.171713654313407 L 15.582969558328813 28.771259532721235 L 16.50688206877632 27.408606699781824 L 17.48462683619733 26.085947347455708 L 18.514480874263715 24.8054031510148 L 19.59463778677507 23.569021869544937 L 20.72321092668479 22.378774075783472 L 21.898236682955822 21.236550020506407 L 23.11767788953287 20.14415663644569 L 24.37942735052477 19.103314686475475 L 25.681311475507595 18.115656060556592 L 27.021094018686227 17.18272122567226 L 28.396479915490694 16.305956832724824 L 29.805119210032093 15.486713484094487 L 31.244611066703673 14.726243665285857 L 32.71250785908485 14.025699843807985 L 34.2063193291886 13.386132738149087 L 35.7235168099891 12.808489759417725 L 37.26153750407252 12.293613627929702 L 38.817788811175255 11.842241166723078 L 40.3896526973032 11.455002273686041 L 41.974490098072266 11.13241907367967 L 43.56964534886426 10.874905251736237 L 45.1724506343636 10.682765568108131 L 46.7802304500195 10.556195555638674 L 48.39030606797384 10.49528139962014 L 50 10.5 A 2.25 2.25 0 0 1 50 6 Z" fill="#e50914" />
+            </svg>
+        </div>
+    );
+
     // Render Overlay
     const Overlay = (
         <div
@@ -554,6 +641,33 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
                      /* Maintain button visibility below if needed, but overlay covers controls except progress per user request */
                      /* User requested "just progress bar", so buttons (play/pause) should dim. */
                 }
+                /* Hide JW's default buffering icon — we render our own Netflix-style spinner */
+                .jwplayer.jw-state-buffering .jw-icon-display .jw-svg-icon-buffer,
+                .jwplayer .jw-icon-display .jw-svg-icon-buffer {
+                    display: none !important;
+                }
+                /* Netflix-style red ring spinner */
+                .sv-netflix-spinner {
+                    width: 64px;
+                    height: 64px;
+                    animation: sv-netflix-spin 0.9s linear infinite;
+                }
+                @keyframes sv-netflix-spin {
+                    to { transform: rotate(360deg); }
+                }
+                /* Hide custom audio menu when JWPlayer user is inactive */
+                .jwplayer.jw-flag-user-inactive #audio-menu-container {
+                    opacity: 0 !important;
+                    pointer-events: none !important;
+                    visibility: hidden !important;
+                    transition: opacity 0.3s ease, visibility 0.3s ease;
+                }
+                .jwplayer.jw-flag-user-active #audio-menu-container {
+                    opacity: 1 !important;
+                    pointer-events: auto !important;
+                    visibility: visible !important;
+                    transition: opacity 0.3s ease, visibility 0.3s ease;
+                }
             `}</style>
 
             <div className={`w-full h-full ${className}`} style={{ position: 'relative' }}>
@@ -568,6 +682,18 @@ const JWPlayerWrapper = forwardRef<VideoPlayerRef, JWPlayerWrapperProps>(({
                     playerContainer
                         ? createPortal(Overlay, playerContainer)
                         : Overlay
+                )}
+                {/* Netflix-style buffering spinner */}
+                {isBuffering && (
+                    playerContainer
+                        ? createPortal(BufferingSpinner, playerContainer)
+                        : BufferingSpinner
+                )}
+                {/* Mobile-only center controls: ⟲10  ▶/⏸  10⟳ */}
+                {isMobile && !isIdle && (
+                    playerContainer
+                        ? createPortal(MobileCenterControls, playerContainer)
+                        : MobileCenterControls
                 )}
                 {/* Render Audio Menu via Portal so it stays in fullscreen */}
                 {audioMenu && (

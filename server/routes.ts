@@ -26,6 +26,8 @@ import multer from "multer";
 import storeRoutes from "./store";
 import { getLinkPreview } from "./link-preview";
 import { translateText, translateBatch } from "./translate";
+import { generateVaultReply, buildContextBlock, isGeminiConfigured, summarizeMemory, type GeminiTurn } from "./gemini";
+import { readMemory, writeMemory, listMemories, getMemoryByUserId } from "./ai-memory";
 import { getStreamMode, setStreamMode, isValidStreamMode, type StreamMode } from "./stream-mode";
 import { getSiteSettings, updateSiteSettings } from "./settings";
 
@@ -4713,6 +4715,198 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Translation error:", error);
       res.status(500).json({ error: "Translation failed" });
+    }
+  });
+
+  // Vault AI brain — Gemini-powered chat that reads watch history + mood and recommends content
+  app.post("/api/ai/chat", async (req, res) => {
+    try {
+      if (!isGeminiConfigured()) {
+        return res.status(503).json({ error: "AI is not configured" });
+      }
+
+      const { messages, watchHistory, recentWatch } = req.body || {};
+
+      if (!Array.isArray(messages) || messages.length === 0) {
+        return res.status(400).json({ error: "messages array is required" });
+      }
+
+      // Normalise the conversation history into Gemini turns (keep it bounded).
+      const history: GeminiTurn[] = messages
+        .slice(-12)
+        .filter((m: any) => m && typeof m.text === "string" && m.text.trim())
+        .map((m: any) => ({
+          role: m.isBot || m.role === "model" ? "model" : "user",
+          text: String(m.text).slice(0, 2000),
+        }));
+
+      if (history.length === 0) {
+        return res.status(400).json({ error: "no valid messages" });
+      }
+
+      // Identify the user (optional) so we can load/save their AI memory.
+      let memUserId: string | null = null;
+      let memUsername: string | undefined;
+      try {
+        const token = req.cookies?.authToken || req.headers.authorization?.replace("Bearer ", "");
+        if (token) {
+          const payload = verifyToken(token);
+          if (payload?.userId) {
+            memUserId = payload.userId;
+            const u = await storage.getUserById(payload.userId);
+            memUsername = u?.username;
+          }
+        }
+      } catch { /* anonymous chat is fine */ }
+
+      const memory = memUserId ? readMemory(memUserId) : "";
+
+      // Build a compact catalog the model can recommend from, plus a title->item map.
+      const [shows, movies, anime] = await Promise.all([
+        storage.getAllShows(),
+        storage.getAllMovies(),
+        storage.getAllAnime(),
+      ]);
+
+      type CatalogItem = {
+        title: string;
+        slug: string;
+        type: "show" | "movie" | "anime";
+        rating?: string | null;
+        year?: number | null;
+        poster?: string | null;
+        genres?: string | null;
+        description?: string | null;
+        cast?: string | null;
+      };
+
+      const catalogItems: CatalogItem[] = [
+        ...shows.map((s) => ({ title: s.title, slug: s.slug, type: "show" as const, rating: s.imdbRating, year: s.year, poster: s.posterUrl, genres: s.genres, description: s.description, cast: s.cast })),
+        ...movies.map((m) => ({ title: m.title, slug: m.slug, type: "movie" as const, rating: m.imdbRating, year: m.year, poster: m.posterUrl, genres: m.genres, description: m.description, cast: m.cast })),
+        ...anime.map((a) => ({ title: a.title, slug: a.slug, type: "anime" as const, rating: a.imdbRating, year: a.year, poster: a.posterUrl, genres: a.genres, description: a.description, cast: (a as any).cast })),
+      ];
+
+      // Title -> item lookup (normalized) for mapping recommendations back to links.
+      // Normalize so "Obsession (2026)", "obsession!", "Obsession" all match.
+      const normalizeTitle = (t: string) =>
+        t.toLowerCase().replace(/\(\d{4}\)/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+
+      const byTitle = new Map<string, CatalogItem>();
+      for (const item of catalogItems) {
+        byTitle.set(normalizeTitle(item.title), item);
+      }
+
+      const resolveTitle = (rec: string): CatalogItem | undefined => {
+        const key = normalizeTitle(rec);
+        if (!key) return undefined;
+        const exact = byTitle.get(key);
+        if (exact) return exact;
+        // Fallback: forgiving contains-match either direction.
+        for (const item of catalogItems) {
+          const itemKey = normalizeTitle(item.title);
+          if (itemKey === key || itemKey.includes(key) || key.includes(itemKey)) return item;
+        }
+        return undefined;
+      };
+
+      // Rank catalog so the most recommendable titles survive the cap (by rating).
+      const catalogLines = catalogItems
+        .slice()
+        .sort((a, b) => parseFloat(b.rating || "0") - parseFloat(a.rating || "0"))
+        .slice(0, 400)
+        .map((c) => {
+          const meta = [c.year ? `${c.year}` : null, c.genres || null, c.rating ? `★${c.rating}` : null]
+            .filter(Boolean)
+            .join(", ");
+          return `${c.title} [${c.type}]${meta ? ` (${meta})` : ""}`;
+        });
+
+      const contextBlock = buildContextBlock({
+        catalog: catalogLines,
+        memory,
+        watchHistory: Array.isArray(watchHistory)
+          ? watchHistory.filter((t: unknown) => typeof t === "string").slice(0, 30)
+          : [],
+        recentWatch: Array.isArray(recentWatch)
+          ? recentWatch.filter((t: unknown) => typeof t === "string").slice(0, 10)
+          : [],
+      });
+
+      const result = await generateVaultReply({ history, contextBlock });
+
+      // Fire-and-forget: fold this conversation into the user's long-term memory.
+      // Throttled — only summarize every ~4th user turn to conserve API quota.
+      if (memUserId) {
+        const userTurns = history.filter((h) => h.role === "user").length;
+        if (userTurns > 0 && userTurns % 4 === 0) {
+          const convoForMemory: GeminiTurn[] = [
+            ...history,
+            { role: "model", text: result.reply },
+          ];
+          summarizeMemory({ existingMemory: memory, conversation: convoForMemory, username: memUsername })
+            .then((updated) => { if (updated) writeMemory(memUserId!, updated); })
+            .catch(() => { /* best effort */ });
+        }
+      }
+
+      // Map recommended titles back to real catalog items so the UI can link/poster them.
+      const showLinks = result.recommend
+        .map((title) => resolveTitle(title))
+        .filter((item): item is CatalogItem => Boolean(item))
+        .map((item) => ({
+          title: item.title,
+          slug: item.slug,
+          type: item.type,
+          rating: item.rating || undefined,
+          year: item.year || undefined,
+          poster: item.poster || undefined,
+          description: item.description ? item.description.slice(0, 100) : undefined,
+          cast: item.cast ? item.cast.split(",").slice(0, 3).join(", ") : undefined,
+        }));
+
+      return res.json({
+        reply: result.reply,
+        suggestions: result.suggestions,
+        showLinks,
+      });
+    } catch (error) {
+      console.error("Vault AI error:", error);
+      res.status(500).json({ error: "AI request failed" });
+    }
+  });
+
+  // Admin: list all Vault AI memory profiles (with username enrichment)
+  app.get("/api/admin/ai-memory", requireAdminOrModerator, async (_req, res) => {
+    try {
+      const files = listMemories();
+      const enriched = await Promise.all(
+        files.map(async (f) => {
+          const user = await storage.getUserById(f.userId).catch(() => null);
+          return {
+            userId: f.userId,
+            username: user?.username || "(unknown / deleted)",
+            avatarUrl: user?.avatarUrl || null,
+            size: f.size,
+            updatedAt: f.updatedAt,
+          };
+        })
+      );
+      res.json(enriched);
+    } catch (error) {
+      console.error("List AI memory error:", error);
+      res.status(500).json({ error: "Failed to list AI memory" });
+    }
+  });
+
+  // Admin: read one user's Vault AI memory markdown
+  app.get("/api/admin/ai-memory/:userId", requireAdminOrModerator, async (req, res) => {
+    try {
+      const content = getMemoryByUserId(req.params.userId);
+      const user = await storage.getUserById(req.params.userId).catch(() => null);
+      res.json({ userId: req.params.userId, username: user?.username || null, content });
+    } catch (error) {
+      console.error("Read AI memory error:", error);
+      res.status(500).json({ error: "Failed to read AI memory" });
     }
   });
 

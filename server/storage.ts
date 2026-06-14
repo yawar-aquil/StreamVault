@@ -1963,14 +1963,46 @@ export class MemStorage implements IStorage {
     const friends = await this.getFriends(userId);
     const friendIds = new Set(friends.map(f => f.userId === userId ? f.friendId : f.userId));
 
-    // Filter out self and existing friends
-    const candidates = allUsers.filter(u => u.id !== userId && !friendIds.has(u.id));
+    // Exclude people we've already sent a pending request to.
+    const sentRequests = await this.getSentFriendRequests(userId);
+    const pendingIds = new Set(
+      sentRequests.filter(r => r.status === 'pending').map(r => r.toUserId)
+    );
 
-    // Enrich users with badges before returning
-    const enrichedCandidates = candidates.map(u => this.enrichUser(u));
+    // Build a quick lookup of each user's friend-id set (for mutual-friend counting).
+    const allFriendEdges = Array.from(this.friends.values());
+    const friendSetOf = (uid: string) => {
+      const set = new Set<string>();
+      for (const f of allFriendEdges) {
+        if (f.userId === uid) set.add(f.friendId);
+        else if (f.friendId === uid) set.add(f.userId);
+      }
+      return set;
+    };
 
-    // Shuffle and pick 5
-    return enrichedCandidates.sort(() => 0.5 - Math.random()).slice(0, 5);
+    // Candidates: not self, not already a friend, not pending.
+    const candidates = allUsers.filter(
+      u => u.id !== userId && !friendIds.has(u.id) && !pendingIds.has(u.id)
+    );
+
+    // Score each candidate Instagram-style: mutual friends dominate, with small
+    // boosts for higher level / activity so brand-new sites still show people.
+    const friendIdList = Array.from(friendIds);
+    const scored = candidates.map(u => {
+      const theirFriends = friendSetOf(u.id);
+      let mutualFriends = 0;
+      for (const fid of friendIdList) {
+        if (theirFriends.has(fid)) mutualFriends++;
+      }
+      const levelBoost = Math.min(u.level || 0, 20) * 0.1;
+      const score = mutualFriends * 100 + levelBoost + Math.random(); // random breaks ties
+      return { user: this.enrichUser(u), mutualFriends, score };
+    });
+
+    return scored
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 40)
+      .map(s => ({ ...s.user, mutualFriends: s.mutualFriends } as User));
   }
 
   async getFriends(userId: string): Promise<Friend[]> {

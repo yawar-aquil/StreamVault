@@ -71,7 +71,7 @@ export function SuggestedFriends() {
                 <CardContent className="pt-6 pb-6 text-center">
                     <p className="text-sm text-muted-foreground mb-4">No new suggestions right now.</p>
                     <Button variant="outline" size="sm" asChild>
-                        <Link href="/leaderboard">Browse Community</Link>
+                        <Link href="/suggested-friends">Find People</Link>
                     </Button>
                 </CardContent>
             </Card>
@@ -104,7 +104,9 @@ export function SuggestedFriends() {
                                     </span>
                                 </Link>
                                 <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                                    Level {user.level}
+                                    {user.mutualFriends && user.mutualFriends > 0
+                                        ? `${user.mutualFriends} mutual friend${user.mutualFriends > 1 ? "s" : ""}`
+                                        : `Level ${user.level}`}
                                 </span>
                             </div>
                         </div>
@@ -121,7 +123,7 @@ export function SuggestedFriends() {
                 ))}
 
                 <Button variant="outline" className="w-full text-xs mt-2 border-dashed border-border hover:bg-muted/50" asChild>
-                    <Link href="/leaderboard">Find more people</Link>
+                    <Link href="/suggested-friends">Find more people</Link>
                 </Button>
             </CardContent>
         </Card>

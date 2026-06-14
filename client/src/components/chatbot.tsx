@@ -3,6 +3,7 @@ import { MessageCircle, X, Send, Loader2, Sparkles, Star, Clock, TrendingUp, Fil
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import type { Show, Movie, Episode, Anime } from "@shared/schema";
 import { Link, useLocation } from "wouter";
 
@@ -132,6 +133,34 @@ export function Chatbot() {
       const parsed = JSON.parse(stored);
       return Object.values(parsed).sort((a: any, b: any) => b.lastWatched - a.lastWatched).slice(0, 5) as any;
     } catch { return []; }
+  };
+
+  // Build watch data for the AI brain: full history (oldest→newest) + recent watches.
+  const getWatchData = (): { watchHistory: string[]; recentWatch: string[] } => {
+    try {
+      const stored = localStorage.getItem('continue-watching');
+      if (!stored) return { watchHistory: [], recentWatch: [] };
+      const items = Object.values(JSON.parse(stored)) as any[];
+      const sorted = items
+        .filter((h) => h && h.title)
+        .sort((a, b) => (a.lastWatched || 0) - (b.lastWatched || 0)); // oldest first
+      const fmt = (h: any) => `${h.title}${h.type ? ` (${h.type})` : ''}`;
+      const watchHistory = sorted.slice(-30).map(fmt);
+      const recentWatch = sorted.slice().reverse().slice(0, 5).map(fmt);
+      return { watchHistory, recentWatch };
+    } catch { return { watchHistory: [], recentWatch: [] }; }
+  };
+
+  // Commands that perform navigation / side-effects stay on the fast local engine.
+  const isActionIntent = (msg: string): boolean => {
+    const m = msg.toLowerCase().trim();
+    if (/^(play|watch|start|resume)\s+/.test(m)) return true;
+    if (m === 'play it' || m === 'watch it' || m === 'play this' || m === 'watch this') return true;
+    if (
+      context.lastResults && context.lastResults.length > 0 &&
+      /^(the\s+)?(first|second|third|fourth|fifth|1st|2nd|3rd|4th|5th|\d+)(\s+one)?$/.test(m)
+    ) return true;
+    return false;
   };
 
   // Save user preferences
@@ -1089,7 +1118,7 @@ export function Chatbot() {
     };
   };
 
-  const handleSend = (text?: string) => {
+  const handleSend = async (text?: string) => {
     const messageText = text || input.trim();
     if (!messageText) return;
 
@@ -1099,18 +1128,73 @@ export function Chatbot() {
       text: messageText,
       isBot: false,
     };
+    const priorMessages = messages;
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
 
     // Show typing indicator
     setIsTyping(true);
 
-    // Generate bot response after delay
-    setTimeout(() => {
-      const botResponse = generateResponse(messageText);
+    // Navigation / side-effect commands stay on the instant local engine.
+    if (isActionIntent(messageText)) {
+      setTimeout(() => {
+        const botResponse = generateResponse(messageText);
+        setMessages((prev) => [...prev, botResponse]);
+        setIsTyping(false);
+      }, 400);
+      return;
+    }
+
+    // Otherwise let the Gemini "brain" handle it (mood + history aware).
+    try {
+      const { watchHistory, recentWatch } = getWatchData();
+      const convo = [...priorMessages, userMessage]
+        .slice(-12)
+        .map((m) => ({ text: m.text, isBot: m.isBot }));
+
+      const res = await apiRequest("POST", "/api/ai/chat", {
+        messages: convo,
+        watchHistory,
+        recentWatch,
+      });
+      const data = await res.json();
+
+      const showLinks: ContentLink[] | undefined = Array.isArray(data.showLinks) && data.showLinks.length
+        ? data.showLinks
+        : undefined;
+
+      if (showLinks) {
+        setContext((prev) => ({ ...prev, lastResults: showLinks }));
+      }
+
+      const botResponse: Message = {
+        id: Date.now().toString(),
+        text: data.reply || "Hmm, I blanked for a sec — try asking again?",
+        isBot: true,
+        suggestions: Array.isArray(data.suggestions) && data.suggestions.length
+          ? data.suggestions
+          : ["🎲 Surprise me", "🔥 What's hot?", "Browse genres"],
+        showLinks,
+      };
       setMessages((prev) => [...prev, botResponse]);
+    } catch {
+      // AI brain unavailable (down / quota). For plain chit-chat, don't dump random
+      // search results — only fall back to the rule-based engine for content-y queries.
+      const looksLikeContentQuery = /\b(watch|movie|show|anime|recommend|series|film|play|trending|top|genre|surprise|mood|similar)\b/i.test(messageText);
+      if (looksLikeContentQuery) {
+        const botResponse = generateResponse(messageText);
+        setMessages((prev) => [...prev, botResponse]);
+      } else {
+        setMessages((prev) => [...prev, {
+          id: Date.now().toString(),
+          text: "I'm having a little trouble thinking right now 😅 — give me a moment and try again. Meanwhile, want a recommendation?",
+          isBot: true,
+          suggestions: ["🎲 Surprise me", "🔥 What's hot?", "Top rated"],
+        }]);
+      }
+    } finally {
       setIsTyping(false);
-    }, 800);
+    }
   };
 
   const handleSuggestionClick = (suggestion: string) => {

@@ -65,6 +65,7 @@ import PublicProfile from "@/pages/public-profile";
 import Profile from "@/pages/profile";
 import Settings from "@/pages/settings";
 import Friends from "@/pages/friends";
+import SuggestedFriendsPage from "@/pages/suggested-friends";
 import NotificationsPage from "@/pages/notifications";
 import Leaderboard from "@/pages/leaderboard";
 import Calendar from "@/pages/calendar";
@@ -153,6 +154,7 @@ function Router() {
           <Route path="/community" component={CommunityFeed} />
           <ProtectedRoute path="/settings" component={Settings} />
           <ProtectedRoute path="/friends" component={Friends} />
+          <ProtectedRoute path="/suggested-friends" component={SuggestedFriendsPage} />
           <ProtectedRoute path="/notifications" component={NotificationsPage} />
           <ProtectedRoute path="/leaderboard" component={Leaderboard} />
           <ProtectedRoute path="/achievements" component={AchievementsPage} />

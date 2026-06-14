@@ -55,6 +55,7 @@ import { StreamingModeManager } from "@/components/admin/StreamingModeManager";
 import { SecuritySettings } from "@/components/admin/SecuritySettings";
 import { ManageModerators } from "@/components/admin/ManageModerators";
 import { ManageAdmins } from "@/components/admin/ManageAdmins";
+import { AiMemoryManager } from "@/components/admin/AiMemoryManager";
 import { RoleBadge, getUserRole } from "@/components/role-badge";
 
 export const AdminContext = createContext<{ userRole: "admin" | "moderator" }>({ userRole: "admin" });
@@ -232,6 +233,9 @@ export default function AdminPage() {
               <ShieldAlert className="w-4 h-4" />
               Security
             </TabsTrigger>
+            <TabsTrigger value="ai-memory" className="gap-2">
+              🧠 Vault AI
+            </TabsTrigger>
             </TabsList>
           </div>
         {userRole === 'admin' && (
@@ -389,6 +393,10 @@ export default function AdminPage() {
           {/* Security Tab */}
           <TabsContent value="security">
             <SecuritySettings />
+          </TabsContent>
+
+          <TabsContent value="ai-memory">
+            <AiMemoryManager />
           </TabsContent>
         </Tabs>
       </div>
